@@ -77,10 +77,68 @@ public partial class LolAnalyzerDbContextModelSnapshot : ModelSnapshot
             entity.ToTable("match_participants", (string)null);
         });
 
+        modelBuilder.Entity("LolAnalyzer.Domain.Entities.PlayerEncounter", entity =>
+        {
+            entity.Property<Guid>("OwnerPlayerId").HasColumnType("uuid").HasColumnName("owner_player_id");
+            entity.Property<Guid>("OtherPlayerId").HasColumnType("uuid").HasColumnName("other_player_id");
+            entity.Property<int>("EnemyTeamMatches").HasColumnType("integer").HasColumnName("enemy_team_matches");
+            entity.Property<DateTimeOffset>("FirstSeenAt").HasColumnType("timestamp with time zone").HasColumnName("first_seen_at");
+            entity.Property<DateTimeOffset>("LastSeenAt").HasColumnType("timestamp with time zone").HasColumnName("last_seen_at");
+            entity.Property<int>("LossesAgainst").HasColumnType("integer").HasColumnName("losses_against");
+            entity.Property<int>("LossesTogether").HasColumnType("integer").HasColumnName("losses_together");
+            entity.Property<int>("SameTeamMatches").HasColumnType("integer").HasColumnName("same_team_matches");
+            entity.Property<int>("TotalMatches").HasColumnType("integer").HasColumnName("total_matches");
+            entity.Property<int>("WinsAgainst").HasColumnType("integer").HasColumnName("wins_against");
+            entity.Property<int>("WinsTogether").HasColumnType("integer").HasColumnName("wins_together");
+            entity.HasKey("OwnerPlayerId", "OtherPlayerId");
+            entity.HasIndex("OtherPlayerId");
+            entity.HasIndex("OwnerPlayerId", "TotalMatches");
+            entity.ToTable("player_encounters", table => table.HasCheckConstraint(
+                "ck_player_encounters_distinct_players",
+                "owner_player_id <> other_player_id"));
+        });
+
+        modelBuilder.Entity("LolAnalyzer.Domain.Entities.PlayerRelationship", entity =>
+        {
+            entity.Property<Guid>("PlayerAId").HasColumnType("uuid").HasColumnName("player_a_id");
+            entity.Property<Guid>("PlayerBId").HasColumnType("uuid").HasColumnName("player_b_id");
+            entity.Property<int>("ConsecutiveMatches").HasColumnType("integer").HasColumnName("consecutive_matches");
+            entity.Property<DateTimeOffset>("FirstSeenAt").HasColumnType("timestamp with time zone").HasColumnName("first_seen_at");
+            entity.Property<DateTimeOffset>("LastSeenAt").HasColumnType("timestamp with time zone").HasColumnName("last_seen_at");
+            entity.Property<int>("MatchesTogether").HasColumnType("integer").HasColumnName("matches_together");
+            entity.Property<int>("OppositeTeamMatches").HasColumnType("integer").HasColumnName("opposite_team_matches");
+            entity.Property<int>("RecentMatchesTogether").HasColumnType("integer").HasColumnName("recent_matches_together");
+            entity.Property<string>("RelationshipConfidence").IsRequired().HasMaxLength(16).HasColumnType("character varying(16)").HasColumnName("relationship_confidence");
+            entity.Property<int>("RelationshipScore").HasColumnType("integer").HasColumnName("relationship_score");
+            entity.Property<int>("SameTeamMatches").HasColumnType("integer").HasColumnName("same_team_matches");
+            entity.HasKey("PlayerAId", "PlayerBId");
+            entity.HasIndex("PlayerAId", "RelationshipScore");
+            entity.HasIndex("PlayerBId", "RelationshipScore");
+            entity.ToTable("player_relationships", table =>
+            {
+                table.HasCheckConstraint("ck_player_relationships_canonical_pair", "player_a_id < player_b_id");
+                table.HasCheckConstraint("ck_player_relationships_match_totals", "matches_together = same_team_matches + opposite_team_matches");
+                table.HasCheckConstraint("ck_player_relationships_nonnegative_counts", "matches_together >= 0 AND same_team_matches >= 0 AND opposite_team_matches >= 0 AND recent_matches_together >= 0 AND consecutive_matches >= 0");
+                table.HasCheckConstraint("ck_player_relationships_score_range", "relationship_score >= 0 AND relationship_score <= 100");
+            });
+        });
+
         modelBuilder.Entity("LolAnalyzer.Domain.Entities.MatchParticipant", entity =>
         {
             entity.HasOne("LolAnalyzer.Domain.Entities.Match", "Match").WithMany("Participants").HasForeignKey("MatchId").OnDelete(DeleteBehavior.Cascade).IsRequired();
             entity.HasOne("LolAnalyzer.Domain.Entities.Player", "Player").WithMany("MatchParticipants").HasForeignKey("PlayerId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+        });
+
+        modelBuilder.Entity("LolAnalyzer.Domain.Entities.PlayerEncounter", entity =>
+        {
+            entity.HasOne("LolAnalyzer.Domain.Entities.Player", "OtherPlayer").WithMany().HasForeignKey("OtherPlayerId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+            entity.HasOne("LolAnalyzer.Domain.Entities.Player", "OwnerPlayer").WithMany().HasForeignKey("OwnerPlayerId").OnDelete(DeleteBehavior.Cascade).IsRequired();
+        });
+
+        modelBuilder.Entity("LolAnalyzer.Domain.Entities.PlayerRelationship", entity =>
+        {
+            entity.HasOne("LolAnalyzer.Domain.Entities.Player", "PlayerA").WithMany().HasForeignKey("PlayerAId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+            entity.HasOne("LolAnalyzer.Domain.Entities.Player", "PlayerB").WithMany().HasForeignKey("PlayerBId").OnDelete(DeleteBehavior.Restrict).IsRequired();
         });
     }
 }

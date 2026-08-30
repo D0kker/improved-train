@@ -11,6 +11,10 @@ public sealed class LolAnalyzerDbContext(DbContextOptions<LolAnalyzerDbContext> 
 
     public DbSet<MatchParticipant> MatchParticipants => Set<MatchParticipant>();
 
+    public DbSet<PlayerEncounter> PlayerEncounters => Set<PlayerEncounter>();
+
+    public DbSet<PlayerRelationship> PlayerRelationships => Set<PlayerRelationship>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Player>(entity =>
@@ -51,6 +55,52 @@ public sealed class LolAnalyzerDbContext(DbContextOptions<LolAnalyzerDbContext> 
             entity.HasOne(participant => participant.Player)
                 .WithMany(player => player.MatchParticipants)
                 .HasForeignKey(participant => participant.PlayerId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PlayerEncounter>(entity =>
+        {
+            entity.ToTable("player_encounters", table => table.HasCheckConstraint(
+                "ck_player_encounters_distinct_players",
+                "owner_player_id <> other_player_id"));
+            entity.HasKey(encounter => new { encounter.OwnerPlayerId, encounter.OtherPlayerId });
+            entity.HasIndex(encounter => new { encounter.OwnerPlayerId, encounter.TotalMatches });
+            entity.HasOne(encounter => encounter.OwnerPlayer)
+                .WithMany()
+                .HasForeignKey(encounter => encounter.OwnerPlayerId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(encounter => encounter.OtherPlayer)
+                .WithMany()
+                .HasForeignKey(encounter => encounter.OtherPlayerId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PlayerRelationship>(entity =>
+        {
+            entity.ToTable("player_relationships", table =>
+            {
+                table.HasCheckConstraint("ck_player_relationships_canonical_pair", "player_a_id < player_b_id");
+                table.HasCheckConstraint(
+                    "ck_player_relationships_match_totals",
+                    "matches_together = same_team_matches + opposite_team_matches");
+                table.HasCheckConstraint(
+                    "ck_player_relationships_nonnegative_counts",
+                    "matches_together >= 0 AND same_team_matches >= 0 AND opposite_team_matches >= 0 AND recent_matches_together >= 0 AND consecutive_matches >= 0");
+                table.HasCheckConstraint(
+                    "ck_player_relationships_score_range",
+                    "relationship_score >= 0 AND relationship_score <= 100");
+            });
+            entity.HasKey(relationship => new { relationship.PlayerAId, relationship.PlayerBId });
+            entity.Property(relationship => relationship.RelationshipConfidence).HasMaxLength(16).IsRequired();
+            entity.HasIndex(relationship => new { relationship.PlayerAId, relationship.RelationshipScore });
+            entity.HasIndex(relationship => new { relationship.PlayerBId, relationship.RelationshipScore });
+            entity.HasOne(relationship => relationship.PlayerA)
+                .WithMany()
+                .HasForeignKey(relationship => relationship.PlayerAId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(relationship => relationship.PlayerB)
+                .WithMany()
+                .HasForeignKey(relationship => relationship.PlayerBId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

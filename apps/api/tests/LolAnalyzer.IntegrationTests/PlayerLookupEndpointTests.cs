@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using LolAnalyzer.Application.Analysis;
 using LolAnalyzer.Application.Matches;
 using LolAnalyzer.Application.Players;
 using LolAnalyzer.Application.Riot;
@@ -71,6 +72,38 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task SprintThreeReadEndpointsReturnAnalysisContractsWithoutCallingRiot()
+    {
+        using var client = _factory.CreateClient();
+
+        var summary = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/summary",
+            TestContext.Current.CancellationToken);
+        var matches = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/matches?page=1&pageSize=20",
+            TestContext.Current.CancellationToken);
+        var detail = await client.GetAsync(
+            "/api/v1/matches/TEST_1",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, summary.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, matches.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, detail.StatusCode);
+    }
+
+    [Fact]
+    public async Task MatchHistoryRejectsPaginationThatCouldOverflowTheRepositoryOffset()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/matches?page=2147483647&pageSize=100",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }
 
 public sealed class LolAnalyzerApiFactory : WebApplicationFactory<Program>
@@ -89,9 +122,11 @@ public sealed class LolAnalyzerApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IRiotApiClient>();
             services.RemoveAll<IPlayerRepository>();
             services.RemoveAll<IMatchRepository>();
+            services.RemoveAll<IPlayerAnalysisRepository>();
             services.AddSingleton<IRiotApiClient>(new SimulatedRiotApiClient());
             services.AddSingleton<IPlayerRepository>(new InMemoryPlayerRepository());
             services.AddSingleton<IMatchRepository>(new InMemoryMatchRepository());
+            services.AddSingleton<IPlayerAnalysisRepository>(new InMemoryPlayerAnalysisRepository());
         });
     }
 }
@@ -149,4 +184,48 @@ internal sealed class InMemoryMatchRepository : IMatchRepository
     {
         return Task.FromResult(_savedMatchIds.Add(match.RiotMatchId));
     }
+}
+
+internal sealed class InMemoryPlayerAnalysisRepository : IPlayerAnalysisRepository
+{
+    private static readonly Guid OwnerId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+    public Task<PlayerAnalysisInput?> LoadInputAsync(string ownerPuuid, CancellationToken cancellationToken) =>
+        Task.FromResult<PlayerAnalysisInput?>(ownerPuuid == "test-owner-puuid"
+            ? new PlayerAnalysisInput(OwnerId, [])
+            : null);
+
+    public Task ReplaceEncountersAsync(
+        Guid ownerPlayerId,
+        IReadOnlyCollection<PlayerEncounterAggregate> encounters,
+        CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task<PlayerSummary?> GetSummaryAsync(string puuid, CancellationToken cancellationToken) =>
+        Task.FromResult<PlayerSummary?>(puuid == "test-owner-puuid"
+            ? new PlayerSummary(puuid, "Ana", "LAN", 1, 0, 1, 0, 9, 0)
+            : null);
+
+    public Task<IReadOnlyList<PlayerEncounterView>?> GetRepeatedPlayersAsync(
+        string puuid,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<PlayerEncounterView>?>(puuid == "test-owner-puuid" ? [] : null);
+
+    public Task<PagedPlayerMatches?> GetMatchesAsync(
+        string puuid,
+        int page,
+        int pageSize,
+        int? queueId,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<PagedPlayerMatches?>(puuid == "test-owner-puuid"
+            ? new PagedPlayerMatches(
+                page,
+                pageSize,
+                1,
+                [new PlayerMatchListItem("TEST_1", 420, DateTimeOffset.UnixEpoch, 1200, "Annie", 0, 0, 0, false)])
+            : null);
+
+    public Task<MatchDetail?> GetMatchDetailAsync(string riotMatchId, CancellationToken cancellationToken) =>
+        Task.FromResult<MatchDetail?>(riotMatchId == "TEST_1"
+            ? new MatchDetail("TEST_1", 420, DateTimeOffset.UnixEpoch, 1200, [])
+            : null);
 }

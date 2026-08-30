@@ -1,4 +1,5 @@
 using System.Net;
+using LolAnalyzer.Application.Analysis;
 using LolAnalyzer.Application.Matches;
 using LolAnalyzer.Application.Players;
 using LolAnalyzer.Application.Riot;
@@ -29,6 +30,11 @@ if (riotOptions.RequestTimeoutSeconds <= 0 || riotOptions.RequestConcurrency is 
     throw new InvalidOperationException("Riot timeout must be positive and concurrency must be between 1 and 5.");
 }
 
+var relationshipScoreOptions = builder.Configuration
+    .GetSection(RelationshipScoreOptions.SectionName)
+    .Get<RelationshipScoreOptions>() ?? new RelationshipScoreOptions();
+relationshipScoreOptions.Validate();
+
 var postgresConnectionString = BuildPostgresConnectionString(builder.Configuration)
     ?? throw new InvalidOperationException("ConnectionStrings:Postgres or POSTGRES_HOST must be configured.");
 var redisHost = builder.Configuration["REDIS_HOST"] ?? builder.Configuration["Redis:Host"] ?? "localhost";
@@ -39,11 +45,15 @@ var redisPort = int.TryParse(builder.Configuration["REDIS_PORT"], out var config
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton(riotOptions);
 builder.Services.AddSingleton(new MatchIngestionOptions { RequestConcurrency = riotOptions.RequestConcurrency });
+builder.Services.AddSingleton(relationshipScoreOptions);
+builder.Services.AddSingleton<RelationshipScoreCalculator>();
 builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<PlayerLookupService>();
 builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<MatchIngestionService>();
+builder.Services.AddScoped<IPlayerAnalysisRepository, PlayerAnalysisRepository>();
+builder.Services.AddScoped<RepeatedPlayerAnalysisService>();
 builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
     {
         client.BaseAddress = riotOptions.GetRegionalBaseUri();
@@ -126,6 +136,7 @@ app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
     string puuid,
     int? count,
     MatchIngestionService ingestionService,
+    RepeatedPlayerAnalysisService analysisService,
     RiotOptions options,
     CancellationToken cancellationToken) =>
 {
@@ -145,7 +156,17 @@ app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
         var result = await ingestionService
             .SynchronizeAsync(puuid, requestedCount, options.PlatformRegion, cancellationToken)
             .ConfigureAwait(false);
-        return Results.Ok(result);
+        var analysis = await analysisService.RebuildAsync(puuid, cancellationToken).ConfigureAwait(false);
+        return Results.Ok(new
+        {
+            result.RequestedCount,
+            result.MatchIdsReturned,
+            result.AlreadyStored,
+            result.Downloaded,
+            result.Persisted,
+            result.NotFound,
+            Analysis = analysis,
+        });
     }
     catch (RiotApiException exception) when (exception.StatusCode == HttpStatusCode.TooManyRequests)
     {
@@ -165,6 +186,75 @@ app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
             statusCode: StatusCodes.Status503ServiceUnavailable,
             title: "Riot API is not configured.");
     }
+});
+
+app.MapGet("/api/v1/players/{puuid}/summary", async Task<IResult> (
+    string puuid,
+    IPlayerAnalysisRepository repository,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(puuid))
+    {
+        return Results.BadRequest();
+    }
+
+    var summary = await repository.GetSummaryAsync(puuid, cancellationToken).ConfigureAwait(false);
+    return summary is null ? Results.NotFound() : Results.Ok(summary);
+});
+
+app.MapGet("/api/v1/players/{puuid}/encounters", async Task<IResult> (
+    string puuid,
+    IPlayerAnalysisRepository repository,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(puuid))
+    {
+        return Results.BadRequest();
+    }
+
+    var encounters = await repository.GetRepeatedPlayersAsync(puuid, cancellationToken).ConfigureAwait(false);
+    return encounters is null ? Results.NotFound() : Results.Ok(encounters);
+});
+
+app.MapGet("/api/v1/players/{puuid}/matches", async Task<IResult> (
+    string puuid,
+    int? page,
+    int? pageSize,
+    int? queue,
+    IPlayerAnalysisRepository repository,
+    CancellationToken cancellationToken) =>
+{
+    const int maximumPage = 10_000;
+    var requestedPage = page ?? 1;
+    var requestedPageSize = pageSize ?? 20;
+    if (string.IsNullOrWhiteSpace(puuid)
+        || requestedPage is < 1 or > maximumPage
+        || requestedPageSize is < 1 or > 100)
+    {
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["pagination"] = [$"puuid is required, page must be between 1 and {maximumPage} and pageSize between 1 and 100."],
+        });
+    }
+
+    var matches = await repository
+        .GetMatchesAsync(puuid, requestedPage, requestedPageSize, queue, cancellationToken)
+        .ConfigureAwait(false);
+    return matches is null ? Results.NotFound() : Results.Ok(matches);
+});
+
+app.MapGet("/api/v1/matches/{matchId}", async Task<IResult> (
+    string matchId,
+    IPlayerAnalysisRepository repository,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(matchId))
+    {
+        return Results.BadRequest();
+    }
+
+    var match = await repository.GetMatchDetailAsync(matchId, cancellationToken).ConfigureAwait(false);
+    return match is null ? Results.NotFound() : Results.Ok(match);
 });
 
 app.Run();

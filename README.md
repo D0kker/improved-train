@@ -2,7 +2,7 @@
 
 Herramienta de análisis histórico y post-partida para descubrir jugadores recurrentes, relaciones y patrones dentro del historial de League of Legends.
 
-Sprint 1 y Sprint 2 están implementados: el monorepo, la persistencia, la integración ACCOUNT-V1/MATCH-V5, las pruebas y el stack Docker son ejecutables. La fuente funcional y técnica continúa siendo [`lol_network_analyzer_spec.md`](lol_network_analyzer_spec.md).
+Los Sprints 1–3 están implementados y Sprint 4 está iniciado: el monorepo, la ingesta ACCOUNT-V1/MATCH-V5, encounters, APIs de consulta, primeras vistas y bases de relaciones son ejecutables. La fuente funcional y técnica continúa siendo [`lol_network_analyzer_spec.md`](lol_network_analyzer_spec.md).
 
 ## Enfoque del producto
 
@@ -31,7 +31,8 @@ El detalle y la separación entre estado planificado e implementado están en [`
 - [x] Configuración de Codex, memoria y skill del repositorio preparada.
 - [x] Sprint 1: monorepo, servicios, health checks y primera integración de Riot.
 - [x] Sprint 2: ingesta acotada, raw JSONB, normalización y deduplicación de partidas.
-- [ ] Sprint 3: encuentros, analizador de repetidos y primeras vistas funcionales.
+- [x] Sprint 3: encounters, analizador de repetidos, APIs de lectura y primeras vistas funcionales.
+- [ ] Sprint 4: persistencia y score listos; reconstrucción, posibles premades, API y UI pendientes.
 
 Consulta [`docs/TODO.md`](docs/TODO.md) para el roadmap y [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) antes de comenzar una nueva sesión.
 

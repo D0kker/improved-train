@@ -2,7 +2,7 @@
 
 Última actualización: 2026-08-30
 
-> Estado: Sprint 1 y Sprint 2 implementados; encuentros/relaciones, grafo y jobs persistentes permanecen planificados.
+> Estado: Sprints 1–3 implementados; Sprint 4 inició con persistencia y cálculo de relaciones. Reconstrucción de relaciones, detección de premades, grafo y jobs persistentes permanecen pendientes.
 
 ## Contexto
 
@@ -57,14 +57,17 @@ docker-compose.yml
 3. La operación acotada obtiene IDs de MATCH-V5 con concurrencia configurable entre 1 y 5.
 4. Cada match se busca por ID en PostgreSQL antes de llamar a Riot.
 5. Los faltantes se guardan como JSONB y se normalizan en jugadores, partidas y participantes.
-6. Procesos derivados reconstruyen encuentros; relaciones, grupos y grafo pertenecen a sprints posteriores.
-7. El frontend consulta el progreso y resultados solo mediante `/api/v1`.
+6. `RepeatedPlayerAnalyzer` reconstruye de forma transaccional la pareja dirigida owner/other en `player_encounters`.
+7. El frontend consulta summary, encounters, historial y detalle solo mediante `/api/v1` y conserva resultados locales si falla una actualización Riot.
+8. Sprint 4 ya define `player_relationships` como pareja canónica no dirigida y un score configurable; la reconstrucción global y su API aún no están conectadas.
 
 ## Dependencias e invariantes
 
 - PostgreSQL es fuente de verdad; Redis acelera pero no reemplaza persistencia.
 - `players.puuid` y `matches.riot_match_id` son únicos.
-- Una pareja de relaciones se normaliza como `player_a_id < player_b_id`.
+- `player_encounters` usa pareja dirigida `(owner_player_id, other_player_id)` y prohíbe autorrelaciones.
+- `player_relationships` usa pareja canónica `player_a_id < player_b_id`, conserva la suma same/opposite y limita el score a 0–100.
+- Los niveles de relación son etiquetas heurísticas explicables, nunca probabilidades ni confirmaciones de duo.
 - Las llamadas a Riot usan cliente abstraído, timeout, cancelación, backoff y control de `429`.
 - Logs estructurados nunca incluyen la Riot API key, cuerpos sensibles ni identificadores innecesarios.
 - CI usa HTTP simulado y no consume Riot.
