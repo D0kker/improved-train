@@ -1,0 +1,15 @@
+# Configuración aplicada únicamente cuando el repositorio está marcado como confiable.
+#:schema https://developers.openai.com/codex/config-schema.json
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = false
+
+[features]
+memories = true
+
+[memories]
+generate_memories = true
+use_memories = true
+disable_on_external_context = true
