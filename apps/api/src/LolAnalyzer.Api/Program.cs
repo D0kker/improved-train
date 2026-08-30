@@ -34,6 +34,10 @@ var relationshipScoreOptions = builder.Configuration
     .GetSection(RelationshipScoreOptions.SectionName)
     .Get<RelationshipScoreOptions>() ?? new RelationshipScoreOptions();
 relationshipScoreOptions.Validate();
+var relationshipAnalysisOptions = builder.Configuration
+    .GetSection(PlayerRelationshipAnalysisOptions.SectionName)
+    .Get<PlayerRelationshipAnalysisOptions>() ?? new PlayerRelationshipAnalysisOptions();
+relationshipAnalysisOptions.Validate();
 
 var postgresConnectionString = BuildPostgresConnectionString(builder.Configuration)
     ?? throw new InvalidOperationException("ConnectionStrings:Postgres or POSTGRES_HOST must be configured.");
@@ -47,6 +51,8 @@ builder.Services.AddSingleton(riotOptions);
 builder.Services.AddSingleton(new MatchIngestionOptions { RequestConcurrency = riotOptions.RequestConcurrency });
 builder.Services.AddSingleton(relationshipScoreOptions);
 builder.Services.AddSingleton<RelationshipScoreCalculator>();
+builder.Services.AddSingleton(relationshipAnalysisOptions);
+builder.Services.AddSingleton<PlayerRelationshipAnalyzer>();
 builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<PlayerLookupService>();
@@ -54,6 +60,8 @@ builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<MatchIngestionService>();
 builder.Services.AddScoped<IPlayerAnalysisRepository, PlayerAnalysisRepository>();
 builder.Services.AddScoped<RepeatedPlayerAnalysisService>();
+builder.Services.AddScoped<IPlayerRelationshipRepository, PlayerRelationshipRepository>();
+builder.Services.AddScoped<PlayerRelationshipAnalysisService>();
 builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
     {
         client.BaseAddress = riotOptions.GetRegionalBaseUri();
@@ -137,6 +145,7 @@ app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
     int? count,
     MatchIngestionService ingestionService,
     RepeatedPlayerAnalysisService analysisService,
+    PlayerRelationshipAnalysisService relationshipAnalysisService,
     RiotOptions options,
     CancellationToken cancellationToken) =>
 {
@@ -157,6 +166,9 @@ app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
             .SynchronizeAsync(puuid, requestedCount, options.PlatformRegion, cancellationToken)
             .ConfigureAwait(false);
         var analysis = await analysisService.RebuildAsync(puuid, cancellationToken).ConfigureAwait(false);
+        var relationshipAnalysis = await relationshipAnalysisService
+            .RebuildAsync(cancellationToken)
+            .ConfigureAwait(false);
         return Results.Ok(new
         {
             result.RequestedCount,
@@ -166,6 +178,7 @@ app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
             result.Persisted,
             result.NotFound,
             Analysis = analysis,
+            RelationshipAnalysis = relationshipAnalysis,
         });
     }
     catch (RiotApiException exception) when (exception.StatusCode == HttpStatusCode.TooManyRequests)

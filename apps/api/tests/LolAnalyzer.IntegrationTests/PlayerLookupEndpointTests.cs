@@ -58,6 +58,9 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
         using var body = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
         Assert.Equal(1, body.RootElement.GetProperty("downloaded").GetInt32());
         Assert.Equal(1, body.RootElement.GetProperty("persisted").GetInt32());
+        Assert.Equal(
+            0,
+            body.RootElement.GetProperty("relationshipAnalysis").GetProperty("relationshipsRebuilt").GetInt32());
     }
 
     [Fact]
@@ -123,10 +126,12 @@ public sealed class LolAnalyzerApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IPlayerRepository>();
             services.RemoveAll<IMatchRepository>();
             services.RemoveAll<IPlayerAnalysisRepository>();
+            services.RemoveAll<IPlayerRelationshipRepository>();
             services.AddSingleton<IRiotApiClient>(new SimulatedRiotApiClient());
             services.AddSingleton<IPlayerRepository>(new InMemoryPlayerRepository());
             services.AddSingleton<IMatchRepository>(new InMemoryMatchRepository());
             services.AddSingleton<IPlayerAnalysisRepository>(new InMemoryPlayerAnalysisRepository());
+            services.AddSingleton<IPlayerRelationshipRepository>(new InMemoryPlayerRelationshipRepository());
         });
     }
 }
@@ -228,4 +233,17 @@ internal sealed class InMemoryPlayerAnalysisRepository : IPlayerAnalysisReposito
         Task.FromResult<MatchDetail?>(riotMatchId == "TEST_1"
             ? new MatchDetail("TEST_1", 420, DateTimeOffset.UnixEpoch, 1200, [])
             : null);
+}
+
+internal sealed class InMemoryPlayerRelationshipRepository : IPlayerRelationshipRepository
+{
+    public Task<IReadOnlyList<RelationshipMatchSnapshot>> LoadMatchesAsync(
+        int batchSize,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<RelationshipMatchSnapshot>>([]);
+
+    public Task ReplaceRelationshipsAsync(
+        IReadOnlyCollection<PlayerRelationshipAggregate> relationships,
+        int batchSize,
+        CancellationToken cancellationToken) => Task.CompletedTask;
 }

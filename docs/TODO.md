@@ -43,7 +43,7 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 
 - [x] S4-001: persistir parejas canónicas `PlayerRelationship` con constraints, FKs e índices por ambos jugadores.
 - [x] S4-002: calcular score 0–100 configurable y niveles `LOW`, `MEDIUM`, `HIGH`, `VERY_HIGH` explicables, no probabilísticos.
-- [ ] S4-003: reconstruir relaciones globales de forma transaccional e idempotente.
+- [x] S4-003: reconstruir relaciones globales de forma transaccional e idempotente, con lectura/escritura por lotes y sin llamadas a Riot.
 - [ ] S4-004: detectar únicamente `possible premade`/`likely premade` con evidencia mínima configurable.
 - [ ] S4-005: exponer `/api/v1/players/{puuid}/relationships` paginado y explicable.
 - [ ] S4-006: crear vista accesible de relaciones y posibles premades.

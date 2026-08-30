@@ -102,6 +102,7 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Issue:** #17.
 - **Prioridad:** P0.
 - **Dependencias:** S4-001 y S4-002.
+- **Criterios cumplidos:** pareja canónica única, cronología estable sobre la unión de historiales, snapshot global reemplazable, lectura/escritura por lotes y cero llamadas a Riot.
 
 ### S4-004 — Detectar posibles premades con lenguaje prudente
 
