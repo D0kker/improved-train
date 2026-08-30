@@ -28,6 +28,9 @@ TestResults/
 *.log
 *.dump
 *.sql
+*.db
+*.sqlite
+*.sqlite3
 backups/
 data/
 

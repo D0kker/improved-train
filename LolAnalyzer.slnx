@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/apps/">
+    <Project Path="apps/api/src/LolAnalyzer.Api/LolAnalyzer.Api.csproj" />
+    <Project Path="apps/api/src/LolAnalyzer.Application/LolAnalyzer.Application.csproj" />
+    <Project Path="apps/api/src/LolAnalyzer.Domain/LolAnalyzer.Domain.csproj" />
+    <Project Path="apps/api/src/LolAnalyzer.Infrastructure/LolAnalyzer.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="apps/api/tests/LolAnalyzer.IntegrationTests/LolAnalyzer.IntegrationTests.csproj" />
+    <Project Path="apps/api/tests/LolAnalyzer.UnitTests/LolAnalyzer.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/workers/">
+    <Project Path="workers/ingestion-worker/LolAnalyzer.IngestionWorker.csproj" />
+  </Folder>
+</Solution>

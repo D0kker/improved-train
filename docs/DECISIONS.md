@@ -3,10 +3,10 @@
 ## D-001 — Foundation documental antes del código
 
 - Fecha: 2026-08-29
-- Estado: aceptada
+- Estado: cumplida
 - Decisión: preservar la especificación original y crear primero la documentación, configuración de agente, memoria y roadmap; el código de Sprint 1 será una entrega posterior.
 - Razón: el documento exige no construir todo de una vez y el repositorio inicial no contenía estructura, toolchains ni decisiones implementadas que pudieran verificarse.
-- Consecuencias: el estado actual es intencionalmente no ejecutable y no se deben afirmar health checks ni servicios existentes.
+- Consecuencias: la foundation quedó preservada antes del código; Sprint 1 convirtió después el repositorio en una aplicación ejecutable.
 
 ## D-002 — Identidad, secreto y fuente de verdad
 
@@ -31,3 +31,35 @@
 - Decisión: mantener `sandbox_workspace_write.network_access = false` en la configuración versionada.
 - Razón: instalaciones, llamadas externas y cambios remotos deben ser visibles y autorizados de forma proporcional; la aplicación tampoco debe hacer llamadas accidentales a Riot durante pruebas.
 - Consecuencias: restaurar dependencias o consultar servicios desde shell puede requerir aprobación explícita del entorno.
+
+## D-005 — Adoptar .NET 10 LTS y Node 24
+
+- Fecha: 2026-08-30
+- Estado: aceptada
+- Decisión: implementar API/worker con .NET 10 y frontend con Node 24/Next.js 16, en lugar del .NET 9 provisional de la especificación.
+- Razón: evita iniciar el proyecto sobre una versión STS próxima al fin de soporte y usa el baseline vigente del frontend.
+- Consecuencias: SDK, paquetes, CI e imágenes fijan esas familias; un cambio mayor exige validación completa.
+
+## D-006 — Ingesta API acotada antes de jobs persistentes
+
+- Fecha: 2026-08-30
+- Estado: aceptada para Sprint 2
+- Decisión: sincronizar como máximo 20 partidas por petición en Sprint 2; jobs durables, progreso, exclusión concurrente y refresh se implementan en Sprint 6.
+- Razón: demuestra reutilización, deduplicación y persistencia sin introducir prematuramente una cola.
+- Consecuencias: la ruta síncrona no es el diseño final para historiales grandes.
+
+## D-007 — Superficie privada por 38080
+
+- Fecha: 2026-08-30
+- Estado: aceptada
+- Decisión: publicar únicamente Next.js por `38080`; API, worker, PostgreSQL y Redis quedan internos. PostgreSQL 18 monta el volumen en `/var/lib/postgresql`.
+- Razón: reduce superficie expuesta y conserva la disposición versionada del clúster PostgreSQL 18+.
+- Consecuencias: una exposición pública requiere HTTPS y el endurecimiento de Sprint 7.
+
+## D-008 — Flujo PO/Codex en GitHub Project
+
+- Fecha: 2026-08-30
+- Estado: aceptada por el PO
+- Decisión: usar `Por hacer`, `Listo para Codex`, `En curso`, `Bloqueado` y `Completado`; crear/refinar/priorizar/mover historias no requiere confirmación adicional. Codex puede delegar y siempre revisa la integración.
+- Razón: el PO selecciona trabajo moviéndolo a `Listo para Codex` sin fricción administrativa.
+- Consecuencias: completar exige evidencia; la autorización no cubre borrado de datos, publicación de V1 o migración de arquitectura no aprobada.

@@ -1,6 +1,6 @@
 # Roadmap
 
-Última actualización: 2026-08-29
+Última actualización: 2026-08-30
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
@@ -11,27 +11,28 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Preparar configuración de secretos de ejemplo, Git ignore, memoria y skill del agente.
 - [x] Inicializar y publicar el repositorio GitHub después de la validación local.
 
-## Sprint 1 — siguiente
+## Sprint 1 — completado localmente
 
-- [ ] Verificar versiones soportadas de .NET, Next.js, Node, PostgreSQL y Redis.
-- [ ] Crear `apps/web`, `apps/api`, `workers/ingestion-worker` e `infrastructure`.
-- [ ] Añadir Dockerfiles multi-stage y `docker-compose.yml` compatible con ARM64/AMD64.
-- [ ] Implementar health checks de web, API, worker, PostgreSQL y Redis.
-- [ ] Configurar EF Core y crear migración para `Player`, `Match` y `MatchParticipant`.
-- [ ] Crear `IRiotApiClient`, routing configurable e implementación de `GetAccountByRiotId`.
-- [ ] Añadir pruebas unitarias/integración sin llamadas reales a Riot.
-- [ ] Verificar `docker compose up -d` y documentar resultados observables.
+- [x] Verificar versiones soportadas de .NET, Next.js, Node, PostgreSQL y Redis.
+- [x] Crear `apps/web`, `apps/api`, `workers/ingestion-worker` e `infrastructure`.
+- [x] Añadir Dockerfiles multi-stage y `docker-compose.yml` compatible con ARM64/AMD64.
+- [x] Implementar health checks de web, API, worker, PostgreSQL y Redis.
+- [x] Configurar EF Core y crear migración para `Player`, `Match` y `MatchParticipant`.
+- [x] Crear `IRiotApiClient`, routing configurable e implementación de `GetAccountByRiotId`.
+- [x] Añadir pruebas unitarias/integración sin llamadas reales a Riot.
+- [x] Verificar `docker compose up -d` por `38080` y documentar resultados observables.
 
-## Sprint 2
+## Sprint 2 — completado localmente
 
-- [ ] Implementar `GetMatchIds` y `GetMatch`.
-- [ ] Persistir raw JSON y datos normalizados.
-- [ ] Deduplicar partidas y participantes.
-- [ ] Añadir pruebas de cliente y repositorios.
+- [x] Implementar `GetMatchIds` y `GetMatch`.
+- [x] Persistir raw JSONB y datos normalizados.
+- [x] Deduplicar partidas y participantes.
+- [x] Añadir pruebas de cliente, servicio y endpoint con HTTP simulado.
 
-## Sprint 3
+## Sprint 3 — iniciado con dos tareas
 
-- [ ] Implementar `RepeatedPlayerAnalyzer` y `PlayerEncounters`.
+- [ ] **En curso:** persistir `PlayerEncounter` con constraints e índices.
+- [ ] **En curso:** implementar `RepeatedPlayerAnalyzer` idempotente.
 - [ ] Exponer summary, repeated players, matches y match detail.
 - [ ] Crear las primeras vistas funcionales del frontend.
 
@@ -43,6 +44,20 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 ## Sprint 5
 
 - [ ] Implementar grafo social, detección de grupos y familiaridad de partida.
+
+## Sprint 6 — planificado
+
+- [ ] Jobs persistentes, exclusión de duplicados y sincronización incremental.
+- [ ] Rate limiting, caché, refresh, observabilidad y pruebas de resiliencia.
+
+## Sprint 7 — planificado
+
+- [ ] Cumplimiento Riot, privacidad/legal, seguridad, HTTPS y backups.
+- [ ] Indexación, incident response y auditoría go/no-go de V1.
+
+## Arquitectura
+
+- [ ] Ejecutar `ARC-001`, benchmark reproducible .NET frente a Go en ARM64.
 
 ## Antes de una V1 pública
 

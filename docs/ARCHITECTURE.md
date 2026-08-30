@@ -1,18 +1,18 @@
 # Arquitectura
 
-Última actualización: 2026-08-29
+Última actualización: 2026-08-30
 
-> Estado: arquitectura planificada. Todavía no hay componentes implementados.
+> Estado: Sprint 1 y Sprint 2 implementados; encuentros/relaciones, grafo y jobs persistentes permanecen planificados.
 
 ## Contexto
 
 LoL Network Analyzer es una aplicación de análisis histórico, no una herramienta para revelar información de partidas activas. Recibe un Riot ID visible, resuelve su PUUID y procesa partidas finalizadas para construir encuentros y relaciones reutilizables.
 
-## Vista de contenedores prevista
+## Vista de contenedores implementada
 
 ```mermaid
 flowchart LR
-  Browser[Browser] --> Web[Next.js web]
+  Browser[Browser] -->|38080| Web[Next.js web]
   Web --> API[.NET API /api/v1]
   API --> Jobs[Background jobs]
   Jobs --> Worker[Ingestion worker]
@@ -24,9 +24,9 @@ flowchart LR
   Worker --> Riot
 ```
 
-La ubicación final de Hangfire y la frontera API/worker se decidirán al implementar Sprint 1. El diagrama expresa responsabilidades, no una topología ya desplegada.
+Solo Next.js se publica al host. API, worker, PostgreSQL y Redis permanecen en la red privada. Sprint 2 usa sincronización API acotada a 20 partidas; los jobs persistentes y la exclusión concurrente global se resuelven en Sprint 6.
 
-## Monorepo previsto
+## Monorepo implementado
 
 ```text
 apps/
@@ -54,7 +54,7 @@ docker-compose.yml
 
 1. El usuario introduce `GameName#TagLine` y una región de plataforma.
 2. API resuelve el PUUID mediante ACCOUNT-V1 usando el routing regional correcto.
-3. Un job obtiene IDs de MATCH-V5 con concurrencia acotada.
+3. La operación acotada obtiene IDs de MATCH-V5 con concurrencia configurable entre 1 y 5.
 4. Cada match se busca por ID en PostgreSQL antes de llamar a Riot.
 5. Los faltantes se guardan como JSONB y se normalizan en jugadores, partidas y participantes.
 6. Procesos derivados reconstruyen encuentros; relaciones, grupos y grafo pertenecen a sprints posteriores.
@@ -72,4 +72,4 @@ docker-compose.yml
 
 ## Despliegue previsto
 
-El primer runtime privado será Docker Compose sobre Raspberry Pi, con volúmenes persistentes para PostgreSQL y health checks de web, API, worker, PostgreSQL y Redis. Cloudflare Tunnel/Nginx, publicación web y AWS se incorporarán solo cuando el alcance correspondiente sea aprobado y validado.
+El runtime privado actual es Docker Compose, con volúmenes persistentes y health checks de web, API, worker, PostgreSQL y Redis. PostgreSQL 18 monta su volumen en `/var/lib/postgresql`; las aplicaciones corren no-root. Cloudflare Tunnel/Nginx, publicación web y AWS se incorporarán solo cuando el alcance correspondiente sea aprobado y validado.

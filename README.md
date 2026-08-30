@@ -2,7 +2,7 @@
 
 Herramienta de análisis histórico y post-partida para descubrir jugadores recurrentes, relaciones y patrones dentro del historial de League of Legends.
 
-El repositorio está en fase de **foundation**. La fuente funcional y técnica es [`lol_network_analyzer_spec.md`](lol_network_analyzer_spec.md); todavía no se ha implementado el monorepo ni existen servicios ejecutables.
+Sprint 1 y Sprint 2 están implementados: el monorepo, la persistencia, la integración ACCOUNT-V1/MATCH-V5, las pruebas y el stack Docker son ejecutables. La fuente funcional y técnica continúa siendo [`lol_network_analyzer_spec.md`](lol_network_analyzer_spec.md).
 
 ## Enfoque del producto
 
@@ -13,7 +13,7 @@ El repositorio está en fase de **foundation**. La fuente funcional y técnica e
 - Mantener la Riot API key únicamente en backend o worker.
 - Ejecutar el MVP de forma local en Raspberry Pi mediante Docker Compose.
 
-## Arquitectura prevista
+## Arquitectura implementada
 
 ```text
 Browser -> Next.js -> .NET API -> PostgreSQL
@@ -29,13 +29,25 @@ El detalle y la separación entre estado planificado e implementado están en [`
 - [x] Especificación inicial analizada y preservada.
 - [x] Documentación de arquitectura, decisiones y continuidad creada.
 - [x] Configuración de Codex, memoria y skill del repositorio preparada.
-- [ ] Sprint 1: monorepo, servicios, health checks y primera integración de Riot.
+- [x] Sprint 1: monorepo, servicios, health checks y primera integración de Riot.
+- [x] Sprint 2: ingesta acotada, raw JSONB, normalización y deduplicación de partidas.
+- [ ] Sprint 3: encuentros, analizador de repetidos y primeras vistas funcionales.
 
 Consulta [`docs/TODO.md`](docs/TODO.md) para el roadmap y [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) antes de comenzar una nueva sesión.
 
+## Ejecutar y validar
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+docker compose ps
+```
+
+La web es el único servicio publicado al host: `http://localhost:38080`. En la máquina actual también responde en `http://192.168.100.55:38080`. La portada y `/api/health` funcionan sin una key; las operaciones Riot devuelven un `503` controlado mientras `RIOT_API_KEY` no esté configurada.
+
 ## Secretos
 
-Copia `.env.example` como `.env` solamente cuando existan servicios que consuman esas variables. Nunca publiques `.env`, una Riot API key, credenciales de PostgreSQL ni tokens.
+Copia `.env.example` como `.env`, define credenciales locales y nunca publiques `.env`, una Riot API key, credenciales de PostgreSQL ni tokens.
 
 ## Licencia y cumplimiento
 

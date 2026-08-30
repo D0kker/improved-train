@@ -22,7 +22,7 @@
 - Implementa únicamente el sprint o alcance solicitado; no conviertas el documento completo en una sola entrega.
 - Mantén una Clean Architecture ligera. No agregues servicios cloud, Neo4j, autenticación compleja, pagos o publicidad durante el MVP salvo petición explícita.
 - Conserva los cambios existentes y evita acciones destructivas sin autorización explícita.
-- Solo delega cuando existan subtareas realmente independientes y el usuario lo autorice. El agente principal revisa la integración y ejecuta la validación final.
+- Codex decide autónomamente cuándo delegar a uno o más agentes si existen subtareas realmente independientes. El agente principal elige el modelo apropiado, revisa siempre el trabajo delegado, integra los resultados y ejecuta la validación final.
 - Antes de agregar dependencias de producción, explica brevemente por qué son necesarias.
 - Mantén compatibilidad `linux/arm64` y `linux/amd64` para imágenes y herramientas del proyecto.
 
@@ -32,6 +32,9 @@
 - Registra decisiones duraderas en `docs/DECISIONS.md` con fecha, estado, razón y consecuencias.
 - Mantén `docs/TODO.md` alineado con el alcance real; una tarea pasa a completada solo con evidencia.
 - No presentes ideas tentativas como decisiones aceptadas.
+- Cuando el PO pida trabajar desde el tablero, consulta las historias en `Listo para Codex`, revisa alcance y dependencias, muévelas a `En curso` al iniciar y a `Completado` únicamente después de la validación. Mover una tarjeta no sustituye la instrucción explícita del PO.
+- Crear, refinar, priorizar y mover historias dentro del tablero vinculado está autorizado de forma permanente y no requiere pedir confirmación adicional. Esto no autoriza por sí solo publicar código, desplegar ni eliminar recursos externos.
+- Al completar un sprint con evidencia, revisa el diff, el índice, los secretos y el remoto; crea un commit descriptivo y publica la rama actual por el remoto SSH verificado. No uses force-push ni publiques un sprint incompleto.
 
 ## Validación
 
