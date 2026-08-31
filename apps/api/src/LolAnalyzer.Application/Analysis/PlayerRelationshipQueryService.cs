@@ -9,11 +9,12 @@ public sealed class PlayerRelationshipQueryService(
         int page,
         int pageSize,
         RelationshipConfidence minimumConfidence,
+        int minimumScore,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(puuid);
         var result = await repository
-            .GetRelationshipsAsync(puuid, page, pageSize, minimumConfidence, cancellationToken)
+            .GetRelationshipsAsync(puuid, page, pageSize, minimumConfidence, minimumScore, cancellationToken)
             .ConfigureAwait(false);
         if (result is null)
         {
@@ -21,6 +22,9 @@ public sealed class PlayerRelationshipQueryService(
         }
 
         return new PagedPlayerRelationships(
+            result.PlayerPuuid,
+            result.PlayerGameName,
+            result.PlayerTagLine,
             result.Page,
             result.PageSize,
             result.TotalCount,

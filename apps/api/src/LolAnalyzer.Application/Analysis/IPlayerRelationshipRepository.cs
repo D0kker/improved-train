@@ -16,5 +16,6 @@ public interface IPlayerRelationshipRepository
         int page,
         int pageSize,
         RelationshipConfidence minimumConfidence,
+        int minimumScore,
         CancellationToken cancellationToken);
 }

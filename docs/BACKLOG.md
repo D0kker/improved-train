@@ -153,6 +153,8 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Issue:** #45.
 - **Prioridad:** P1.
 - **Contrato ajustado:** `GET /api/v1/players/{puuid}/network`; red ego de profundidad uno por defecto, máximo configurable de nodos/edges, filtros, truncation metadata y orden estable.
+- **Estado:** completada el 2026-08-30.
+- **Evidencia:** contrato con centro/nodos/aristas, filtros por confianza y score, límites configurables, metadata de totales/truncamiento y 404/vacío/límites cubiertos por integración; reutiliza la consulta estable de relaciones y no llama a Riot.
 
 ### S5-005 — Crear visualización accesible del grafo
 
@@ -174,6 +176,22 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Objetivo:** al navegar desde una conexión recurrente, mostrar primero el resumen local disponible y dejar la sincronización con Riot como acción explícita.
 - **Criterios propuestos:** conservar PUUID como identidad interna, indicar frescura/ausencia de datos, evitar consumo automático de API al navegar, tolerar Riot IDs mutables y cubrir estados cacheado, vacío, error, cancelación y rutas codificadas.
 - **Fuera de alcance:** autenticación, perfiles públicos, compartir, publicidad o cambios de identidad Riot.
+
+## Sprint 6 — operación y rendimiento planificados
+
+- Mantener jobs persistentes, exclusión concurrente, sincronización incremental, caché, rate limiting y observabilidad como núcleo del sprint.
+- Incorporar de GM-03 únicamente mediciones reproducibles sobre consultas reales e índices PostgreSQL justificados con planes/latencias antes y después; no usar objetivos arbitrarios como `<50 ms`.
+- Probar reintentos, `429`, timeout y degradación con HTTP simulado; CI nunca consume Riot.
+- Los análisis de sinergia de línea o `performance delta` no reemplazan este alcance y requieren una historia futura separada por su riesgo de convertirse en una métrica de habilidad no permitida.
+
+## Sprint 7 — cumplimiento, privacidad y seguridad planificados
+
+- **S7-001/#32:** verificar de nuevo fuentes oficiales y requisitos de registro/acceso Production, monetización transformativa, branding y disclaimer antes de publicar.
+- **S7-002/#31:** inventariar datos, propósito, retención, exportación y eliminación; definir cómo atender identificadores enviados por Riot por sus canales oficiales sin inventar un SLA no publicado.
+- **S7-003/#33:** Privacy Policy, Terms y disclaimer versionados, con revisión PO/legal.
+- **S7-004/#36:** threat model; secretos solo en runtime; rate limiting propio; validación y errores seguros; CORS/CSP/headers; contenedores no-root; DB/Redis privados y escaneo de dependencias/imágenes.
+- **S7-005–009/#34–#39:** HTTPS, backups restaurables, indexación prudente, incident response y auditoría go/no-go con evidencia.
+- Autenticación/RSO solo se incorporará si una función pública concreta la necesita y tras confirmar acceso Production; no se agrega por defecto al MVP privado.
 
 ## Sprint 8 — creado y refinado
 
@@ -219,9 +237,17 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 
 - **Issue:** #54.
 - **Prioridad:** P1.
-- **Estado:** `Por hacer` en el tablero.
+- **Estado:** revisada por Codex el 2026-08-30.
 - **Prompt:** investigar fuentes actuales de Riot, restricciones de datos y API, privacidad, publicación, monetización y competidores; separar hechos confirmados de recomendaciones e inferencias.
-- **Entregable:** Gemini adjunta un Markdown con fuentes, fecha, acciones por etapa y preguntas para revisión legal/Riot; después mueve la historia a `Listo para Codex`.
+- **Resultado útil:** se conservaron registro/acceso Production, secreto de runtime, HTTPS, producto transformativo, disclaimer, privacidad/retención/eliminación y revisión de monetización para Sprint 7.
+- **Correcciones:** no se adoptaron como hechos el remapeo de PUUID entre keys, un SLA fijo de 24 horas para borrar ni un umbral de confianza de 95 %, porque no quedaron respaldados por la fuente oficial revisada.
+
+### GM-03 — Refinamiento de Sprints 6, 7 y futuro
+
+- **Issue:** #55.
+- **Estado:** revisada por Codex el 2026-08-30.
+- **Resultado útil:** medición de índices/caché/resiliencia para Sprint 6; threat model, rate limiting propio, secretos, headers, contenedores y escaneo para Sprint 7; Data Dragon como opción visual futura.
+- **Ajustes:** seguridad y privacidad permanecen en Sprint 7; no se reemplazan jobs/operación de Sprint 6 por métricas de juego; monetización queda condicionada al go/no-go público y no se crea un Sprint 9 artificial.
 
 ## Por hacer
 

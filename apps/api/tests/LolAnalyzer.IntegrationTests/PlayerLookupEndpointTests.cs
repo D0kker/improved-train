@@ -152,6 +152,69 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
         Assert.Equal(HttpStatusCode.NotFound, notFound.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, invalidPageSize.StatusCode);
     }
+
+    [Fact]
+    public async Task NetworkExposesBoundedDepthOneGraphAndTruncationMetadata()
+    {
+        using var client = _factory.CreateClient();
+
+        var completeResponse = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/network?maxNodes=2&maxEdges=1&minimumConfidence=HIGH",
+            TestContext.Current.CancellationToken);
+        var truncatedResponse = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/network?maxNodes=1&maxEdges=1&minimumConfidence=HIGH",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, completeResponse.StatusCode);
+        using var completeBody = JsonDocument.Parse(await completeResponse.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        var edge = completeBody.RootElement.GetProperty("edges")[0];
+        Assert.Equal("test-owner-puuid", edge.GetProperty("sourcePuuid").GetString());
+        Assert.Equal("other-puuid", edge.GetProperty("targetPuuid").GetString());
+        Assert.Equal("likely premade", edge.GetProperty("premadeLabel").GetString());
+
+        Assert.Equal(HttpStatusCode.OK, truncatedResponse.StatusCode);
+        using var body = JsonDocument.Parse(await truncatedResponse.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("test-owner-puuid", body.RootElement.GetProperty("center").GetProperty("puuid").GetString());
+        Assert.Equal(1, body.RootElement.GetProperty("nodes").GetArrayLength());
+        Assert.Equal(0, body.RootElement.GetProperty("edges").GetArrayLength());
+        var metadata = body.RootElement.GetProperty("metadata");
+        Assert.Equal(1, metadata.GetProperty("depth").GetInt32());
+        Assert.True(metadata.GetProperty("truncated").GetBoolean());
+        Assert.Equal(2, metadata.GetProperty("totalAvailableNodes").GetInt32());
+        Assert.Equal(1, metadata.GetProperty("totalAvailableEdges").GetInt32());
+    }
+
+    [Fact]
+    public async Task NetworkSupportsStrengthFiltersAndEmptyGraphs()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/network?minimumScore=61",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(1, body.RootElement.GetProperty("nodes").GetArrayLength());
+        Assert.Equal(0, body.RootElement.GetProperty("edges").GetArrayLength());
+        Assert.False(body.RootElement.GetProperty("metadata").GetProperty("truncated").GetBoolean());
+    }
+
+    [Fact]
+    public async Task NetworkRejectsInvalidLimitsAndReturnsNotFound()
+    {
+        using var client = _factory.CreateClient();
+
+        var invalid = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/network?maxNodes=51",
+            TestContext.Current.CancellationToken);
+        var notFound = await client.GetAsync(
+            "/api/v1/players/unknown/network",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, notFound.StatusCode);
+    }
 }
 
 public sealed class LolAnalyzerApiFactory : WebApplicationFactory<Program>
@@ -302,13 +365,17 @@ internal sealed class InMemoryPlayerRelationshipRepository : IPlayerRelationship
         int page,
         int pageSize,
         RelationshipConfidence minimumConfidence,
+        int minimumScore,
         CancellationToken cancellationToken) =>
         Task.FromResult<PagedPlayerRelationshipQuery?>(puuid == "test-owner-puuid"
             ? new PagedPlayerRelationshipQuery(
+                "test-owner-puuid",
+                "Ana",
+                "LAN",
                 page,
                 pageSize,
-                minimumConfidence > RelationshipConfidence.High ? 0 : 1,
-                minimumConfidence > RelationshipConfidence.High ? [] : [new PlayerRelationshipQueryItem(
+                minimumConfidence > RelationshipConfidence.High || minimumScore > 60 ? 0 : 1,
+                minimumConfidence > RelationshipConfidence.High || minimumScore > 60 ? [] : [new PlayerRelationshipQueryItem(
                     "other-puuid",
                     "Bea",
                     "LAN",

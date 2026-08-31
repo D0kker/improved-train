@@ -106,15 +106,16 @@ public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext)
         int page,
         int pageSize,
         RelationshipConfidence minimumConfidence,
+        int minimumScore,
         CancellationToken cancellationToken)
     {
-        var playerId = await dbContext.Players
+        var player = await dbContext.Players
             .AsNoTracking()
             .Where(player => player.Puuid == puuid)
-            .Select(player => (Guid?)player.Id)
+            .Select(player => new { player.Id, player.Puuid, player.GameName, player.TagLine })
             .SingleOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
-        if (playerId is null)
+        if (player is null)
         {
             return null;
         }
@@ -126,21 +127,22 @@ public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext)
         var query = dbContext.PlayerRelationships
             .AsNoTracking()
             .Where(relationship =>
-                (relationship.PlayerAId == playerId || relationship.PlayerBId == playerId)
-                && confidenceLabels.Contains(relationship.RelationshipConfidence));
+                (relationship.PlayerAId == player.Id || relationship.PlayerBId == player.Id)
+                && confidenceLabels.Contains(relationship.RelationshipConfidence)
+                && relationship.RelationshipScore >= minimumScore);
         var totalCount = await query.CountAsync(cancellationToken).ConfigureAwait(false);
         var rows = await query
             .OrderByDescending(relationship => relationship.RelationshipScore)
             .ThenByDescending(relationship => relationship.MatchesTogether)
-            .ThenBy(relationship => relationship.PlayerAId == playerId
+            .ThenBy(relationship => relationship.PlayerAId == player.Id
                 ? relationship.PlayerB.Puuid
                 : relationship.PlayerA.Puuid)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(relationship => new RelationshipQueryRow(
-                relationship.PlayerAId == playerId ? relationship.PlayerB.Puuid : relationship.PlayerA.Puuid,
-                relationship.PlayerAId == playerId ? relationship.PlayerB.GameName : relationship.PlayerA.GameName,
-                relationship.PlayerAId == playerId ? relationship.PlayerB.TagLine : relationship.PlayerA.TagLine,
+                relationship.PlayerAId == player.Id ? relationship.PlayerB.Puuid : relationship.PlayerA.Puuid,
+                relationship.PlayerAId == player.Id ? relationship.PlayerB.GameName : relationship.PlayerA.GameName,
+                relationship.PlayerAId == player.Id ? relationship.PlayerB.TagLine : relationship.PlayerA.TagLine,
                 relationship.MatchesTogether,
                 relationship.SameTeamMatches,
                 relationship.OppositeTeamMatches,
@@ -154,6 +156,9 @@ public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext)
             .ConfigureAwait(false);
 
         return new PagedPlayerRelationshipQuery(
+            player.Puuid,
+            player.GameName,
+            player.TagLine,
             page,
             pageSize,
             totalCount,

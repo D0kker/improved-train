@@ -124,6 +124,7 @@ public sealed class PlayerRelationshipAnalyzerTests
             int page,
             int pageSize,
             RelationshipConfidence minimumConfidence,
+            int minimumScore,
             CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

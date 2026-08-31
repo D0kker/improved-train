@@ -119,3 +119,19 @@
 - Decisión: un posible grupo recurrente de 3–5 jugadores exige que todas sus parejas tengan al menos clasificación `possible premade`; solo se emiten cliques máximos canónicos y se permiten cliques máximos solapados.
 - Razón: una cadena de relaciones no prueba cohesión del grupo y emitir todos los subgrupos produciría resultados redundantes y trabajo combinatorio innecesario.
 - Consecuencias: IDs ordenados, etiqueta no concluyente, clasificación determinada por la pareja más débil y límites configurables de candidatos y combinaciones con fallo explícito al excederlos.
+
+## D-016 — Red ego de profundidad uno y límites aplicados
+
+- Fecha: 2026-08-30
+- Estado: aceptada para Sprint 5
+- Decisión: el primer contrato de red devuelve únicamente el owner y sus relaciones directas, reutiliza el orden estable de relaciones y aplica máximos configurables de nodos y aristas; la respuesta informa totales disponibles, límites y truncamiento.
+- Razón: una red acotada es explicable, permite una tabla equivalente y evita consultas o renderizados sin límite durante el MVP.
+- Consecuencias: `minimumConfidence` y `minimumScore` filtran antes de calcular totales; PUUID sigue siendo la identidad pública técnica disponible en este contrato, sin exponer IDs de base ni `raw_data`; ampliar profundidad requiere una historia explícita.
+
+## D-017 — Adopción selectiva de GM-02 y GM-03
+
+- Fecha: 2026-08-30
+- Estado: aceptada para planificación
+- Decisión: incorporar medición de consultas, caché y resiliencia en Sprint 6; concentrar cumplimiento, privacidad, seguridad, HTTPS, backups e incident response en Sprint 7; evaluar monetización solo después del go/no-go público.
+- Razón: las investigaciones contienen recomendaciones útiles junto con cifras y afirmaciones no respaldadas o incompatibles con el orden del producto.
+- Consecuencias: no se adopta un SLA de eliminación de 24 horas, remapeo de PUUID por cambio de key, metas arbitrarias de latencia/cobertura ni autenticación por defecto; cualquier decisión temporal sobre Riot se verifica otra vez en fuentes oficiales al implementarse.

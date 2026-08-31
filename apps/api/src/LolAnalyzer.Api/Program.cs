@@ -46,6 +46,10 @@ var premadeGroupDetectionOptions = builder.Configuration
     .GetSection(PremadeGroupDetectionOptions.SectionName)
     .Get<PremadeGroupDetectionOptions>() ?? new PremadeGroupDetectionOptions();
 premadeGroupDetectionOptions.Validate();
+var playerNetworkOptions = builder.Configuration
+    .GetSection(PlayerNetworkOptions.SectionName)
+    .Get<PlayerNetworkOptions>() ?? new PlayerNetworkOptions();
+playerNetworkOptions.Validate();
 
 var postgresConnectionString = BuildPostgresConnectionString(builder.Configuration)
     ?? throw new InvalidOperationException("ConnectionStrings:Postgres or POSTGRES_HOST must be configured.");
@@ -65,6 +69,7 @@ builder.Services.AddSingleton(premadeDetectionOptions);
 builder.Services.AddSingleton<PossiblePremadeDetector>();
 builder.Services.AddSingleton(premadeGroupDetectionOptions);
 builder.Services.AddSingleton<PossiblePremadeGroupDetector>();
+builder.Services.AddSingleton(playerNetworkOptions);
 builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<PlayerLookupService>();
@@ -76,6 +81,7 @@ builder.Services.AddScoped<MatchFamiliarityService>();
 builder.Services.AddScoped<IPlayerRelationshipRepository, PlayerRelationshipRepository>();
 builder.Services.AddScoped<PlayerRelationshipAnalysisService>();
 builder.Services.AddScoped<PlayerRelationshipQueryService>();
+builder.Services.AddScoped<PlayerNetworkQueryService>();
 builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
     {
         client.BaseAddress = riotOptions.GetRegionalBaseUri();
@@ -289,6 +295,7 @@ app.MapGet("/api/v1/players/{puuid}/relationships", async Task<IResult> (
     int? page,
     int? pageSize,
     string? minimumConfidence,
+    int? minimumScore,
     PlayerRelationshipQueryService queryService,
     CancellationToken cancellationToken) =>
 {
@@ -296,6 +303,7 @@ app.MapGet("/api/v1/players/{puuid}/relationships", async Task<IResult> (
     var requestedPage = page ?? 1;
     var requestedPageSize = pageSize ?? 20;
     var requestedConfidence = RelationshipConfidence.Low;
+    var requestedMinimumScore = minimumScore ?? 0;
     if (!string.IsNullOrWhiteSpace(minimumConfidence)
         && !RelationshipConfidenceExtensions.TryParseLabel(minimumConfidence, out requestedConfidence))
     {
@@ -307,18 +315,64 @@ app.MapGet("/api/v1/players/{puuid}/relationships", async Task<IResult> (
 
     if (string.IsNullOrWhiteSpace(puuid)
         || requestedPage is < 1 or > maximumPage
-        || requestedPageSize is < 1 or > 100)
+        || requestedPageSize is < 1 or > 100
+        || requestedMinimumScore is < 0 or > 100)
     {
         return Results.ValidationProblem(new Dictionary<string, string[]>
         {
-            ["pagination"] = [$"puuid is required, page must be between 1 and {maximumPage} and pageSize between 1 and 100."],
+            ["query"] = [$"puuid is required, page must be between 1 and {maximumPage}, pageSize between 1 and 100 and minimumScore between 0 and 100."],
         });
     }
 
     var relationships = await queryService
-        .GetAsync(puuid, requestedPage, requestedPageSize, requestedConfidence, cancellationToken)
+        .GetAsync(puuid, requestedPage, requestedPageSize, requestedConfidence, requestedMinimumScore, cancellationToken)
         .ConfigureAwait(false);
     return relationships is null ? Results.NotFound() : Results.Ok(relationships);
+});
+
+app.MapGet("/api/v1/players/{puuid}/network", async Task<IResult> (
+    string puuid,
+    int? maxNodes,
+    int? maxEdges,
+    string? minimumConfidence,
+    int? minimumScore,
+    PlayerNetworkOptions options,
+    PlayerNetworkQueryService queryService,
+    CancellationToken cancellationToken) =>
+{
+    var requestedMaxNodes = maxNodes ?? options.MaximumNodes;
+    var requestedMaxEdges = maxEdges ?? options.MaximumEdges;
+    var requestedMinimumScore = minimumScore ?? 0;
+    var requestedConfidence = RelationshipConfidence.Low;
+    if (!string.IsNullOrWhiteSpace(minimumConfidence)
+        && !RelationshipConfidenceExtensions.TryParseLabel(minimumConfidence, out requestedConfidence))
+    {
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["minimumConfidence"] = ["Use LOW, MEDIUM, HIGH or VERY_HIGH."],
+        });
+    }
+
+    if (string.IsNullOrWhiteSpace(puuid)
+        || !queryService.LimitsAreValid(requestedMaxNodes, requestedMaxEdges)
+        || requestedMinimumScore is < 0 or > 100)
+    {
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["query"] = [$"puuid is required, maxNodes must be between 1 and {options.MaximumNodes}, maxEdges between 1 and {options.MaximumEdges} and minimumScore between 0 and 100."],
+        });
+    }
+
+    var network = await queryService
+        .GetAsync(
+            puuid,
+            requestedMaxNodes,
+            requestedMaxEdges,
+            requestedConfidence,
+            requestedMinimumScore,
+            cancellationToken)
+        .ConfigureAwait(false);
+    return network is null ? Results.NotFound() : Results.Ok(network);
 });
 
 app.Run();

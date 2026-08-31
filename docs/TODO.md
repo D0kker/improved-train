@@ -53,7 +53,7 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [ ] S5-001: cerrar la historia padre de grafo, grupos y familiaridad.
 - [x] S5-002: calcular familiaridad con orden `(occurred_at, riot_match_id)`, solo historial anterior y denominador auditable.
 - [x] S5-003: detectar grupos canónicos máximos de 3–5 sin subgrupos redundantes ni explosión combinatoria.
-- [ ] S5-004: exponer red ego `/api/v1/players/{puuid}/network` con límites, truncation metadata y orden estable.
+- [x] S5-004: exponer red ego `/api/v1/players/{puuid}/network` con límites, truncation metadata y orden estable.
 - [ ] S5-005: crear grafo progresivo con alternativa tabular funcional y accesible.
 - [ ] S5-006: mostrar familiaridad y grupos usando evidencia anterior y participantes visibles.
 - [ ] S5-007: perfil relacionado con resumen local; navegación sin sincronización automática y con estado de frescura.
@@ -61,11 +61,14 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 ## Sprint 6 — planificado
 
 - [ ] Jobs persistentes, exclusión de duplicados y sincronización incremental.
-- [ ] Rate limiting, caché, refresh, observabilidad y pruebas de resiliencia.
+- [ ] Rate limiting, caché, refresh, observabilidad, índices medidos sobre consultas reales y pruebas de resiliencia.
 
 ## Sprint 7 — planificado
 
-- [ ] Cumplimiento Riot, privacidad/legal, seguridad, HTTPS y backups.
+- [ ] Cumplimiento Riot y revisión actual de registro, acceso Production, monetización transformativa y canales de solicitudes de eliminación.
+- [ ] Inventario, retención, eliminación y exportación de datos; Privacy Policy, Terms y disclaimer antes de publicación.
+- [ ] Threat model, secretos de runtime, rate limiting propio, validación, errores seguros, headers/CORS/CSP, contenedores no-root y escaneo de dependencias.
+- [ ] HTTPS, superficie privada de PostgreSQL/Redis, backups probados y runbook de incidentes.
 - [ ] Indexación, incident response y auditoría go/no-go de V1.
 
 ## Sprint 8 — creado y refinado
@@ -77,9 +80,10 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [ ] S8-005: crear UI accesible de historial, tendencias e insights.
 - [ ] S8-006: generar tarjeta compartible bajo demanda, sin publicación automática ni IDs internos.
 
-## Investigación pendiente
+## Investigación revisada
 
-- [ ] GM-02: revisar requisitos Riot y estrategia de servicio público con investigación externa adjunta.
+- [x] GM-02: investigación contrastada; requisitos confirmables se trasladaron a Sprint 7 y se descartaron plazos/afirmaciones sin fuente oficial suficiente.
+- [x] GM-03: refinamiento aplicado selectivamente; rendimiento/operación permanece en Sprint 6, seguridad/privacidad en Sprint 7 y monetización después del go/no-go público.
 
 ## Arquitectura
 
