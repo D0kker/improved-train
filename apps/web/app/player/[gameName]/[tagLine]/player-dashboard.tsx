@@ -12,6 +12,7 @@ import {
   type RelationshipsResponse,
   type PlayerSummary,
   playerLookupPath,
+  playerProfilePath,
   playerRelationshipsPath,
   playerSyncPath,
 } from "@/src/api";
@@ -242,8 +243,24 @@ function Relationships({
               {relationships.items.map((relationship) => (
                 <tr key={relationship.otherPlayerPuuid}>
                   <td>
-                    <strong>{relationship.gameName || "Jugador"}</strong>
-                    <span>#{relationship.tagLine || "—"}</span>
+                    {relationship.gameName && relationship.tagLine ? (
+                      <Link
+                        className="player-link"
+                        href={playerProfilePath(
+                          relationship.gameName,
+                          relationship.tagLine,
+                        )}
+                        aria-label={`Ver resumen de ${relationship.gameName}#${relationship.tagLine}`}
+                      >
+                        <strong>{relationship.gameName}</strong>
+                        <span>#{relationship.tagLine}</span>
+                      </Link>
+                    ) : (
+                      <>
+                        <strong>{relationship.gameName || "Jugador"}</strong>
+                        <span>#{relationship.tagLine || "—"}</span>
+                      </>
+                    )}
                   </td>
                   <td>
                     <strong>{relationship.relationshipScore}/100</strong>

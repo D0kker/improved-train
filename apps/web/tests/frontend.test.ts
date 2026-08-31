@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   apiPath,
   playerLookupPath,
+  playerProfilePath,
   playerRelationshipsPath,
   playerSyncPath,
 } from "../src/api.ts";
@@ -13,6 +14,10 @@ test("API paths remain same-origin and encode user-controlled segments", () => {
   assert.equal(
     playerLookupPath("Ana Uno", "LA/N"),
     "/api/v1/players/by-riot-id/Ana%20Uno/LA%2FN",
+  );
+  assert.equal(
+    playerProfilePath("Ana Uno", "LA/N"),
+    "/player/Ana%20Uno/LA%2FN",
   );
   assert.equal(
     apiPath("matches", "LA1_123/456"),

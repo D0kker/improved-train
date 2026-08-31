@@ -120,6 +120,10 @@ export function playerLookupPath(gameName: string, tagLine: string): string {
   return apiPath("players", "by-riot-id", gameName, tagLine);
 }
 
+export function playerProfilePath(gameName: string, tagLine: string): string {
+  return `/player/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
+}
+
 export function playerSyncPath(puuid: string, count = 20): string {
   if (!Number.isInteger(count) || count < 1 || count > 20) {
     throw new RangeError("El número de partidas debe estar entre 1 y 20.");

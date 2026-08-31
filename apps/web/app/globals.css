@@ -270,6 +270,19 @@ p {
   font-weight: 700;
 }
 
+.player-link {
+  display: inline-flex;
+  flex-direction: column;
+  color: inherit;
+}
+
+.player-link:hover strong,
+.player-link:focus-visible strong {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
 .back-link {
   border: 0;
   background: transparent;
