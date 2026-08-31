@@ -1,6 +1,6 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-08-30
+Última actualización: 2026-08-31
 
 ## Propósito
 
@@ -21,6 +21,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - S5-003 detecta cliques máximos de 3–5 jugadores a partir de parejas clasificadas, conserva solapamientos legítimos y aplica límites configurables antes de la integración en contratos/UI.
 - S5-004 expone una red ego de profundidad uno mediante `/api/v1/players/{puuid}/network`, con orden estable heredado de relaciones, filtros por confianza/score, límites configurables y metadata de truncamiento.
 - S5-006 está en curso: el detalle de partida ya identifica posibles premades por equipo, muestra dúos no contenidos y cliques máximos de 3–5, y los distingue mediante código textual/tono y nivel prudente de evidencia; la familiaridad contextual aún está pendiente.
+- Los Riot IDs visibles del detalle y de la leyenda de premades enlazan al perfil mediante el componente compartido; datos incompletos permanecen como texto y no provocan sincronización automática.
 - El worker base está separado y saludable; los jobs persistentes pertenecen a Sprint 6.
 - No se ha seleccionado una licencia.
 
@@ -61,6 +62,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - Frontend: los enlaces de conexiones y jugadores recurrentes a perfiles codifican correctamente Riot IDs con espacios o `/`; tests, lint, type-check, formato, build Next.js y build Docker pasan. El contenedor web quedó saludable tras recreación.
 - Runtime posterior a S5-004: la API fue reconstruida/recreada, los cinco servicios permanecen saludables, `/health` responde `Healthy` y la nueva ruta `/network` devuelve un 404 controlado para un jugador inexistente.
 - Frontend posterior a la presentación de premades: 6 pruebas, lint, type-check, Prettier y build Next.js/Docker aprobados; API y web fueron recreadas, `/health` responde `Healthy` y la ruta dinámica de detalle renderiza.
+- Navegación desde detalle: el componente compartido enlaza Riot IDs completos tanto en las filas de participantes como en la leyenda de premades; pruebas frontend, lint, type-check, Prettier y build local/Docker pasan, y la web recreada queda saludable.
 - Se verificaron el 2026-08-30 las políticas oficiales vigentes de Riot: el producto se mantiene post-partida, no desanonimiza jugadores ocultos y trata relaciones como inferencias. Referencias: https://developer.riotgames.com/policies/general y https://developer.riotgames.com/docs/lol
 
 ## Próximo paso

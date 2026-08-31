@@ -276,6 +276,23 @@ p {
   color: inherit;
 }
 
+.player-link.compact {
+  display: inline;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.player-link.compact:hover,
+.player-link.compact:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.player-identity-incomplete {
+  display: inline-flex;
+  flex-direction: column;
+}
+
 .player-link:hover strong,
 .player-link:focus-visible strong {
   color: var(--accent);
@@ -707,6 +724,12 @@ td > span,
   margin-top: 0.25rem;
   color: var(--muted);
   font-size: 0.75rem;
+}
+
+.premade-member-links {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.65rem;
 }
 
 .premade-memberships {

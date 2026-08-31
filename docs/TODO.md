@@ -1,6 +1,6 @@
 # Roadmap
 
-Última actualización: 2026-08-30
+Última actualización: 2026-08-31
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
@@ -57,6 +57,7 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [ ] S5-005: crear grafo progresivo con alternativa tabular funcional y accesible.
 - [ ] S5-006: mostrar familiaridad y grupos usando evidencia anterior y participantes visibles.
   - [x] Mostrar posibles premades de 2–5 jugadores en el detalle, con etiqueta prudente, código textual y color por grupo.
+  - [x] Enlazar cada Riot ID visible del detalle y de la leyenda de grupos con su perfil; datos incompletos permanecen como texto.
   - [ ] Integrar familiaridad histórica contextual y sus estados de evidencia.
 - [ ] S5-007: perfil relacionado con resumen local; navegación sin sincronización automática y con estado de frescura.
 

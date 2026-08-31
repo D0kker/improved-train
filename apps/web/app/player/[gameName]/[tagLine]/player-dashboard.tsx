@@ -12,7 +12,6 @@ import {
   type RelationshipsResponse,
   type PlayerSummary,
   playerLookupPath,
-  playerProfilePath,
   playerRelationshipsPath,
   playerSyncPath,
 } from "@/src/api";
@@ -23,6 +22,7 @@ import {
   queueLabel,
   winRate,
 } from "@/src/format";
+import { PlayerProfileLink } from "@/src/player-profile-link";
 
 interface PlayerDashboardProps {
   gameName: string;
@@ -392,34 +392,6 @@ function Encounters({ encounters }: { encounters: PlayerEncounter[] }) {
         </div>
       )}
     </section>
-  );
-}
-
-function PlayerProfileLink({
-  gameName,
-  tagLine,
-}: {
-  gameName: string;
-  tagLine: string;
-}) {
-  if (!gameName || !tagLine) {
-    return (
-      <>
-        <strong>{gameName || "Jugador"}</strong>
-        <span>#{tagLine || "—"}</span>
-      </>
-    );
-  }
-
-  return (
-    <Link
-      className="player-link"
-      href={playerProfilePath(gameName, tagLine)}
-      aria-label={`Ver resumen de ${gameName}#${tagLine}`}
-    >
-      <strong>{gameName}</strong>
-      <span>#{tagLine}</span>
-    </Link>
   );
 }
 

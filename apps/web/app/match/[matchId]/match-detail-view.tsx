@@ -17,6 +17,7 @@ import {
   groupTone,
   groupsForParticipant,
 } from "@/src/premade-groups";
+import { PlayerProfileLink } from "@/src/player-profile-link";
 
 export function MatchDetailView({ matchId }: { matchId: string }) {
   const [match, setMatch] = useState<MatchDetail | null>(null);
@@ -187,7 +188,10 @@ function ParticipantRow({
       </span>
       <div>
         <strong>{participant.championName}</strong>
-        <span>{playerName(participant)}</span>
+        <PlayerProfileLink
+          gameName={participant.gameName}
+          tagLine={participant.tagLine}
+        />
         {groups.length > 0 ? (
           <span className="premade-memberships">
             {groups.map((group) => (
@@ -238,9 +242,16 @@ function PremadeSummary({ groups }: { groups: MatchPremadeGroup[] }) {
               </span>
               <div>
                 <strong>{groupLabel(group)}</strong>
-                <span>
-                  Equipo {group.teamId} ·{" "}
-                  {group.members.map(memberName).join(", ")}
+                <span>Equipo {group.teamId}</span>
+                <span className="premade-member-links">
+                  {group.members.map((member) => (
+                    <PlayerProfileLink
+                      compact
+                      gameName={member.gameName}
+                      key={member.puuid}
+                      tagLine={member.tagLine}
+                    />
+                  ))}
                 </span>
               </div>
             </li>
@@ -249,19 +260,6 @@ function PremadeSummary({ groups }: { groups: MatchPremadeGroup[] }) {
       )}
     </section>
   );
-}
-
-function memberName(member: MatchPremadeGroup["members"][number]): string {
-  return member.tagLine
-    ? `${member.gameName}#${member.tagLine}`
-    : member.gameName || "Jugador identificado";
-}
-
-function playerName(participant: MatchParticipant): string {
-  if (!participant.gameName) return "Jugador no identificado";
-  return participant.tagLine
-    ? `${participant.gameName}#${participant.tagLine}`
-    : participant.gameName;
 }
 
 function positionName(position: string | undefined, index: number): string {

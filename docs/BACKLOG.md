@@ -1,12 +1,12 @@
 # Tablero Kanban
 
-Última actualización: 2026-08-30
+Última actualización: 2026-08-31
 
 Este archivo conserva las historias y criterios versionados. GitHub Project mantiene el estado operativo una vez sincronizado. Los estados son **Por hacer**, **Listo para Codex**, **En curso**, **Bloqueado** y **Completado**; una tarea solo se completa con la evidencia exigida en `AGENTS.md`.
 
 - **Repositorio:** [D0kker/improved-train](https://github.com/D0kker/improved-train)
 - **Tablero operativo:** [LoL Network Analyzer — Kanban](https://github.com/users/D0kker/projects/5)
-- **Sincronización actual:** 54 historias registradas como issues `#1` a `#54`; GitHub Project es la fuente operativa del estado y este archivo conserva criterios y decisiones de flujo.
+- **Sincronización actual:** 55 historias registradas como issues `#1` a `#55`; GitHub Project es la fuente operativa del estado y este archivo conserva criterios y decisiones de flujo.
 - **Prioridades:** P0 bloquea el sprint; P1 es necesaria para el resultado; P2 mejora continuidad u operación sin bloquear el núcleo.
 
 ## Sprint 1/2 — completados
@@ -169,6 +169,7 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Criterio ajustado:** evidencia estrictamente anterior, grupos inferidos solo entre participantes visibles y estados explícitos para historial insuficiente/incompleto.
 - **Estado:** en curso; la presentación de premades quedó implementada, familiaridad contextual permanece pendiente.
 - **Entrega parcial:** el detalle expone dúos no contenidos y cliques máximos de 3–5 por equipo. La UI usa `P1`, `P2`, etc., cinco tonos reutilizables y una leyenda textual; distingue `Posible premade` de `Posible premade · evidencia alta` y aclara que no confirma que hayan entrado juntos.
+- **Navegación:** los Riot IDs completos son enlaces accesibles al perfil tanto en cada equipo como en la leyenda de premades; nombres/tags incompletos no generan rutas ambiguas.
 - **Evidencia parcial:** contrato cubierto con dos grupos, niveles distintos, exclusión de relaciones entre rivales y ausencia de lenguaje `verified`; 41 pruebas unitarias, 13 de integración y 6 pruebas frontend aprobadas, además de lint, type-check, formato y builds Docker de API/web.
 
 ### S5-007 — Perfil relacionado con resumen local
