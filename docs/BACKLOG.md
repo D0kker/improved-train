@@ -145,6 +145,8 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Issue:** #42.
 - **Prioridad:** P0.
 - **Criterios ajustados:** grupos canónicos máximos de 3–5 con todas las parejas por encima del umbral; solapamientos explícitos, sin emitir subgrupos redundantes y con candidatos/límites configurables.
+- **Estado:** completada el 2026-08-30.
+- **Evidencia:** detector puro de cliques, clasificación por la evidencia más débil, IDs canónicos, eliminación de subgrupos, solapamientos permitidos y límites configurables de candidatos/combinaciones.
 
 ### S5-004 — Exponer contrato de red social
 

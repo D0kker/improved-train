@@ -52,7 +52,7 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 
 - [ ] S5-001: cerrar la historia padre de grafo, grupos y familiaridad.
 - [x] S5-002: calcular familiaridad con orden `(occurred_at, riot_match_id)`, solo historial anterior y denominador auditable.
-- [ ] S5-003: detectar grupos canónicos máximos de 3–5 sin subgrupos redundantes ni explosión combinatoria.
+- [x] S5-003: detectar grupos canónicos máximos de 3–5 sin subgrupos redundantes ni explosión combinatoria.
 - [ ] S5-004: exponer red ego `/api/v1/players/{puuid}/network` con límites, truncation metadata y orden estable.
 - [ ] S5-005: crear grafo progresivo con alternativa tabular funcional y accesible.
 - [ ] S5-006: mostrar familiaridad y grupos usando evidencia anterior y participantes visibles.

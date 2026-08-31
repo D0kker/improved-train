@@ -42,6 +42,10 @@ var premadeDetectionOptions = builder.Configuration
     .GetSection(PremadeDetectionOptions.SectionName)
     .Get<PremadeDetectionOptions>() ?? new PremadeDetectionOptions();
 premadeDetectionOptions.Validate();
+var premadeGroupDetectionOptions = builder.Configuration
+    .GetSection(PremadeGroupDetectionOptions.SectionName)
+    .Get<PremadeGroupDetectionOptions>() ?? new PremadeGroupDetectionOptions();
+premadeGroupDetectionOptions.Validate();
 
 var postgresConnectionString = BuildPostgresConnectionString(builder.Configuration)
     ?? throw new InvalidOperationException("ConnectionStrings:Postgres or POSTGRES_HOST must be configured.");
@@ -59,6 +63,8 @@ builder.Services.AddSingleton(relationshipAnalysisOptions);
 builder.Services.AddSingleton<PlayerRelationshipAnalyzer>();
 builder.Services.AddSingleton(premadeDetectionOptions);
 builder.Services.AddSingleton<PossiblePremadeDetector>();
+builder.Services.AddSingleton(premadeGroupDetectionOptions);
+builder.Services.AddSingleton<PossiblePremadeGroupDetector>();
 builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<PlayerLookupService>();

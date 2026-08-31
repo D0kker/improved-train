@@ -111,3 +111,11 @@
 - Decisión: para una partida objetivo, considerar anterior únicamente una partida del owner cuya clave `(occurred_at, riot_match_id)` sea lexicográficamente menor; el denominador contiene jugadores identificables distintos del owner y sin duplicados.
 - Razón: el timestamp puede empatar y un orden total estable evita resultados no deterministas o evidencia futura. Los conteos hacen auditable el porcentaje.
 - Consecuencias: la familiaridad devuelve conocidos, desconocidos, total evaluable, porcentaje y razón de insuficiencia; no añade win-rate ni un score alternativo y se calcula sin llamadas a Riot.
+
+## D-015 — Grupos como cliques máximos y acotados
+
+- Fecha: 2026-08-30
+- Estado: aceptada para Sprint 5
+- Decisión: un posible grupo recurrente de 3–5 jugadores exige que todas sus parejas tengan al menos clasificación `possible premade`; solo se emiten cliques máximos canónicos y se permiten cliques máximos solapados.
+- Razón: una cadena de relaciones no prueba cohesión del grupo y emitir todos los subgrupos produciría resultados redundantes y trabajo combinatorio innecesario.
+- Consecuencias: IDs ordenados, etiqueta no concluyente, clasificación determinada por la pareja más débil y límites configurables de candidatos y combinaciones con fallo explícito al excederlos.
