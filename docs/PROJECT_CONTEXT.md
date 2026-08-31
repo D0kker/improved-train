@@ -4,7 +4,7 @@
 
 ## Propósito
 
-LoL Network Analyzer analizará partidas terminadas de League of Legends para responder quién reaparece en el historial de un jugador, con qué frecuencia fue aliado o rival y qué relaciones históricas se pueden inferir sin afirmar información que Riot no proporciona.
+LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas terminadas de League of Legends. Comienza para uso personal y debe evolucionar, tras validación, hacia un servicio público útil para muchas personas en distintas regiones del mundo: responderá quién reaparece, con qué frecuencia fue aliado o rival y qué relaciones o grupos pueden inferirse sin afirmar información que Riot no proporciona. A futuro podrá sostenerse mediante publicidad u otra estrategia de monetización, siempre subordinada a cumplimiento, privacidad, seguridad y utilidad del producto.
 
 ## Estado real
 
@@ -25,7 +25,7 @@ LoL Network Analyzer analizará partidas terminadas de League of Legends para re
 - PostgreSQL será la fuente de verdad. Las partidas terminadas se reutilizan por `riot_match_id` y conservan el JSON original en JSONB.
 - PUUID será la identidad interna; Riot ID será la entrada de búsqueda y un atributo mutable.
 - Browser y Next.js nunca llamarán directamente a Riot. API/worker concentran secreto, rate limiting, resiliencia y persistencia.
-- El despliegue privado inicial será Docker Compose sobre Raspberry Pi ARM64; AWS, monetización y una web pública quedan fuera del MVP inicial.
+- El despliegue inicial será privado mediante Docker Compose sobre Raspberry Pi ARM64; la transición a una web pública y la monetización son objetivos posteriores, no compromisos de despliegue del MVP.
 
 ## Riesgos y preguntas abiertas
 
@@ -35,6 +35,7 @@ LoL Network Analyzer analizará partidas terminadas de League of Legends para re
 - `ARC-001` medirá .NET frente a Go en ARM64; el benchmark no autoriza una migración.
 - Falta decidir la licencia del repositorio.
 - Falta definir contraseñas locales seguras y la estrategia inicial de migraciones/health checks sin introducir secretos en Git.
+- Antes de abrir el servicio al público habrá que validar registro/auditoría Riot, privacidad, consentimiento/visibilidad, términos, disclaimer, HTTPS, capacidad y una estrategia de monetización no invasiva.
 
 ## Validación realizada
 

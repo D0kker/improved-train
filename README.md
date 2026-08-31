@@ -1,8 +1,8 @@
 # LoL Network Analyzer
 
-Herramienta de análisis histórico y post-partida para descubrir jugadores recurrentes, relaciones y patrones dentro del historial de League of Legends.
+Sistema de análisis histórico y post-partida para descubrir jugadores recurrentes, relaciones y patrones dentro del historial de League of Legends. Comienza como una herramienta personal y aspira a convertirse en un sitio público útil para muchas personas en distintas regiones del mundo.
 
-Los Sprints 1–3 están implementados y Sprint 4 está iniciado: el monorepo, la ingesta ACCOUNT-V1/MATCH-V5, encounters, APIs de consulta, primeras vistas y bases de relaciones son ejecutables. La fuente funcional y técnica continúa siendo [`lol_network_analyzer_spec.md`](lol_network_analyzer_spec.md).
+Los Sprints 1–4 están implementados; Sprint 5 está refinado y Sprint 8 creado. La fuente funcional y técnica continúa siendo [`lol_network_analyzer_spec.md`](lol_network_analyzer_spec.md).
 
 ## Enfoque del producto
 
@@ -12,6 +12,7 @@ Los Sprints 1–3 están implementados y Sprint 4 está iniciado: el monorepo, l
 - Inferir relaciones con lenguaje prudente, sin afirmar duos verificados.
 - Mantener la Riot API key únicamente en backend o worker.
 - Ejecutar el MVP de forma local en Raspberry Pi mediante Docker Compose.
+- Evolucionar gradualmente hacia un servicio público sostenible; la publicidad u otra monetización solo se evaluará después de cumplir políticas Riot, privacidad, seguridad y requisitos legales.
 
 ## Arquitectura implementada
 
@@ -32,7 +33,9 @@ El detalle y la separación entre estado planificado e implementado están en [`
 - [x] Sprint 1: monorepo, servicios, health checks y primera integración de Riot.
 - [x] Sprint 2: ingesta acotada, raw JSONB, normalización y deduplicación de partidas.
 - [x] Sprint 3: encounters, analizador de repetidos, APIs de lectura y primeras vistas funcionales.
-- [ ] Sprint 4: persistencia y score listos; reconstrucción, posibles premades, API y UI pendientes.
+- [x] Sprint 4: relaciones, detector prudente, API paginada y vista web.
+- [ ] Sprint 5: familiaridad, grupos y red social.
+- [ ] Sprint 8: insights históricos y tarjetas compartibles seguras.
 
 Consulta [`docs/TODO.md`](docs/TODO.md) para el roadmap y [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) antes de comenzar una nueva sesión.
 
@@ -52,4 +55,4 @@ Copia `.env.example` como `.env`, define credenciales locales y nunca publiques 
 
 ## Licencia y cumplimiento
 
-La licencia del código aún no está decidida. Antes de una publicación abierta o monetización se deben revisar las políticas vigentes de Riot, registrar el producto cuando corresponda y agregar los avisos legales requeridos.
+La licencia del código aún no está decidida. Antes de una publicación abierta o monetización se deben revisar las políticas vigentes de Riot, registrar el producto cuando corresponda y agregar los avisos legales requeridos. La monetización es una posibilidad futura —publicidad u otra estrategia—, no una condición para el MVP privado.

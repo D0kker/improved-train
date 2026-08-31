@@ -95,3 +95,11 @@
 - Decisión: reservar Sprint 8 para historial A–B, evolución temporal, rankings de `most seen`/`best teammate`/`nemesis`, contratos de insights y tarjetas descargables bajo demanda.
 - Razón: son extensiones derivadas de datos ya persistidos y no deben desplazar jobs, rate limiting, privacidad ni readiness V1 de Sprints 6–7.
 - Consecuencias: toda comparación usa partidas terminadas y orden estable; compartir queda condicionado a decisiones de privacidad y nunca publica automáticamente.
+
+## D-013 — Trayectoria personal a servicio público sostenible
+
+- Fecha: 2026-08-30
+- Estado: aceptada como objetivo de producto
+- Decisión: desarrollar primero una herramienta privada útil para el propietario y evolucionarla gradualmente hacia un sitio público para muchas personas; evaluar publicidad u otra monetización únicamente después de validar cumplimiento Riot, privacidad, seguridad, capacidad operativa y valor transformativo.
+- Razón: permite aprender con un caso real sin prometer publicación, ingresos ni escala antes de tener evidencia y aprobaciones necesarias.
+- Consecuencias: Sprints 1–5 priorizan utilidad y exactitud; Sprints 6–7 preparan operación y readiness; cualquier monetización pública requiere una decisión posterior y mantiene un acceso gratuito no invasivo.
