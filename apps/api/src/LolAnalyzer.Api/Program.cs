@@ -38,6 +38,10 @@ var relationshipAnalysisOptions = builder.Configuration
     .GetSection(PlayerRelationshipAnalysisOptions.SectionName)
     .Get<PlayerRelationshipAnalysisOptions>() ?? new PlayerRelationshipAnalysisOptions();
 relationshipAnalysisOptions.Validate();
+var premadeDetectionOptions = builder.Configuration
+    .GetSection(PremadeDetectionOptions.SectionName)
+    .Get<PremadeDetectionOptions>() ?? new PremadeDetectionOptions();
+premadeDetectionOptions.Validate();
 
 var postgresConnectionString = BuildPostgresConnectionString(builder.Configuration)
     ?? throw new InvalidOperationException("ConnectionStrings:Postgres or POSTGRES_HOST must be configured.");
@@ -53,6 +57,8 @@ builder.Services.AddSingleton(relationshipScoreOptions);
 builder.Services.AddSingleton<RelationshipScoreCalculator>();
 builder.Services.AddSingleton(relationshipAnalysisOptions);
 builder.Services.AddSingleton<PlayerRelationshipAnalyzer>();
+builder.Services.AddSingleton(premadeDetectionOptions);
+builder.Services.AddSingleton<PossiblePremadeDetector>();
 builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<PlayerLookupService>();
@@ -62,6 +68,7 @@ builder.Services.AddScoped<IPlayerAnalysisRepository, PlayerAnalysisRepository>(
 builder.Services.AddScoped<RepeatedPlayerAnalysisService>();
 builder.Services.AddScoped<IPlayerRelationshipRepository, PlayerRelationshipRepository>();
 builder.Services.AddScoped<PlayerRelationshipAnalysisService>();
+builder.Services.AddScoped<PlayerRelationshipQueryService>();
 builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
     {
         client.BaseAddress = riotOptions.GetRegionalBaseUri();
@@ -268,6 +275,43 @@ app.MapGet("/api/v1/matches/{matchId}", async Task<IResult> (
 
     var match = await repository.GetMatchDetailAsync(matchId, cancellationToken).ConfigureAwait(false);
     return match is null ? Results.NotFound() : Results.Ok(match);
+});
+
+app.MapGet("/api/v1/players/{puuid}/relationships", async Task<IResult> (
+    string puuid,
+    int? page,
+    int? pageSize,
+    string? minimumConfidence,
+    PlayerRelationshipQueryService queryService,
+    CancellationToken cancellationToken) =>
+{
+    const int maximumPage = 10_000;
+    var requestedPage = page ?? 1;
+    var requestedPageSize = pageSize ?? 20;
+    var requestedConfidence = RelationshipConfidence.Low;
+    if (!string.IsNullOrWhiteSpace(minimumConfidence)
+        && !RelationshipConfidenceExtensions.TryParseLabel(minimumConfidence, out requestedConfidence))
+    {
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["minimumConfidence"] = ["Use LOW, MEDIUM, HIGH or VERY_HIGH."],
+        });
+    }
+
+    if (string.IsNullOrWhiteSpace(puuid)
+        || requestedPage is < 1 or > maximumPage
+        || requestedPageSize is < 1 or > 100)
+    {
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["pagination"] = [$"puuid is required, page must be between 1 and {maximumPage} and pageSize between 1 and 100."],
+        });
+    }
+
+    var relationships = await queryService
+        .GetAsync(puuid, requestedPage, requestedPageSize, requestedConfidence, cancellationToken)
+        .ConfigureAwait(false);
+    return relationships is null ? Results.NotFound() : Results.Ok(relationships);
 });
 
 app.Run();

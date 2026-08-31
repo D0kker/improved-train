@@ -10,4 +10,11 @@ public interface IPlayerRelationshipRepository
         IReadOnlyCollection<PlayerRelationshipAggregate> relationships,
         int batchSize,
         CancellationToken cancellationToken);
+
+    Task<PagedPlayerRelationshipQuery?> GetRelationshipsAsync(
+        string puuid,
+        int page,
+        int pageSize,
+        RelationshipConfidence minimumConfidence,
+        CancellationToken cancellationToken);
 }

@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { apiPath, playerLookupPath, playerSyncPath } from "../src/api.ts";
+import {
+  apiPath,
+  playerLookupPath,
+  playerRelationshipsPath,
+  playerSyncPath,
+} from "../src/api.ts";
 import { formatDuration, formatPercent, winRate } from "../src/format.ts";
 
 test("API paths remain same-origin and encode user-controlled segments", () => {
@@ -22,6 +27,15 @@ test("match synchronization is bounded to twenty matches", () => {
   );
   assert.throws(() => playerSyncPath("test-puuid", 21), RangeError);
   assert.throws(() => playerSyncPath("test-puuid", 0), RangeError);
+});
+
+test("relationship paths are same-origin and pagination is bounded", () => {
+  assert.equal(
+    playerRelationshipsPath("test/puuid", 2, 50),
+    "/api/v1/players/test%2Fpuuid/relationships?page=2&pageSize=50",
+  );
+  assert.throws(() => playerRelationshipsPath("test", 0, 20), RangeError);
+  assert.throws(() => playerRelationshipsPath("test", 1, 101), RangeError);
 });
 
 test("presentation helpers normalize percentages and durations", () => {

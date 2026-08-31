@@ -118,5 +118,12 @@ public sealed class PlayerRelationshipAnalyzerTests
             Snapshots.Add(relationships.ToArray());
             return Task.CompletedTask;
         }
+
+        public Task<PagedPlayerRelationshipQuery?> GetRelationshipsAsync(
+            string puuid,
+            int page,
+            int pageSize,
+            RelationshipConfidence minimumConfidence,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

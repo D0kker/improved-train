@@ -6,7 +6,7 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 
 - **Repositorio:** [D0kker/improved-train](https://github.com/D0kker/improved-train)
 - **Tablero operativo:** [LoL Network Analyzer — Kanban](https://github.com/users/D0kker/projects/5)
-- **Sincronización actual:** 45 historias registradas como issues `#1` a `#45`; GitHub Project es la fuente operativa del estado y este archivo conserva criterios y decisiones de flujo.
+- **Sincronización actual:** 51 historias registradas como issues `#1` a `#51`; GitHub Project es la fuente operativa del estado y este archivo conserva criterios y decisiones de flujo.
 - **Prioridades:** P0 bloquea el sprint; P1 es necesaria para el resultado; P2 mejora continuidad u operación sin bloquear el núcleo.
 
 ## Sprint 1/2 — completados
@@ -83,7 +83,7 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Prioridad:** P1.
 - **Criterios de aceptación:** summary, repetidos, historial y detalle responsive con estados de carga/error/vacío y lenguaje prudente.
 
-## Sprint 4 — iniciado
+## Sprint 4 — completado
 
 ### S4-001 — Persistir relaciones normalizadas
 
@@ -109,18 +109,21 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Issue:** #22.
 - **Prioridad:** P1.
 - **Dependencias:** S4-003 y revisión vigente de políticas Riot.
+- **Criterios cumplidos:** mínimos configurables, clasificación `possible premade`/`likely premade`, negativos para evidencia casual/oponente y sin desanonimización.
 
 ### S4-005 — Exponer API de relaciones
 
 - **Issue:** #21.
 - **Prioridad:** P1.
 - **Dependencias:** S4-003 y S4-004.
+- **Criterios cumplidos:** contrato paginado, filtros de confidence, orden estable, metadata observable, 404/límites y sin raw JSON.
 
 ### S4-006 — Crear vista de relaciones
 
 - **Issue:** #20.
 - **Prioridad:** P1.
 - **Dependencias:** S4-005 y frontend de Sprint 3.
+- **Criterios cumplidos:** tabla semántica responsive con estados de carga/vacío/error/reintento y lenguaje de inferencia.
 
 ## Sprint 5 — refinado
 
@@ -133,31 +136,69 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 
 - **Issue:** #41.
 - **Prioridad:** P0.
-- **Criterio clave:** usar solo partidas estrictamente anteriores y excluir al owner del denominador.
+- **Criterios ajustados:** usar solo partidas estrictamente anteriores por `(occurred_at, riot_match_id)`; excluir owner, duplicados y participantes no identificables del denominador; conservar conteos además del porcentaje.
 
 ### S5-003 — Detectar posibles grupos recurrentes
 
 - **Issue:** #42.
 - **Prioridad:** P0.
-- **Criterio clave:** grupos canónicos de 3–5 con todas las parejas fuertes y candidatos acotados.
+- **Criterios ajustados:** grupos canónicos máximos de 3–5 con todas las parejas por encima del umbral; solapamientos explícitos, sin emitir subgrupos redundantes y con candidatos/límites configurables.
 
 ### S5-004 — Exponer contrato de red social
 
 - **Issue:** #45.
 - **Prioridad:** P1.
-- **Contrato:** `GET /api/v1/players/{puuid}/network` con filtros, límites y orden estable.
+- **Contrato ajustado:** `GET /api/v1/players/{puuid}/network`; red ego de profundidad uno por defecto, máximo configurable de nodos/edges, filtros, truncation metadata y orden estable.
 
 ### S5-005 — Crear visualización accesible del grafo
 
 - **Issue:** #43.
 - **Prioridad:** P1.
-- **Criterio clave:** interacción visual y alternativa tabular accesible; justificar una dependencia antes de agregarla.
+- **Criterio ajustado:** interacción visual progresiva y alternativa tabular equivalente; el grafo no bloquea la tabla y cualquier dependencia requiere justificar peso, mantenimiento y compatibilidad.
 
 ### S5-006 — Mostrar familiaridad y grupos en detalle
 
 - **Issue:** #44.
 - **Prioridad:** P1.
-- **Criterio clave:** evidencia histórica y lenguaje de inferencia sin desanonimización.
+- **Criterio ajustado:** evidencia estrictamente anterior, grupos inferidos solo entre participantes visibles y estados explícitos para historial insuficiente/incompleto.
+
+## Sprint 8 — creado y refinado
+
+### S8-001 — Historia padre de insights históricos
+
+- **Issue:** #48.
+- **Prioridad:** P1.
+- **Objetivo:** convertir relaciones y grupos persistidos en explicaciones históricas acotadas, comparables y compartibles de forma segura.
+
+### S8-002 — Construir historial entre dos jugadores
+
+- **Issue:** #51.
+- **Prioridad:** P0.
+- **Criterios:** detalle canónico A–B, partidas terminadas paginadas, evolución por periodos estables, ally/opponent y cero fuga de partidas futuras.
+
+### S8-003 — Calcular rankings explicables de relaciones
+
+- **Issue:** #49.
+- **Prioridad:** P0.
+- **Criterios:** `most seen`, `best teammate` y `nemesis` con muestra mínima configurable, evidencia visible, desempate estable y sin presentar comportamiento o intención como hecho.
+
+### S8-004 — Exponer API de insights históricos
+
+- **Issue:** #46.
+- **Prioridad:** P1.
+- **Contratos:** detalle de relación e insights del jugador con paginación, filtros temporales, límites y sin exponer PUUID internos ni raw JSON.
+
+### S8-005 — Crear UI de historial e insights
+
+- **Issue:** #47.
+- **Prioridad:** P1.
+- **Criterios:** navegación desde relaciones/grafo, tendencias accesibles con alternativa tabular, evidencia y estados de carga/vacío/error.
+
+### S8-006 — Generar tarjeta compartible segura
+
+- **Issue:** #50.
+- **Prioridad:** P2.
+- **Criterios:** generación explícita bajo demanda, vista previa, texto alternativo y descarga local; sin publicación automática, PUUID, secretos ni datos no visibles. Requiere decisiones de privacidad de Sprint 7 antes de exposición pública.
 
 ## Por hacer
 

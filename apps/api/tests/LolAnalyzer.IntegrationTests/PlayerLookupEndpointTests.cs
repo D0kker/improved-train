@@ -107,6 +107,51 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task RelationshipsExposeEvidenceAndPrudentPremadeLabelWithoutRiot()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/relationships?page=1&pageSize=20&minimumConfidence=HIGH",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        var relationship = body.RootElement.GetProperty("items")[0];
+        Assert.Equal("HIGH", relationship.GetProperty("relationshipConfidence").GetString());
+        Assert.Equal("likely premade", relationship.GetProperty("premadeLabel").GetString());
+        Assert.Equal(0.8m, relationship.GetProperty("sameTeamRatio").GetDecimal());
+    }
+
+    [Fact]
+    public async Task RelationshipsRejectUnknownConfidenceLabels()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/relationships?minimumConfidence=VERIFIED",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RelationshipsReturnNotFoundAndRejectUnboundedPagination()
+    {
+        using var client = _factory.CreateClient();
+
+        var notFound = await client.GetAsync(
+            "/api/v1/players/unknown/relationships",
+            TestContext.Current.CancellationToken);
+        var invalidPageSize = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/relationships?pageSize=101",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, notFound.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, invalidPageSize.StatusCode);
+    }
 }
 
 public sealed class LolAnalyzerApiFactory : WebApplicationFactory<Program>
@@ -246,4 +291,30 @@ internal sealed class InMemoryPlayerRelationshipRepository : IPlayerRelationship
         IReadOnlyCollection<PlayerRelationshipAggregate> relationships,
         int batchSize,
         CancellationToken cancellationToken) => Task.CompletedTask;
+
+    public Task<PagedPlayerRelationshipQuery?> GetRelationshipsAsync(
+        string puuid,
+        int page,
+        int pageSize,
+        RelationshipConfidence minimumConfidence,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<PagedPlayerRelationshipQuery?>(puuid == "test-owner-puuid"
+            ? new PagedPlayerRelationshipQuery(
+                page,
+                pageSize,
+                minimumConfidence > RelationshipConfidence.High ? 0 : 1,
+                minimumConfidence > RelationshipConfidence.High ? [] : [new PlayerRelationshipQueryItem(
+                    "other-puuid",
+                    "Bea",
+                    "LAN",
+                    5,
+                    4,
+                    1,
+                    4,
+                    3,
+                    DateTimeOffset.UnixEpoch,
+                    DateTimeOffset.UnixEpoch.AddDays(4),
+                    60,
+                    RelationshipConfidence.High)])
+            : null);
 }

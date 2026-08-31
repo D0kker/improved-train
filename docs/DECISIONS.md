@@ -79,3 +79,19 @@
 - Decisión: reconstruir todas las parejas canónicas desde PostgreSQL y reemplazar el snapshot completo en una transacción. Para cada pareja, recencia y consecutividad se calculan sobre la unión cronológica de los historiales de ambos jugadores; la evaluación usa la fecha de la partida persistida más reciente.
 - Razón: la unión evita depender de cuál UUID quedó como `player_a`, y una fecha derivada de los datos hace que reprocesar el mismo conjunto produzca exactamente el mismo resultado.
 - Consecuencias: las consultas se proyectan en lotes configurables y no llaman a Riot; exclusión concurrente y ejecución durable siguen reservadas para Sprint 6.
+
+## D-011 — Clasificación prudente de posibles premades
+
+- Fecha: 2026-08-30
+- Estado: aceptada para Sprint 4
+- Decisión: clasificar una relación únicamente cuando supera simultáneamente mínimos configurables de partidas juntas, proporción de mismo equipo y confidence; distinguir `possible premade` de `likely premade` y omitir la etiqueta cuando la evidencia es insuficiente.
+- Razón: la coincidencia histórica no demuestra intención, amistad ni identidad oculta; umbrales explícitos permiten auditar el resultado y ajustar el MVP sin fingir probabilidad.
+- Consecuencias: la etiqueta se deriva al consultar la relación y no se persiste como hecho; contratos y UI deben explicar factores y mantener lenguaje de inferencia.
+
+## D-012 — Alcance de Sprint 8: insights históricos seguros
+
+- Fecha: 2026-08-30
+- Estado: planificado
+- Decisión: reservar Sprint 8 para historial A–B, evolución temporal, rankings de `most seen`/`best teammate`/`nemesis`, contratos de insights y tarjetas descargables bajo demanda.
+- Razón: son extensiones derivadas de datos ya persistidos y no deben desplazar jobs, rate limiting, privacidad ni readiness V1 de Sprints 6–7.
+- Consecuencias: toda comparación usa partidas terminadas y orden estable; compartir queda condicionado a decisiones de privacidad y nunca publica automáticamente.

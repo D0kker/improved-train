@@ -471,6 +471,30 @@ tbody tr:last-child td {
   border-bottom: 0;
 }
 
+.inference-badge {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.inference-badge.possible {
+  color: #fde68a;
+  border-color: rgb(251 191 36 / 35%);
+  background: rgb(251 191 36 / 8%);
+}
+
+.inference-badge.likely {
+  color: var(--accent);
+  border-color: rgb(97 226 180 / 35%);
+  background: rgb(97 226 180 / 9%);
+}
+
 td > span,
 .match-champion span,
 .kda span,

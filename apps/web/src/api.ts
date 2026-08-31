@@ -51,6 +51,30 @@ export interface MatchesResponse {
   items: MatchListItem[];
 }
 
+export interface PlayerRelationship {
+  otherPlayerPuuid: string;
+  gameName: string;
+  tagLine: string;
+  matchesTogether: number;
+  sameTeamMatches: number;
+  oppositeTeamMatches: number;
+  sameTeamRatio: number;
+  recentMatchesTogether: number;
+  consecutiveMatches: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  relationshipScore: number;
+  relationshipConfidence: "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH";
+  premadeLabel: "possible premade" | "likely premade" | null;
+}
+
+export interface RelationshipsResponse {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  items: PlayerRelationship[];
+}
+
 export interface MatchParticipant {
   puuid?: string;
   gameName?: string;
@@ -102,6 +126,24 @@ export function playerSyncPath(puuid: string, count = 20): string {
   }
 
   return `${apiPath("players", puuid, "matches", "sync")}?count=${count}`;
+}
+
+export function playerRelationshipsPath(
+  puuid: string,
+  page = 1,
+  pageSize = 20,
+): string {
+  if (
+    !Number.isInteger(page) ||
+    page < 1 ||
+    !Number.isInteger(pageSize) ||
+    pageSize < 1 ||
+    pageSize > 100
+  ) {
+    throw new RangeError("La paginación de relaciones no es válida.");
+  }
+
+  return `${apiPath("players", puuid, "relationships")}?page=${page}&pageSize=${pageSize}`;
 }
 
 export async function fetchJson<T>(

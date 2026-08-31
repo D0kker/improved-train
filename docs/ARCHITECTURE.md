@@ -2,7 +2,7 @@
 
 Última actualización: 2026-08-30
 
-> Estado: Sprints 1–3 implementados; Sprint 4 inició con persistencia y cálculo de relaciones. Reconstrucción de relaciones, detección de premades, grafo y jobs persistentes permanecen pendientes.
+> Estado: Sprints 1–3 y Sprint 4 implementados; Sprint 5 refinado y pendiente. Jobs persistentes y operación avanzada permanecen en Sprint 6.
 
 ## Contexto
 
@@ -59,7 +59,7 @@ docker-compose.yml
 5. Los faltantes se guardan como JSONB y se normalizan en jugadores, partidas y participantes.
 6. `RepeatedPlayerAnalyzer` reconstruye de forma transaccional la pareja dirigida owner/other en `player_encounters`.
 7. El frontend consulta summary, encounters, historial y detalle solo mediante `/api/v1` y conserva resultados locales si falla una actualización Riot.
-8. Sprint 4 ya define `player_relationships` como pareja canónica no dirigida y un score configurable; la reconstrucción global y su API aún no están conectadas.
+8. Sprint 4 reconstruye `player_relationships` globalmente, clasifica evidencia como `possible premade`/`likely premade` y la expone mediante `/api/v1/players/{puuid}/relationships`; la UI muestra factores y lenguaje prudente.
 
 ## Dependencias e invariantes
 

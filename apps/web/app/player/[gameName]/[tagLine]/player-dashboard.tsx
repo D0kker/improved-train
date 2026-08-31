@@ -9,8 +9,10 @@ import {
   type MatchesResponse,
   type PlayerEncounter,
   type PlayerLookup,
+  type RelationshipsResponse,
   type PlayerSummary,
   playerLookupPath,
+  playerRelationshipsPath,
   playerSyncPath,
 } from "@/src/api";
 import {
@@ -31,6 +33,7 @@ interface DashboardData {
   summary: PlayerSummary;
   encounters: PlayerEncounter[];
   matches: MatchesResponse;
+  relationships: RelationshipsResponse;
 }
 
 type LoadingStep = "lookup" | "sync" | "results";
@@ -77,22 +80,27 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
         }
 
         setStep("results");
-        const [summary, encounterResponse, matches] = await Promise.all([
-          fetchJson<PlayerSummary>(
-            apiPath("players", player.puuid, "summary"),
-            {
-              signal,
-            },
-          ),
-          fetchJson<PlayerEncounter[] | { items: PlayerEncounter[] }>(
-            apiPath("players", player.puuid, "encounters"),
-            { signal },
-          ),
-          fetchJson<MatchesResponse>(
-            `${apiPath("players", player.puuid, "matches")}?page=1&pageSize=10`,
-            { signal },
-          ),
-        ]);
+        const [summary, encounterResponse, matches, relationships] =
+          await Promise.all([
+            fetchJson<PlayerSummary>(
+              apiPath("players", player.puuid, "summary"),
+              {
+                signal,
+              },
+            ),
+            fetchJson<PlayerEncounter[] | { items: PlayerEncounter[] }>(
+              apiPath("players", player.puuid, "encounters"),
+              { signal },
+            ),
+            fetchJson<MatchesResponse>(
+              `${apiPath("players", player.puuid, "matches")}?page=1&pageSize=10`,
+              { signal },
+            ),
+            fetchJson<RelationshipsResponse>(
+              playerRelationshipsPath(player.puuid),
+              { signal },
+            ),
+          ]);
 
         setData({
           player,
@@ -101,6 +109,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
             ? encounterResponse
             : encounterResponse.items,
           matches,
+          relationships,
         });
         setWarning(syncWarning);
       } catch (requestError) {
@@ -183,11 +192,91 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
             ) : null}
             <SummaryCards summary={data.summary} />
             <Encounters encounters={data.encounters} />
+            <Relationships relationships={data.relationships} />
             <MatchHistory matches={data.matches} />
           </>
         ) : null}
       </div>
     </main>
+  );
+}
+
+function Relationships({
+  relationships,
+}: {
+  relationships: RelationshipsResponse;
+}) {
+  return (
+    <section aria-labelledby="relationships-title">
+      <div className="section-title-row">
+        <div>
+          <p className="eyebrow">Relaciones históricas</p>
+          <h2 id="relationships-title">Posibles conexiones recurrentes</h2>
+        </div>
+        <p className="section-note">
+          Confidence es una heurística, no una probabilidad ni confirmación
+          oficial.
+        </p>
+      </div>
+
+      {relationships.items.length === 0 ? (
+        <EmptyState
+          title="Aún no hay relaciones suficientes"
+          copy="Las relaciones aparecerán al coincidir jugadores en las partidas terminadas almacenadas."
+        />
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Jugador</th>
+                <th>Score</th>
+                <th>Evidencia</th>
+                <th>Mismo equipo</th>
+                <th>Recientes</th>
+                <th>Consecutivas</th>
+                <th>Inferencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {relationships.items.map((relationship) => (
+                <tr key={relationship.otherPlayerPuuid}>
+                  <td>
+                    <strong>{relationship.gameName || "Jugador"}</strong>
+                    <span>#{relationship.tagLine || "—"}</span>
+                  </td>
+                  <td>
+                    <strong>{relationship.relationshipScore}/100</strong>
+                    <span>{relationship.relationshipConfidence}</span>
+                  </td>
+                  <td>
+                    {relationship.matchesTogether} partidas
+                    <span>{relationship.oppositeTeamMatches} como rivales</span>
+                  </td>
+                  <td>
+                    {formatPercent(relationship.sameTeamRatio * 100)}
+                    <span>{relationship.sameTeamMatches} partidas</span>
+                  </td>
+                  <td>{relationship.recentMatchesTogether}</td>
+                  <td>{relationship.consecutiveMatches}</td>
+                  <td>
+                    {relationship.premadeLabel ? (
+                      <span
+                        className={`inference-badge ${relationship.premadeLabel === "likely premade" ? "likely" : "possible"}`}
+                      >
+                        {relationship.premadeLabel}
+                      </span>
+                    ) : (
+                      <span>Evidencia insuficiente</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 

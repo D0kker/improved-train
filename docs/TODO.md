@@ -39,23 +39,23 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] S3-006: crear búsqueda y flujo visual síncrono acotado a 20 hasta los jobs de Sprint 6.
 - [x] S3-007: crear vistas responsive de repetidos, historial y detalle con estados de carga/error/vacío.
 
-## Sprint 4 — iniciado
+## Sprint 4 — completado
 
 - [x] S4-001: persistir parejas canónicas `PlayerRelationship` con constraints, FKs e índices por ambos jugadores.
 - [x] S4-002: calcular score 0–100 configurable y niveles `LOW`, `MEDIUM`, `HIGH`, `VERY_HIGH` explicables, no probabilísticos.
 - [x] S4-003: reconstruir relaciones globales de forma transaccional e idempotente, con lectura/escritura por lotes y sin llamadas a Riot.
-- [ ] S4-004: detectar únicamente `possible premade`/`likely premade` con evidencia mínima configurable.
-- [ ] S4-005: exponer `/api/v1/players/{puuid}/relationships` paginado y explicable.
-- [ ] S4-006: crear vista accesible de relaciones y posibles premades.
+- [x] S4-004: detectar únicamente `possible premade`/`likely premade` con evidencia mínima configurable.
+- [x] S4-005: exponer `/api/v1/players/{puuid}/relationships` paginado y explicable.
+- [x] S4-006: crear vista accesible de relaciones y posibles premades.
 
 ## Sprint 5 — refinado
 
 - [ ] S5-001: cerrar la historia padre de grafo, grupos y familiaridad.
-- [ ] S5-002: calcular familiaridad usando solo partidas estrictamente anteriores.
-- [ ] S5-003: detectar grupos canónicos de 3–5 jugadores sin explosión combinatoria.
-- [ ] S5-004: exponer `/api/v1/players/{puuid}/network` con límites y orden estable.
-- [ ] S5-005: crear grafo interactivo con alternativa tabular accesible.
-- [ ] S5-006: mostrar familiaridad y posibles grupos en detalle de partida.
+- [ ] S5-002: calcular familiaridad con orden `(occurred_at, riot_match_id)`, solo historial anterior y denominador auditable.
+- [ ] S5-003: detectar grupos canónicos máximos de 3–5 sin subgrupos redundantes ni explosión combinatoria.
+- [ ] S5-004: exponer red ego `/api/v1/players/{puuid}/network` con límites, truncation metadata y orden estable.
+- [ ] S5-005: crear grafo progresivo con alternativa tabular funcional y accesible.
+- [ ] S5-006: mostrar familiaridad y grupos usando evidencia anterior y participantes visibles.
 
 ## Sprint 6 — planificado
 
@@ -66,6 +66,15 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 
 - [ ] Cumplimiento Riot, privacidad/legal, seguridad, HTTPS y backups.
 - [ ] Indexación, incident response y auditoría go/no-go de V1.
+
+## Sprint 8 — creado y refinado
+
+- [ ] S8-001: cerrar la historia padre de insights históricos.
+- [ ] S8-002: construir historial canónico y evolución temporal entre dos jugadores.
+- [ ] S8-003: calcular `most seen`, `best teammate` y `nemesis` con evidencia mínima configurable.
+- [ ] S8-004: exponer contratos paginados y acotados de relación e insights.
+- [ ] S8-005: crear UI accesible de historial, tendencias e insights.
+- [ ] S8-006: generar tarjeta compartible bajo demanda, sin publicación automática ni IDs internos.
 
 ## Arquitectura
 
