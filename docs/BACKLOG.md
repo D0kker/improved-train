@@ -125,7 +125,7 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Dependencias:** S4-005 y frontend de Sprint 3.
 - **Criterios cumplidos:** tabla semántica responsive con estados de carga/vacío/error/reintento y lenguaje de inferencia.
 
-## Sprint 5 — refinado
+## Sprint 5 — en curso
 
 ### S5-001 — Historia padre de grafo, grupos y familiaridad
 
@@ -137,6 +137,8 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Issue:** #41.
 - **Prioridad:** P0.
 - **Criterios ajustados:** usar solo partidas estrictamente anteriores por `(occurred_at, riot_match_id)`; excluir owner, duplicados y participantes no identificables del denominador; conservar conteos además del porcentaje.
+- **Estado:** completada el 2026-08-30.
+- **Evidencia:** calculador puro determinista, servicio de aplicación, carga agregada sin N+1 y matriz automatizada de primera partida, aliado/rival repetido, futuro, empate temporal, duplicados y datos incompletos. GM-01 fue revisada; se adoptaron sus recomendaciones compatibles con el contrato y se aplazaron score/win-rate fuera de alcance.
 
 ### S5-003 — Detectar posibles grupos recurrentes
 

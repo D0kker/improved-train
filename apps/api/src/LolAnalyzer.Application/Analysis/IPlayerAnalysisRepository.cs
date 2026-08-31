@@ -4,6 +4,11 @@ public interface IPlayerAnalysisRepository
 {
     Task<PlayerAnalysisInput?> LoadInputAsync(string ownerPuuid, CancellationToken cancellationToken);
 
+    Task<MatchFamiliarityInput?> LoadFamiliarityInputAsync(
+        string ownerPuuid,
+        string targetRiotMatchId,
+        CancellationToken cancellationToken);
+
     Task ReplaceEncountersAsync(
         Guid ownerPlayerId,
         IReadOnlyCollection<PlayerEncounterAggregate> encounters,

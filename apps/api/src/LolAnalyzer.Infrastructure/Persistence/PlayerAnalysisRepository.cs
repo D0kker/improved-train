@@ -52,6 +52,53 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
         return new PlayerAnalysisInput(owner.Id, matches);
     }
 
+    public async Task<MatchFamiliarityInput?> LoadFamiliarityInputAsync(
+        string ownerPuuid,
+        string targetRiotMatchId,
+        CancellationToken cancellationToken)
+    {
+        var ownerId = await dbContext.Players
+            .AsNoTracking()
+            .Where(player => player.Puuid == ownerPuuid)
+            .Select(player => (Guid?)player.Id)
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (ownerId is null)
+        {
+            return null;
+        }
+
+        var rows = await dbContext.MatchParticipants
+            .AsNoTracking()
+            .Where(participant => participant.Match.Participants.Any(candidate => candidate.PlayerId == ownerId))
+            .Select(participant => new FamiliarityRow(
+                participant.Match.RiotMatchId,
+                participant.Match.GameEndTimestamp
+                    ?? participant.Match.GameStartTimestamp
+                    ?? participant.Match.GameCreation
+                    ?? participant.Match.CreatedAt,
+                participant.PlayerId))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var matches = rows
+            .GroupBy(row => new { row.RiotMatchId, row.OccurredAt })
+            .Select(group => new FamiliarityMatch(
+                group.Key.RiotMatchId,
+                group.Key.OccurredAt,
+                group.Select(row => new FamiliarityParticipant(row.PlayerId)).ToArray()))
+            .ToArray();
+        if (!matches.Any(match => string.Equals(
+                match.RiotMatchId,
+                targetRiotMatchId,
+                StringComparison.Ordinal)))
+        {
+            return null;
+        }
+
+        return new MatchFamiliarityInput(ownerId.Value, targetRiotMatchId, matches);
+    }
+
     public async Task ReplaceEncountersAsync(
         Guid ownerPlayerId,
         IReadOnlyCollection<PlayerEncounterAggregate> encounters,
@@ -257,4 +304,9 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
         Guid PlayerId,
         int TeamId,
         bool Win);
+
+    private sealed record FamiliarityRow(
+        string RiotMatchId,
+        DateTimeOffset OccurredAt,
+        Guid PlayerId);
 }

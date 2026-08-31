@@ -66,6 +66,7 @@ builder.Services.AddScoped<IMatchRepository, MatchRepository>();
 builder.Services.AddScoped<MatchIngestionService>();
 builder.Services.AddScoped<IPlayerAnalysisRepository, PlayerAnalysisRepository>();
 builder.Services.AddScoped<RepeatedPlayerAnalysisService>();
+builder.Services.AddScoped<MatchFamiliarityService>();
 builder.Services.AddScoped<IPlayerRelationshipRepository, PlayerRelationshipRepository>();
 builder.Services.AddScoped<PlayerRelationshipAnalysisService>();
 builder.Services.AddScoped<PlayerRelationshipQueryService>();

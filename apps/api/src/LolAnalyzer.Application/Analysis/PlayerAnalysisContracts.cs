@@ -31,6 +31,35 @@ public sealed record PlayerAnalysisResult(
     int MatchesAnalyzed,
     int EncountersPersisted);
 
+public sealed record FamiliarityParticipant(Guid? PlayerId);
+
+public sealed record FamiliarityMatch(
+    string RiotMatchId,
+    DateTimeOffset OccurredAt,
+    IReadOnlyList<FamiliarityParticipant> Participants);
+
+public sealed record MatchFamiliarityInput(
+    Guid OwnerPlayerId,
+    string TargetRiotMatchId,
+    IReadOnlyList<FamiliarityMatch> Matches);
+
+public enum MatchFamiliarityStatus
+{
+    Available,
+    NoPriorHistory,
+    NoEvaluableParticipants,
+    OwnerNotPresent,
+}
+
+public sealed record MatchFamiliarityResult(
+    string TargetRiotMatchId,
+    int KnownPlayers,
+    int UnknownPlayers,
+    int EvaluablePlayers,
+    decimal FamiliarityPercentage,
+    MatchFamiliarityStatus Status,
+    IReadOnlyList<Guid> KnownPlayerIds);
+
 public sealed record PlayerSummary(
     string Puuid,
     string GameName,

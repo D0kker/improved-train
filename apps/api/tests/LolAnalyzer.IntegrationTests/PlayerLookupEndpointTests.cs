@@ -245,6 +245,11 @@ internal sealed class InMemoryPlayerAnalysisRepository : IPlayerAnalysisReposito
             ? new PlayerAnalysisInput(OwnerId, [])
             : null);
 
+    public Task<MatchFamiliarityInput?> LoadFamiliarityInputAsync(
+        string ownerPuuid,
+        string targetRiotMatchId,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
+
     public Task ReplaceEncountersAsync(
         Guid ownerPlayerId,
         IReadOnlyCollection<PlayerEncounterAggregate> encounters,

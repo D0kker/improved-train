@@ -9,13 +9,14 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 ## Estado real
 
 - El repositorio contiene web Next.js, API .NET, worker, PostgreSQL, Redis, pruebas, CI y la especificación original.
-- Foundation y Sprints 1–3 están implementados; Sprint 4 queda completo con S4-001 a S4-006.
+- Foundation y Sprints 1–4 están implementados; Sprint 5 está en curso con S5-002 completada.
 - `docs/SPEC_ANALYSIS.md` registra fortalezas, tensiones y el orden recomendado para Sprint 1.
 - El stack Docker está activo con cinco servicios saludables y solo la web publicada en `0.0.0.0:38080`.
 - ACCOUNT-V1 resuelve Riot ID a PUUID; MATCH-V5 ingesta hasta 20 partidas, consulta primero PostgreSQL, conserva raw JSONB y normaliza participantes.
 - Sprint 3 reconstruye encounters dirigidos owner/other y expone summary, repetidos, historial paginado y detalle de partida.
 - La web permite buscar Riot ID, sincronizar el lote acotado y revisar summary, recurrentes, historial y equipos mediante `/api/v1` same-origin.
 - Sprint 4 contiene el modelo/migración de parejas canónicas, reconstrucción global idempotente, detector prudente, API paginada y vista de relaciones.
+- S5-002 incorpora un cálculo puro de familiaridad por partida: usa únicamente historial anterior según `(occurred_at, riot_match_id)`, entrega conocidos/desconocidos/denominador/porcentaje y carga el historial en bloque desde PostgreSQL.
 - El worker base está separado y saludable; los jobs persistentes pertenecen a Sprint 6.
 - No se ha seleccionado una licencia.
 
@@ -30,7 +31,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 ## Riesgos y preguntas abiertas
 
 - Las políticas, límites y requisitos legales de Riot son temporales; deben verificarse en documentación oficial antes de integrar o publicar.
-- Sprint 5 es el siguiente alcance de producto; sus historias están refinadas pero aún no iniciadas.
+- Sprint 5 está iniciado; el siguiente riesgo algorítmico es detectar grupos canónicos sin explosión combinatoria en S5-003.
 - Los jobs, deduplicación concurrente y rate limiting global se decidirán e implementarán en Sprint 6.
 - `ARC-001` medirá .NET frente a Go en ARM64; el benchmark no autoriza una migración.
 - Falta decidir la licencia del repositorio.
@@ -44,15 +45,16 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - Se comparó el patrón de continuidad de `vigilant-adventure` y se adaptó sin copiar datos runtime ni decisiones ajenas.
 - La skill del repositorio queda en `.agents/skills/lol-network-analyzer` y la memoria se habilita mediante `.codex/config.toml`.
 - Frontend: lint, 4 pruebas, type-check, formato, build local y build Docker exitosos.
-- .NET: 28 pruebas unitarias y 8 de integración, formato y build Docker exitosos.
+- .NET: 36 pruebas unitarias y 9 de integración exitosas; el formato de la solución permanece limpio tras S5-002.
 - Frontend: 5 pruebas, lint, type-check, formato y build Docker exitosos tras añadir la vista de relaciones.
 - Runtime: los cinco servicios están saludables; `/`, `/api/health` y `/openapi/v1.json` responden 200 dentro del contenedor publicado y un jugador inexistente devuelve 404.
 - PostgreSQL aplicó `InitialCreate`, `AddPlayerEncounters` y `AddPlayerRelationships`; ambas tablas nuevas existen.
 - Transacciones reversibles comprobaron en PostgreSQL la pareja dirigida/única de encounters y la canonicalización, suma, unicidad y rango de score de relationships.
 - Una prueba efímera contra PostgreSQL reconstruyó dos veces tres partidas sintéticas en lotes de uno, verificó dos parejas y los contadores ally/opponent/consecutivo, y dejó la base nuevamente vacía.
-- Runtime posterior a la integración: PostgreSQL conserva 781 jugadores, 94 partidas y 4.127 relaciones; API/web, worker, PostgreSQL y Redis saludables; `/api/health` responde 200.
+- Runtime posterior a S5-002: PostgreSQL conserva 1.094 jugadores, 132 partidas y 5.795 relaciones; API/web, worker, PostgreSQL y Redis saludables; `/api/health` responde 200.
+- Una verificación efímera de familiaridad contra PostgreSQL obtuvo `known=1`, `unknown=0`, `percentage=100` usando tres partidas sintéticas y eliminó esos datos al terminar.
 - Se verificaron el 2026-08-30 las políticas oficiales vigentes de Riot: el producto se mantiene post-partida, no desanonimiza jugadores ocultos y trata relaciones como inferencias. Referencias: https://developer.riotgames.com/policies/general y https://developer.riotgames.com/docs/lol
 
 ## Próximo paso
 
-Iniciar S5-002: calcular familiaridad histórica con orden estricto `(occurred_at, riot_match_id)` y sin fuga de información futura. Sprint 8 queda creado como alcance posterior de insights históricos.
+Implementar S5-003: detectar grupos recurrentes canónicos de 3–5 jugadores, con límites configurables y sin emitir subgrupos redundantes. S5-006 integrará posteriormente el resultado de familiaridad ya disponible en el detalle de partida.
