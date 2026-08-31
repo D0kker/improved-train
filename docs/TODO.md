@@ -77,6 +77,10 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [ ] S8-005: crear UI accesible de historial, tendencias e insights.
 - [ ] S8-006: generar tarjeta compartible bajo demanda, sin publicación automática ni IDs internos.
 
+## Investigación pendiente
+
+- [ ] GM-02: revisar requisitos Riot y estrategia de servicio público con investigación externa adjunta.
+
 ## Arquitectura
 
 - [ ] Ejecutar `ARC-001`, benchmark reproducible .NET frente a Go en ARM64.

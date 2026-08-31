@@ -6,7 +6,7 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 
 - **Repositorio:** [D0kker/improved-train](https://github.com/D0kker/improved-train)
 - **Tablero operativo:** [LoL Network Analyzer — Kanban](https://github.com/users/D0kker/projects/5)
-- **Sincronización actual:** 53 historias registradas como issues `#1` a `#53`; GitHub Project es la fuente operativa del estado y este archivo conserva criterios y decisiones de flujo.
+- **Sincronización actual:** 54 historias registradas como issues `#1` a `#54`; GitHub Project es la fuente operativa del estado y este archivo conserva criterios y decisiones de flujo.
 - **Prioridades:** P0 bloquea el sprint; P1 es necesaria para el resultado; P2 mejora continuidad u operación sin bloquear el núcleo.
 
 ## Sprint 1/2 — completados
@@ -212,6 +212,16 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Issue:** #50.
 - **Prioridad:** P2.
 - **Criterios:** generación explícita bajo demanda, vista previa, texto alternativo y descarga local; sin publicación automática, PUUID, secretos ni datos no visibles. Requiere decisiones de privacidad de Sprint 7 antes de exposición pública.
+
+## Investigación Gemini
+
+### GM-02 — Requisitos Riot y estrategia de servicio público
+
+- **Issue:** #54.
+- **Prioridad:** P1.
+- **Estado:** `Por hacer` en el tablero.
+- **Prompt:** investigar fuentes actuales de Riot, restricciones de datos y API, privacidad, publicación, monetización y competidores; separar hechos confirmados de recomendaciones e inferencias.
+- **Entregable:** Gemini adjunta un Markdown con fuentes, fecha, acciones por etapa y preguntas para revisión legal/Riot; después mueve la historia a `Listo para Codex`.
 
 ## Por hacer
 
