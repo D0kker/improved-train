@@ -6,7 +6,7 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 
 - **Repositorio:** [D0kker/improved-train](https://github.com/D0kker/improved-train)
 - **Tablero operativo:** [LoL Network Analyzer — Kanban](https://github.com/users/D0kker/projects/5)
-- **Sincronización actual:** 51 historias registradas como issues `#1` a `#51`; GitHub Project es la fuente operativa del estado y este archivo conserva criterios y decisiones de flujo.
+- **Sincronización actual:** 53 historias registradas como issues `#1` a `#53`; GitHub Project es la fuente operativa del estado y este archivo conserva criterios y decisiones de flujo.
 - **Prioridades:** P0 bloquea el sprint; P1 es necesaria para el resultado; P2 mejora continuidad u operación sin bloquear el núcleo.
 
 ## Sprint 1/2 — completados
@@ -165,6 +165,15 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Issue:** #44.
 - **Prioridad:** P1.
 - **Criterio ajustado:** evidencia estrictamente anterior, grupos inferidos solo entre participantes visibles y estados explícitos para historial insuficiente/incompleto.
+
+### S5-007 — Perfil relacionado con resumen local
+
+- **Issue:** #53.
+- **Prioridad:** P1.
+- **Estado:** propuesta pendiente de revisión.
+- **Objetivo:** al navegar desde una conexión recurrente, mostrar primero el resumen local disponible y dejar la sincronización con Riot como acción explícita.
+- **Criterios propuestos:** conservar PUUID como identidad interna, indicar frescura/ausencia de datos, evitar consumo automático de API al navegar, tolerar Riot IDs mutables y cubrir estados cacheado, vacío, error, cancelación y rutas codificadas.
+- **Fuera de alcance:** autenticación, perfiles públicos, compartir, publicidad o cambios de identidad Riot.
 
 ## Sprint 8 — creado y refinado
 
