@@ -243,24 +243,10 @@ function Relationships({
               {relationships.items.map((relationship) => (
                 <tr key={relationship.otherPlayerPuuid}>
                   <td>
-                    {relationship.gameName && relationship.tagLine ? (
-                      <Link
-                        className="player-link"
-                        href={playerProfilePath(
-                          relationship.gameName,
-                          relationship.tagLine,
-                        )}
-                        aria-label={`Ver resumen de ${relationship.gameName}#${relationship.tagLine}`}
-                      >
-                        <strong>{relationship.gameName}</strong>
-                        <span>#{relationship.tagLine}</span>
-                      </Link>
-                    ) : (
-                      <>
-                        <strong>{relationship.gameName || "Jugador"}</strong>
-                        <span>#{relationship.tagLine || "—"}</span>
-                      </>
-                    )}
+                    <PlayerProfileLink
+                      gameName={relationship.gameName}
+                      tagLine={relationship.tagLine}
+                    />
                   </td>
                   <td>
                     <strong>{relationship.relationshipScore}/100</strong>
@@ -378,8 +364,10 @@ function Encounters({ encounters }: { encounters: PlayerEncounter[] }) {
               {encounters.map((encounter) => (
                 <tr key={encounter.otherPlayerPuuid}>
                   <td>
-                    <strong>{encounter.gameName || "Jugador"}</strong>
-                    <span>#{encounter.tagLine || "—"}</span>
+                    <PlayerProfileLink
+                      gameName={encounter.gameName}
+                      tagLine={encounter.tagLine}
+                    />
                   </td>
                   <td>{encounter.totalMatches}</td>
                   <td>{encounter.sameTeamMatches}</td>
@@ -404,6 +392,34 @@ function Encounters({ encounters }: { encounters: PlayerEncounter[] }) {
         </div>
       )}
     </section>
+  );
+}
+
+function PlayerProfileLink({
+  gameName,
+  tagLine,
+}: {
+  gameName: string;
+  tagLine: string;
+}) {
+  if (!gameName || !tagLine) {
+    return (
+      <>
+        <strong>{gameName || "Jugador"}</strong>
+        <span>#{tagLine || "—"}</span>
+      </>
+    );
+  }
+
+  return (
+    <Link
+      className="player-link"
+      href={playerProfilePath(gameName, tagLine)}
+      aria-label={`Ver resumen de ${gameName}#${tagLine}`}
+    >
+      <strong>{gameName}</strong>
+      <span>#{tagLine}</span>
+    </Link>
   );
 }
 
