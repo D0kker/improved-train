@@ -1,8 +1,8 @@
 # Arquitectura
 
-Última actualización: 2026-08-30
+Última actualización: 2026-08-31
 
-> Estado: Sprints 1–3 y Sprint 4 implementados; Sprint 5 refinado y pendiente. Jobs persistentes y operación avanzada permanecen en Sprint 6.
+> Estado: Sprints 1–5 implementados. Sprint 6 inicia con jobs persistentes y operación avanzada.
 
 ## Contexto
 
@@ -53,13 +53,15 @@ docker-compose.yml
 ## Flujo de datos
 
 1. El usuario introduce `GameName#TagLine` y una región de plataforma.
-2. API resuelve el PUUID mediante ACCOUNT-V1 usando el routing regional correcto.
+2. API busca primero el Riot ID en PostgreSQL; solo un ID ausente se resuelve mediante ACCOUNT-V1 usando el routing regional correcto.
 3. La operación acotada obtiene IDs de MATCH-V5 con concurrencia configurable entre 1 y 5.
 4. Cada match se busca por ID en PostgreSQL antes de llamar a Riot.
 5. Los faltantes se guardan como JSONB y se normalizan en jugadores, partidas y participantes.
 6. `RepeatedPlayerAnalyzer` reconstruye de forma transaccional la pareja dirigida owner/other en `player_encounters`.
 7. El frontend consulta summary, encounters, historial y detalle solo mediante `/api/v1` y conserva resultados locales si falla una actualización Riot.
 8. Sprint 4 reconstruye `player_relationships` globalmente, clasifica evidencia como `possible premade`/`likely premade` y la expone mediante `/api/v1/players/{puuid}/relationships`; la UI muestra factores y lenguaje prudente.
+9. Sprint 5 expone una red ego acotada y la representa con SVG nativo más tabla equivalente; el detalle combina grupos visibles y familiaridad estrictamente anterior usando el owner transportado desde el historial.
+10. Abrir un perfil conocido es lectura local; sincronizar hasta 20 partidas exige una acción explícita.
 
 ## Dependencias e invariantes
 

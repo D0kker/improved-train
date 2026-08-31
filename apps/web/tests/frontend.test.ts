@@ -3,6 +3,8 @@ import test from "node:test";
 
 import {
   apiPath,
+  matchDetailPath,
+  playerNetworkPath,
   playerLookupPath,
   playerProfilePath,
   playerRelationshipsPath,
@@ -15,11 +17,21 @@ import {
   groupTone,
   groupsForParticipant,
 } from "../src/premade-groups.ts";
+import {
+  filterNetwork,
+  networkEdgeWidth,
+  networkNodeRadius,
+  positionNetworkNodes,
+} from "../src/network.ts";
 
 test("API paths remain same-origin and encode user-controlled segments", () => {
   assert.equal(
     playerLookupPath("Ana Uno", "LA/N"),
     "/api/v1/players/by-riot-id/Ana%20Uno/LA%2FN",
+  );
+  assert.equal(
+    matchDetailPath("LA1_123/456", "owner/puuid"),
+    "/match/LA1_123%2F456?ownerPuuid=owner%2Fpuuid",
   );
   assert.equal(
     playerProfilePath("Ana Uno", "LA/N"),
@@ -47,6 +59,68 @@ test("relationship paths are same-origin and pagination is bounded", () => {
   );
   assert.throws(() => playerRelationshipsPath("test", 0, 20), RangeError);
   assert.throws(() => playerRelationshipsPath("test", 1, 101), RangeError);
+  assert.equal(
+    playerNetworkPath("test/puuid"),
+    "/api/v1/players/test%2Fpuuid/network?maxNodes=50&maxEdges=100",
+  );
+});
+
+test("network helpers filter, position and scale deterministically", () => {
+  const network = {
+    center: { puuid: "owner", gameName: "Ana", tagLine: "LAN", isCenter: true },
+    nodes: [
+      { puuid: "owner", gameName: "Ana", tagLine: "LAN", isCenter: true },
+      { puuid: "high", gameName: "Bea", tagLine: "LAN", isCenter: false },
+      { puuid: "low", gameName: "Caro", tagLine: "LAN", isCenter: false },
+    ],
+    edges: [
+      {
+        sourcePuuid: "owner",
+        targetPuuid: "high",
+        matchesTogether: 5,
+        sameTeamMatches: 4,
+        oppositeTeamMatches: 1,
+        sameTeamRatio: 0.8,
+        relationshipScore: 70,
+        relationshipConfidence: "HIGH" as const,
+        premadeLabel: "likely premade" as const,
+      },
+      {
+        sourcePuuid: "owner",
+        targetPuuid: "low",
+        matchesTogether: 2,
+        sameTeamMatches: 1,
+        oppositeTeamMatches: 1,
+        sameTeamRatio: 0.5,
+        relationshipScore: 20,
+        relationshipConfidence: "LOW" as const,
+        premadeLabel: null,
+      },
+    ],
+    metadata: {
+      depth: 1,
+      truncated: false,
+      totalAvailableNodes: 3,
+      totalAvailableEdges: 2,
+      appliedMaxNodes: 50,
+      appliedMaxEdges: 100,
+    },
+  };
+
+  const filtered = filterNetwork(network, 50, "MEDIUM");
+  assert.deepEqual(
+    filtered.nodes.map((node) => node.puuid),
+    ["owner", "high"],
+  );
+  assert.equal(filtered.edges.length, 1);
+  assert.deepEqual(positionNetworkNodes(filtered.nodes, filtered.edges)[0], {
+    ...network.center,
+    x: 400,
+    y: 250,
+    score: 100,
+  });
+  assert.equal(networkNodeRadius(70, false), 23);
+  assert.equal(networkEdgeWidth(100), 5);
 });
 
 test("presentation helpers normalize percentages and durations", () => {

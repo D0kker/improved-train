@@ -143,3 +143,19 @@
 - Decisión: en el detalle de partida, evaluar relaciones únicamente entre participantes visibles del mismo equipo; mostrar cliques máximos de 3–5 y parejas detectadas solo cuando no estén contenidas en un grupo mayor. Etiquetar siempre como `Posible premade`, añadiendo `evidencia alta` cuando todas las parejas superen el umbral fuerte.
 - Razón: los dúos también son útiles, pero repetir cada pareja de un grupo produciría ruido. El historial no demuestra que los jugadores hayan entrado juntos en esa partida.
 - Consecuencias: cada grupo recibe un código determinista `P1`, `P2`, etc. y un tono visual; código, etiqueta y lista de integrantes garantizan que el color no sea el único identificador. Los solapamientos legítimos muestran varias insignias en el jugador.
+
+## D-019 — Grafo SVG progresivo sin dependencia de producción
+
+- Fecha: 2026-08-31
+- Estado: aceptada para Sprint 5
+- Decisión: representar la red ego acotada con SVG nativo, controles HTML y una tabla semántica equivalente en vez de incorporar Cytoscape/D3 durante el MVP.
+- Razón: profundidad uno y máximo 50 nodos no justifican todavía el peso, mantenimiento y superficie de una dependencia; la tabla conserva toda la funcionalidad informativa si falla o no se usa el mapa.
+- Consecuencias: zoom, pan, selección, filtros y reset se implementan localmente; posiciones, radios y grosores son deterministas y probados. Reevaluar una librería solo si aumenta la profundidad o complejidad del grafo.
+
+## D-020 — Perfil local-first y sincronización explícita
+
+- Fecha: 2026-08-31
+- Estado: aceptada para Sprint 5
+- Decisión: resolver primero Riot ID desde PostgreSQL y cargar resumen, relaciones e historial sin sincronizar; ACCOUNT-V1 se usa para IDs ausentes y MATCH-V5 solo tras la acción explícita `Actualizar 20 partidas`.
+- Razón: navegar entre perfiles debe ser rápido, reutilizar datos y no consumir cuota externa por efecto lateral.
+- Consecuencias: el resumen expone la fecha local de actualización; los datos vacíos se muestran como tales y los Riot IDs siguen siendo atributos mutables sobre PUUID. Refresh durable y programado pertenece a Sprint 6.

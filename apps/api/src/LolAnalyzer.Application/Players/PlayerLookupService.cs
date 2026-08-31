@@ -15,6 +15,14 @@ public sealed class PlayerLookupService(IRiotApiClient riotApiClient, IPlayerRep
         ArgumentException.ThrowIfNullOrWhiteSpace(tagLine);
         ArgumentException.ThrowIfNullOrWhiteSpace(platformRegion);
 
+        var localPlayer = await playerRepository
+            .FindByRiotIdAsync(gameName, tagLine, cancellationToken)
+            .ConfigureAwait(false);
+        if (localPlayer is not null)
+        {
+            return localPlayer;
+        }
+
         var account = await riotApiClient
             .GetAccountByRiotIdAsync(gameName, tagLine, cancellationToken)
             .ConfigureAwait(false);

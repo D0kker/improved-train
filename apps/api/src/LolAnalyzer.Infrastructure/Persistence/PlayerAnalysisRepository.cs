@@ -144,7 +144,7 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
         var results = await dbContext.MatchParticipants
             .AsNoTracking()
             .Where(participant => participant.PlayerId == player.Id)
-            .Select(participant => participant.Win)
+            .Select(participant => new { participant.Win, participant.Match.CreatedAt })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         var uniquePlayers = await dbContext.PlayerEncounters
@@ -157,7 +157,10 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
                 encounter => encounter.OwnerPlayerId == player.Id && encounter.TotalMatches >= 2,
                 cancellationToken)
             .ConfigureAwait(false);
-        var wins = results.Count(result => result);
+        var wins = results.Count(result => result.Win);
+        var dataUpdatedAt = results.Count == 0
+            ? player.UpdatedAt
+            : results.Max(result => result.CreatedAt);
 
         return new PlayerSummary(
             player.Puuid,
@@ -168,7 +171,8 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
             results.Count - wins,
             results.Count == 0 ? 0 : Math.Round(wins * 100d / results.Count, 1),
             uniquePlayers,
-            repeatedPlayers);
+            repeatedPlayers,
+            dataUpdatedAt);
     }
 
     public async Task<IReadOnlyList<PlayerEncounterView>?> GetRepeatedPlayersAsync(

@@ -12,6 +12,7 @@ import {
   type RelationshipsResponse,
   type PlayerSummary,
   playerLookupPath,
+  matchDetailPath,
   playerRelationshipsPath,
   playerSyncPath,
 } from "@/src/api";
@@ -23,6 +24,7 @@ import {
   winRate,
 } from "@/src/format";
 import { PlayerProfileLink } from "@/src/player-profile-link";
+import { PlayerNetworkSection } from "./player-network-section";
 
 interface PlayerDashboardProps {
   gameName: string;
@@ -53,7 +55,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   const load = useCallback(
-    async (signal?: AbortSignal) => {
+    async (synchronize: boolean, signal?: AbortSignal) => {
       setIsLoading(true);
       setError(null);
       setWarning(null);
@@ -65,19 +67,21 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
           { signal },
         );
 
-        setStep("sync");
         let syncWarning: string | null = null;
-        try {
-          await fetchJson<unknown>(playerSyncPath(player.puuid, 20), {
-            method: "POST",
-            signal,
-          });
-        } catch (syncError) {
-          if (signal?.aborted) return;
-          syncWarning = messageFor(
-            syncError,
-            "No se pudo actualizar el historial.",
-          );
+        if (synchronize) {
+          setStep("sync");
+          try {
+            await fetchJson<unknown>(playerSyncPath(player.puuid, 20), {
+              method: "POST",
+              signal,
+            });
+          } catch (syncError) {
+            if (signal?.aborted) return;
+            syncWarning = messageFor(
+              syncError,
+              "No se pudo actualizar el historial.",
+            );
+          }
         }
 
         setStep("results");
@@ -125,7 +129,10 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
 
   useEffect(() => {
     const controller = new AbortController();
-    const request = window.setTimeout(() => void load(controller.signal), 0);
+    const request = window.setTimeout(
+      () => void load(false, controller.signal),
+      0,
+    );
     return () => {
       window.clearTimeout(request);
       controller.abort();
@@ -157,14 +164,22 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
               almacenadas por el analizador.
             </p>
           </div>
-          <button
-            className="secondary-button"
-            disabled={isLoading}
-            onClick={() => void load()}
-            type="button"
-          >
-            {isLoading ? "Actualizando…" : "Actualizar 20 partidas"}
-          </button>
+          <div className="profile-actions">
+            <button
+              className="secondary-button"
+              disabled={isLoading}
+              onClick={() => void load(true)}
+              type="button"
+            >
+              {isLoading ? "Actualizando…" : "Actualizar 20 partidas"}
+            </button>
+            {data ? (
+              <p className="profile-freshness">
+                Datos locales actualizados:{" "}
+                {formatDate(data.summary.dataUpdatedAt)}
+              </p>
+            ) : null}
+          </div>
         </section>
 
         {isLoading && !data ? <LoadingPanel step={step} /> : null}
@@ -178,7 +193,10 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
                 internas ni credenciales.
               </p>
             </div>
-            <button className="secondary-button" onClick={() => void load()}>
+            <button
+              className="secondary-button"
+              onClick={() => void load(false)}
+            >
               Reintentar
             </button>
           </section>
@@ -194,7 +212,11 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
             <SummaryCards summary={data.summary} />
             <Encounters encounters={data.encounters} />
             <Relationships relationships={data.relationships} />
-            <MatchHistory matches={data.matches} />
+            <PlayerNetworkSection puuid={data.player.puuid} />
+            <MatchHistory
+              matches={data.matches}
+              ownerPuuid={data.player.puuid}
+            />
           </>
         ) : null}
       </div>
@@ -395,7 +417,13 @@ function Encounters({ encounters }: { encounters: PlayerEncounter[] }) {
   );
 }
 
-function MatchHistory({ matches }: { matches: MatchesResponse }) {
+function MatchHistory({
+  matches,
+  ownerPuuid,
+}: {
+  matches: MatchesResponse;
+  ownerPuuid: string;
+}) {
   return (
     <section aria-labelledby="matches-title">
       <div className="section-title-row">
@@ -418,7 +446,7 @@ function MatchHistory({ matches }: { matches: MatchesResponse }) {
           {matches.items.map((match) => (
             <Link
               className={`match-card ${match.win ? "win" : "loss"}`}
-              href={`/match/${encodeURIComponent(match.riotMatchId)}`}
+              href={matchDetailPath(match.riotMatchId, ownerPuuid)}
               key={match.riotMatchId}
             >
               <span className="result-badge">

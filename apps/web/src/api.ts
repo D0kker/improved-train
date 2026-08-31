@@ -15,6 +15,7 @@ export interface PlayerSummary {
   winRate: number;
   uniquePlayersEncountered: number;
   repeatedPlayers: number;
+  dataUpdatedAt: string;
 }
 
 export interface PlayerEncounter {
@@ -75,6 +76,41 @@ export interface RelationshipsResponse {
   items: PlayerRelationship[];
 }
 
+export type RelationshipConfidence = "LOW" | "MEDIUM" | "HIGH" | "VERY_HIGH";
+
+export interface PlayerNetworkNode {
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+  isCenter: boolean;
+}
+
+export interface PlayerNetworkEdge {
+  sourcePuuid: string;
+  targetPuuid: string;
+  matchesTogether: number;
+  sameTeamMatches: number;
+  oppositeTeamMatches: number;
+  sameTeamRatio: number;
+  relationshipScore: number;
+  relationshipConfidence: RelationshipConfidence;
+  premadeLabel: "possible premade" | "likely premade" | null;
+}
+
+export interface PlayerNetworkResponse {
+  center: PlayerNetworkNode;
+  nodes: PlayerNetworkNode[];
+  edges: PlayerNetworkEdge[];
+  metadata: {
+    depth: number;
+    truncated: boolean;
+    totalAvailableNodes: number;
+    totalAvailableEdges: number;
+    appliedMaxNodes: number;
+    appliedMaxEdges: number;
+  };
+}
+
 export interface MatchParticipant {
   puuid?: string;
   gameName?: string;
@@ -106,6 +142,18 @@ export interface MatchPremadeGroup {
   members: MatchPremadeGroupMember[];
 }
 
+export interface MatchFamiliarity {
+  knownPlayers: number;
+  unknownPlayers: number;
+  evaluablePlayers: number;
+  familiarityPercentage: number;
+  status:
+    | "Available"
+    | "NoPriorHistory"
+    | "NoEvaluableParticipants"
+    | "OwnerNotPresent";
+}
+
 export interface MatchDetail {
   riotMatchId: string;
   queueId: number | null;
@@ -113,6 +161,7 @@ export interface MatchDetail {
   gameDurationSeconds: number | null;
   teams: MatchTeam[];
   premadeGroups: MatchPremadeGroup[];
+  familiarity: MatchFamiliarity | null;
 }
 
 export class ApiError extends Error {
@@ -139,6 +188,13 @@ export function playerProfilePath(gameName: string, tagLine: string): string {
   return `/player/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
 }
 
+export function matchDetailPath(matchId: string, ownerPuuid?: string): string {
+  const path = `/match/${encodeURIComponent(matchId)}`;
+  return ownerPuuid
+    ? `${path}?ownerPuuid=${encodeURIComponent(ownerPuuid)}`
+    : path;
+}
+
 export function playerSyncPath(puuid: string, count = 20): string {
   if (!Number.isInteger(count) || count < 1 || count > 20) {
     throw new RangeError("El número de partidas debe estar entre 1 y 20.");
@@ -163,6 +219,10 @@ export function playerRelationshipsPath(
   }
 
   return `${apiPath("players", puuid, "relationships")}?page=${page}&pageSize=${pageSize}`;
+}
+
+export function playerNetworkPath(puuid: string): string {
+  return `${apiPath("players", puuid, "network")}?maxNodes=50&maxEdges=100`;
 }
 
 export async function fetchJson<T>(

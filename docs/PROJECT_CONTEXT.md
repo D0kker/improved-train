@@ -9,7 +9,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 ## Estado real
 
 - El repositorio contiene web Next.js, API .NET, worker, PostgreSQL, Redis, pruebas, CI y la especificación original.
-- Foundation y Sprints 1–4 están implementados; Sprint 5 está en curso con S5-002, S5-003 y S5-004 completadas.
+- Foundation y Sprints 1–5 están implementados; Sprint 6 inicia con la formalización de jobs persistentes.
 - `docs/SPEC_ANALYSIS.md` registra fortalezas, tensiones y el orden recomendado para Sprint 1.
 - El stack Docker está activo con cinco servicios saludables y solo la web publicada en `0.0.0.0:38080`.
 - ACCOUNT-V1 resuelve Riot ID a PUUID; MATCH-V5 ingesta hasta 20 partidas, consulta primero PostgreSQL, conserva raw JSONB y normaliza participantes.
@@ -20,10 +20,13 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - S5-002 incorpora un cálculo puro de familiaridad por partida: usa únicamente historial anterior según `(occurred_at, riot_match_id)`, entrega conocidos/desconocidos/denominador/porcentaje y carga el historial en bloque desde PostgreSQL.
 - S5-003 detecta cliques máximos de 3–5 jugadores a partir de parejas clasificadas, conserva solapamientos legítimos y aplica límites configurables antes de la integración en contratos/UI.
 - S5-004 expone una red ego de profundidad uno mediante `/api/v1/players/{puuid}/network`, con orden estable heredado de relaciones, filtros por confianza/score, límites configurables y metadata de truncamiento.
-- S5-006 está en curso: el detalle de partida ya identifica posibles premades por equipo, muestra dúos no contenidos y cliques máximos de 3–5, y los distingue mediante código textual/tono y nivel prudente de evidencia; la familiaridad contextual aún está pendiente.
+- S5-005 muestra la red ego mediante SVG nativo y tabla equivalente, con filtros, zoom/pan por controles, selección accesible, truncamiento y estados de carga/vacío/error sin añadir dependencias.
+- S5-006 identifica posibles premades por equipo y muestra familiaridad histórica según el owner transportado desde el historial, con estados explícitos y solo evidencia anterior.
+- S5-007 hace lookup local-first, muestra frescura del resumen y reserva las llamadas de sincronización para el botón explícito de actualización.
 - Los Riot IDs visibles del detalle y de la leyenda de premades enlazan al perfil mediante el componente compartido; datos incompletos permanecen como texto y no provocan sincronización automática.
 - El worker base está separado y saludable; los jobs persistentes pertenecen a Sprint 6.
 - No se ha seleccionado una licencia.
+- Validación de cierre de Sprint 5 (2026-08-31): 43 pruebas unitarias y 15 de integración .NET; pruebas, lint, type-check, formato y build de Next.js; `dotnet format --verify-no-changes`; `docker compose config`; builds Docker de API/web; y cinco servicios saludables con API y web comprobadas en runtime.
 
 ## Arquitectura implementada del MVP
 
@@ -36,7 +39,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 ## Riesgos y preguntas abiertas
 
 - Las políticas, límites y requisitos legales de Riot son temporales; deben verificarse en documentación oficial antes de integrar o publicar.
-- Sprint 5 está iniciado; S5-006 está parcialmente implementada y S5-005 continúa pendiente.
+- Sprint 5 está completado; Sprint 6 debe comenzar por S6-001 porque deduplicación, refresh e incrementalidad dependen del contrato de jobs.
 - Los jobs, deduplicación concurrente y rate limiting global se decidirán e implementarán en Sprint 6.
 - `ARC-001` medirá .NET frente a Go en ARM64; el benchmark no autoriza una migración.
 - Falta decidir la licencia del repositorio.
@@ -67,4 +70,4 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 
 ## Próximo paso
 
-Completar S5-006 con familiaridad histórica contextual y después continuar S5-005: consumir la red ego con visualización progresiva y alternativa tabular accesible.
+Implementar S6-001: formalizar jobs persistentes con estados, progreso, error seguro y endpoints start/status antes de mover la sincronización al worker.

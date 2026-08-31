@@ -19,7 +19,13 @@ import {
 } from "@/src/premade-groups";
 import { PlayerProfileLink } from "@/src/player-profile-link";
 
-export function MatchDetailView({ matchId }: { matchId: string }) {
+export function MatchDetailView({
+  matchId,
+  ownerPuuid,
+}: {
+  matchId: string;
+  ownerPuuid?: string;
+}) {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,7 +34,10 @@ export function MatchDetailView({ matchId }: { matchId: string }) {
     setIsLoading(true);
     setError(null);
     try {
-      setMatch(await fetchJson<MatchDetail>(apiPath("matches", matchId)));
+      const path = ownerPuuid
+        ? `${apiPath("matches", matchId)}?ownerPuuid=${encodeURIComponent(ownerPuuid)}`
+        : apiPath("matches", matchId);
+      setMatch(await fetchJson<MatchDetail>(path));
     } catch (requestError) {
       setError(
         requestError instanceof ApiError || requestError instanceof Error
@@ -38,7 +47,7 @@ export function MatchDetailView({ matchId }: { matchId: string }) {
     } finally {
       setIsLoading(false);
     }
-  }, [matchId]);
+  }, [matchId, ownerPuuid]);
 
   useEffect(() => {
     const request = window.setTimeout(() => void load(), 0);
@@ -97,6 +106,8 @@ export function MatchDetailView({ matchId }: { matchId: string }) {
               </div>
             </section>
 
+            <FamiliaritySummary familiarity={match.familiarity} />
+
             <PremadeSummary groups={match.premadeGroups} />
 
             <div className="teams-grid">
@@ -116,6 +127,51 @@ export function MatchDetailView({ matchId }: { matchId: string }) {
         ) : null}
       </div>
     </main>
+  );
+}
+
+function FamiliaritySummary({
+  familiarity,
+}: {
+  familiarity: MatchDetail["familiarity"];
+}) {
+  if (!familiarity) {
+    return (
+      <section className="familiarity-summary">
+        <p className="eyebrow">Familiaridad del lobby</p>
+        <h2>Contexto no disponible</h2>
+        <p className="muted-copy">
+          Abre la partida desde el historial de un jugador para comparar con su
+          evidencia anterior.
+        </p>
+      </section>
+    );
+  }
+
+  const messages = {
+    Available: `${familiarity.knownPlayers} de ${familiarity.evaluablePlayers} jugadores ya habían aparecido antes.`,
+    NoPriorHistory: "Esta es la primera partida evaluable del historial.",
+    NoEvaluableParticipants:
+      "No hay participantes visibles suficientes para calcular familiaridad.",
+    OwnerNotPresent: "El jugador de referencia no aparece en esta partida.",
+  };
+  return (
+    <section
+      className="familiarity-summary"
+      aria-labelledby="familiarity-title"
+    >
+      <div>
+        <p className="eyebrow">Familiaridad del lobby</p>
+        <h2 id="familiarity-title">{messages[familiarity.status]}</h2>
+        <p className="muted-copy">
+          Solo usa partidas estrictamente anteriores.
+        </p>
+      </div>
+      <div className="familiarity-value">
+        <strong>{familiarity.familiarityPercentage}%</strong>
+        <span>{familiarity.unknownPlayers} no conocidos</span>
+      </div>
+    </section>
   );
 }
 

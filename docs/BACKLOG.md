@@ -125,7 +125,7 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Dependencias:** S4-005 y frontend de Sprint 3.
 - **Criterios cumplidos:** tabla semántica responsive con estados de carga/vacío/error/reintento y lenguaje de inferencia.
 
-## Sprint 5 — en curso
+## Sprint 5 — completado
 
 ### S5-001 — Historia padre de grafo, grupos y familiaridad
 
@@ -161,27 +161,31 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Issue:** #43.
 - **Prioridad:** P1.
 - **Criterio ajustado:** interacción visual progresiva y alternativa tabular equivalente; el grafo no bloquea la tabla y cualquier dependencia requiere justificar peso, mantenimiento y compatibilidad.
+- **Estado:** completada el 2026-08-31.
+- **Evidencia:** implementación nativa SVG sin dependencia nueva; zoom, pan por controles, selección con teclado, restablecimiento, filtros, truncamiento, estados de carga/vacío/error, tamaños/grosores con leyenda y tabla semántica equivalente. Los helpers fijan filtrado, posición y escalas de forma determinista.
 
 ### S5-006 — Mostrar familiaridad y grupos en detalle
 
 - **Issue:** #44.
 - **Prioridad:** P1.
 - **Criterio ajustado:** evidencia estrictamente anterior, grupos inferidos solo entre participantes visibles y estados explícitos para historial insuficiente/incompleto.
-- **Estado:** en curso; la presentación de premades quedó implementada, familiaridad contextual permanece pendiente.
+- **Estado:** completada el 2026-08-31.
 - **Entrega parcial:** el detalle expone dúos no contenidos y cliques máximos de 3–5 por equipo. La UI usa `P1`, `P2`, etc., cinco tonos reutilizables y una leyenda textual; distingue `Posible premade` de `Posible premade · evidencia alta` y aclara que no confirma que hayan entrado juntos.
 - **Navegación:** los Riot IDs completos son enlaces accesibles al perfil tanto en cada equipo como en la leyenda de premades; nombres/tags incompletos no generan rutas ambiguas.
-- **Evidencia parcial:** contrato cubierto con dos grupos, niveles distintos, exclusión de relaciones entre rivales y ausencia de lenguaje `verified`; 41 pruebas unitarias, 13 de integración y 6 pruebas frontend aprobadas, además de lint, type-check, formato y builds Docker de API/web.
+- **Familiaridad:** el historial transporta el owner como contexto; el contrato devuelve conteos, porcentaje y estados `Available`, `NoPriorHistory`, `NoEvaluableParticipants` y `OwnerNotPresent`, sin exponer IDs internos de evidencia.
+- **Evidencia:** contrato cubierto con grupos y familiaridad contextual; 43 pruebas unitarias y 15 de integración aprobadas antes de la validación Docker final.
 
 ### S5-007 — Perfil relacionado con resumen local
 
 - **Issue:** #53.
 - **Prioridad:** P1.
-- **Estado:** propuesta pendiente de revisión.
+- **Estado:** completada el 2026-08-31.
 - **Objetivo:** al navegar desde una conexión recurrente, mostrar primero el resumen local disponible y dejar la sincronización con Riot como acción explícita.
 - **Criterios propuestos:** conservar PUUID como identidad interna, indicar frescura/ausencia de datos, evitar consumo automático de API al navegar, tolerar Riot IDs mutables y cubrir estados cacheado, vacío, error, cancelación y rutas codificadas.
 - **Fuera de alcance:** autenticación, perfiles públicos, compartir, publicidad o cambios de identidad Riot.
+- **Evidencia:** lookup consulta primero PostgreSQL y solo resuelve contra Riot cuando el Riot ID no existe localmente; la navegación carga resumen/historial sin sincronizar y el botón de actualización es explícito. El resumen informa `dataUpdatedAt`; pruebas cubren hit local, miss remoto y rutas codificadas.
 
-## Sprint 6 — operación y rendimiento planificados
+## Sprint 6 — operación y rendimiento iniciado
 
 - Mantener jobs persistentes, exclusión concurrente, sincronización incremental, caché, rate limiting y observabilidad como núcleo del sprint.
 - Incorporar de GM-03 únicamente mediciones reproducibles sobre consultas reales e índices PostgreSQL justificados con planes/latencias antes y después; no usar objetivos arbitrarios como `<50 ms`.

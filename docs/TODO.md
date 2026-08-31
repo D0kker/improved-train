@@ -48,20 +48,20 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] S4-005: exponer `/api/v1/players/{puuid}/relationships` paginado y explicable.
 - [x] S4-006: crear vista accesible de relaciones y posibles premades.
 
-## Sprint 5 — en curso
+## Sprint 5 — completado
 
-- [ ] S5-001: cerrar la historia padre de grafo, grupos y familiaridad.
+- [x] S5-001: cerrar la historia padre de grafo, grupos y familiaridad.
 - [x] S5-002: calcular familiaridad con orden `(occurred_at, riot_match_id)`, solo historial anterior y denominador auditable.
 - [x] S5-003: detectar grupos canónicos máximos de 3–5 sin subgrupos redundantes ni explosión combinatoria.
 - [x] S5-004: exponer red ego `/api/v1/players/{puuid}/network` con límites, truncation metadata y orden estable.
-- [ ] S5-005: crear grafo progresivo con alternativa tabular funcional y accesible.
-- [ ] S5-006: mostrar familiaridad y grupos usando evidencia anterior y participantes visibles.
+- [x] S5-005: crear grafo progresivo con alternativa tabular funcional y accesible.
+- [x] S5-006: mostrar familiaridad y grupos usando evidencia anterior y participantes visibles.
   - [x] Mostrar posibles premades de 2–5 jugadores en el detalle, con etiqueta prudente, código textual y color por grupo.
   - [x] Enlazar cada Riot ID visible del detalle y de la leyenda de grupos con su perfil; datos incompletos permanecen como texto.
-  - [ ] Integrar familiaridad histórica contextual y sus estados de evidencia.
-- [ ] S5-007: perfil relacionado con resumen local; navegación sin sincronización automática y con estado de frescura.
+  - [x] Integrar familiaridad histórica contextual y sus estados de evidencia.
+- [x] S5-007: perfil relacionado con resumen local; navegación sin sincronización automática y con estado de frescura.
 
-## Sprint 6 — planificado
+## Sprint 6 — iniciado
 
 - [ ] Jobs persistentes, exclusión de duplicados y sincronización incremental.
 - [ ] Rate limiting, caché, refresh, observabilidad, índices medidos sobre consultas reales y pruebas de resiliencia.

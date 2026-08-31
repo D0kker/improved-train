@@ -280,6 +280,7 @@ app.MapGet("/api/v1/players/{puuid}/matches", async Task<IResult> (
 
 app.MapGet("/api/v1/matches/{matchId}", async Task<IResult> (
     string matchId,
+    string? ownerPuuid,
     MatchDetailQueryService queryService,
     CancellationToken cancellationToken) =>
 {
@@ -288,7 +289,7 @@ app.MapGet("/api/v1/matches/{matchId}", async Task<IResult> (
         return Results.BadRequest();
     }
 
-    var match = await queryService.GetAsync(matchId, cancellationToken).ConfigureAwait(false);
+    var match = await queryService.GetAsync(matchId, ownerPuuid, cancellationToken).ConfigureAwait(false);
     return match is null ? Results.NotFound() : Results.Ok(match);
 });
 

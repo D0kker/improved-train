@@ -22,7 +22,7 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
     public PlayerLookupEndpointTests(LolAnalyzerApiFactory factory) => _factory = factory;
 
     [Fact]
-    public async Task LookupReturnsThePuuidResolvedByTheSimulatedRiotClient()
+    public async Task LookupReturnsTheExistingLocalPlayerBeforeRiot()
     {
         using var client = _factory.CreateClient();
 
@@ -30,8 +30,21 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
-        Assert.Equal("simulated-puuid", body.RootElement.GetProperty("puuid").GetString());
+        Assert.Equal("test-owner-puuid", body.RootElement.GetProperty("puuid").GetString());
         Assert.Equal("Ana", body.RootElement.GetProperty("gameName").GetString());
+    }
+
+    [Fact]
+    public async Task LookupResolvesAnUnknownRiotIdWithTheSimulatedClient()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/api/v1/players/by-riot-id/Nueva/LAN", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var body = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("simulated-puuid", body.RootElement.GetProperty("puuid").GetString());
+        Assert.Equal("Nueva", body.RootElement.GetProperty("gameName").GetString());
     }
 
     [Fact]
@@ -116,6 +129,29 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
         Assert.Equal(200, groups[1].GetProperty("teamId").GetInt32());
         Assert.Equal(2, groups[1].GetProperty("members").GetArrayLength());
         Assert.DoesNotContain("verified", json);
+    }
+
+    [Fact]
+    public async Task MatchDetailExposesFamiliarityOnlyWithOwnerContext()
+    {
+        using var client = _factory.CreateClient();
+
+        var contextual = await client.GetAsync(
+            "/api/v1/matches/TEST_1?ownerPuuid=test-owner-puuid",
+            TestContext.Current.CancellationToken);
+        var withoutOwner = await client.GetAsync(
+            "/api/v1/matches/TEST_1",
+            TestContext.Current.CancellationToken);
+
+        using var contextualBody = JsonDocument.Parse(
+            await contextual.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        using var plainBody = JsonDocument.Parse(
+            await withoutOwner.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        var familiarity = contextualBody.RootElement.GetProperty("familiarity");
+        Assert.Equal(1, familiarity.GetProperty("knownPlayers").GetInt32());
+        Assert.Equal(50m, familiarity.GetProperty("familiarityPercentage").GetDecimal());
+        Assert.Equal("Available", familiarity.GetProperty("status").GetString());
+        Assert.Equal(JsonValueKind.Null, plainBody.RootElement.GetProperty("familiarity").ValueKind);
     }
 
     [Fact]
@@ -291,6 +327,20 @@ internal sealed class SimulatedRiotApiClient : IRiotApiClient
 
 internal sealed class InMemoryPlayerRepository : IPlayerRepository
 {
+    public Task<Player?> FindByRiotIdAsync(
+        string gameName,
+        string tagLine,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<Player?>(gameName == "Ana" && tagLine == "LAN"
+            ? new Player
+            {
+                Puuid = "test-owner-puuid",
+                GameName = gameName,
+                TagLine = tagLine,
+                PlatformRegion = "la1",
+            }
+            : null);
+
     public Task<Player> UpsertAsync(
         string puuid,
         string gameName,
@@ -333,7 +383,30 @@ internal sealed class InMemoryPlayerAnalysisRepository : IPlayerAnalysisReposito
     public Task<MatchFamiliarityInput?> LoadFamiliarityInputAsync(
         string ownerPuuid,
         string targetRiotMatchId,
-        CancellationToken cancellationToken) => throw new NotSupportedException();
+        CancellationToken cancellationToken) =>
+        Task.FromResult<MatchFamiliarityInput?>(
+            ownerPuuid == "test-owner-puuid" && targetRiotMatchId == "TEST_1"
+                ? new MatchFamiliarityInput(
+                    OwnerId,
+                    targetRiotMatchId,
+                    [
+                        new FamiliarityMatch(
+                            "TEST_0",
+                            DateTimeOffset.UnixEpoch,
+                            [
+                                new FamiliarityParticipant(OwnerId),
+                                new FamiliarityParticipant(Guid.Parse("00000000-0000-0000-0000-000000000002")),
+                            ]),
+                        new FamiliarityMatch(
+                            "TEST_1",
+                            DateTimeOffset.UnixEpoch.AddMinutes(20),
+                            [
+                                new FamiliarityParticipant(OwnerId),
+                                new FamiliarityParticipant(Guid.Parse("00000000-0000-0000-0000-000000000002")),
+                                new FamiliarityParticipant(Guid.Parse("00000000-0000-0000-0000-000000000003")),
+                            ]),
+                    ])
+                : null);
 
     public Task ReplaceEncountersAsync(
         Guid ownerPlayerId,
@@ -342,7 +415,7 @@ internal sealed class InMemoryPlayerAnalysisRepository : IPlayerAnalysisReposito
 
     public Task<PlayerSummary?> GetSummaryAsync(string puuid, CancellationToken cancellationToken) =>
         Task.FromResult<PlayerSummary?>(puuid == "test-owner-puuid"
-            ? new PlayerSummary(puuid, "Ana", "LAN", 1, 0, 1, 0, 9, 0)
+            ? new PlayerSummary(puuid, "Ana", "LAN", 1, 0, 1, 0, 9, 0, DateTimeOffset.UnixEpoch)
             : null);
 
     public Task<IReadOnlyList<PlayerEncounterView>?> GetRepeatedPlayersAsync(

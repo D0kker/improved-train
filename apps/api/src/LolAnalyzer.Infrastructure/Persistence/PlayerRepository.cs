@@ -6,6 +6,17 @@ namespace LolAnalyzer.Infrastructure.Persistence;
 
 public sealed class PlayerRepository(LolAnalyzerDbContext dbContext) : IPlayerRepository
 {
+    public Task<Player?> FindByRiotIdAsync(
+        string gameName,
+        string tagLine,
+        CancellationToken cancellationToken) =>
+        dbContext.Players
+            .AsNoTracking()
+            .Where(player => player.GameName == gameName && player.TagLine == tagLine)
+            .OrderByDescending(player => player.UpdatedAt)
+            .ThenBy(player => player.Puuid)
+            .FirstOrDefaultAsync(cancellationToken);
+
     public async Task<Player> UpsertAsync(
         string puuid,
         string gameName,

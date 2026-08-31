@@ -69,7 +69,8 @@ public sealed record PlayerSummary(
     int Losses,
     double WinRate,
     int UniquePlayersEncountered,
-    int RepeatedPlayers);
+    int RepeatedPlayers,
+    DateTimeOffset DataUpdatedAt);
 
 public sealed record PlayerEncounterView(
     string OtherPlayerPuuid,
@@ -131,6 +132,13 @@ public sealed record MatchPremadeGroup(
     string Label,
     IReadOnlyList<MatchPremadeGroupMember> Members);
 
+public sealed record MatchFamiliarityView(
+    int KnownPlayers,
+    int UnknownPlayers,
+    int EvaluablePlayers,
+    decimal FamiliarityPercentage,
+    string Status);
+
 public sealed record MatchDetail(
     string RiotMatchId,
     int? QueueId,
@@ -139,4 +147,6 @@ public sealed record MatchDetail(
     IReadOnlyList<MatchTeamDetail> Teams)
 {
     public IReadOnlyList<MatchPremadeGroup> PremadeGroups { get; init; } = [];
+
+    public MatchFamiliarityView? Familiarity { get; init; }
 }
