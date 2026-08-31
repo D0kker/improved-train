@@ -97,6 +97,28 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
     }
 
     [Fact]
+    public async Task MatchDetailExposesDistinctPrudentPremadeGroups()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(
+            "/api/v1/matches/TEST_1",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        using var body = JsonDocument.Parse(json);
+        var groups = body.RootElement.GetProperty("premadeGroups");
+        Assert.Equal(2, groups.GetArrayLength());
+        Assert.Equal(1, groups[0].GetProperty("groupNumber").GetInt32());
+        Assert.Equal("possible premade · high evidence", groups[0].GetProperty("label").GetString());
+        Assert.Equal(3, groups[0].GetProperty("members").GetArrayLength());
+        Assert.Equal(200, groups[1].GetProperty("teamId").GetInt32());
+        Assert.Equal(2, groups[1].GetProperty("members").GetArrayLength());
+        Assert.DoesNotContain("verified", json);
+    }
+
+    [Fact]
     public async Task MatchHistoryRejectsPaginationThatCouldOverflowTheRepositoryOffset()
     {
         using var client = _factory.CreateClient();
@@ -350,6 +372,13 @@ internal sealed class InMemoryPlayerAnalysisRepository : IPlayerAnalysisReposito
 
 internal sealed class InMemoryPlayerRelationshipRepository : IPlayerRelationshipRepository
 {
+    private static readonly Guid A = Guid.Parse("00000000-0000-0000-0000-000000000001");
+    private static readonly Guid B = Guid.Parse("00000000-0000-0000-0000-000000000002");
+    private static readonly Guid C = Guid.Parse("00000000-0000-0000-0000-000000000003");
+    private static readonly Guid D = Guid.Parse("00000000-0000-0000-0000-000000000004");
+    private static readonly Guid E = Guid.Parse("00000000-0000-0000-0000-000000000005");
+    private static readonly Guid F = Guid.Parse("00000000-0000-0000-0000-000000000006");
+
     public Task<IReadOnlyList<RelationshipMatchSnapshot>> LoadMatchesAsync(
         int batchSize,
         CancellationToken cancellationToken) =>
@@ -389,4 +418,38 @@ internal sealed class InMemoryPlayerRelationshipRepository : IPlayerRelationship
                     60,
                     RelationshipConfidence.High)])
             : null);
+
+    public Task<MatchPremadeGroupInput?> LoadMatchPremadeGroupInputAsync(
+        string riotMatchId,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<MatchPremadeGroupInput?>(riotMatchId == "TEST_1"
+            ? new MatchPremadeGroupInput(
+                [
+                    Participant(A, "a", 100), Participant(B, "b", 100), Participant(C, "c", 100),
+                    Participant(D, "d", 200), Participant(E, "e", 200), Participant(F, "", 200),
+                ],
+                [
+                    Relationship(A, B, RelationshipConfidence.High),
+                    Relationship(A, C, RelationshipConfidence.High),
+                    Relationship(B, C, RelationshipConfidence.High),
+                    Relationship(D, E, RelationshipConfidence.Medium),
+                    Relationship(D, F, RelationshipConfidence.High),
+                    Relationship(E, F, RelationshipConfidence.High),
+                    Relationship(A, D, RelationshipConfidence.High),
+                ])
+            : null);
+
+    private static MatchPremadeParticipant Participant(Guid id, string name, int teamId) =>
+        new(id, $"{name}-puuid", name.ToUpperInvariant(), "LAN", teamId);
+
+    private static MatchPremadeRelationship Relationship(
+        Guid first,
+        Guid second,
+        RelationshipConfidence confidence) =>
+        new(
+            first,
+            second,
+            confidence == RelationshipConfidence.High ? 5 : 3,
+            confidence == RelationshipConfidence.High ? 4 : 2,
+            confidence);
 }

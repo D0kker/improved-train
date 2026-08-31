@@ -135,3 +135,11 @@
 - Decisión: incorporar medición de consultas, caché y resiliencia en Sprint 6; concentrar cumplimiento, privacidad, seguridad, HTTPS, backups e incident response en Sprint 7; evaluar monetización solo después del go/no-go público.
 - Razón: las investigaciones contienen recomendaciones útiles junto con cifras y afirmaciones no respaldadas o incompatibles con el orden del producto.
 - Consecuencias: no se adopta un SLA de eliminación de 24 horas, remapeo de PUUID por cambio de key, metas arbitrarias de latencia/cobertura ni autenticación por defecto; cualquier decisión temporal sobre Riot se verifica otra vez en fuentes oficiales al implementarse.
+
+## D-018 — Premades visibles como grupos máximos y códigos accesibles
+
+- Fecha: 2026-08-30
+- Estado: aceptada para Sprint 5
+- Decisión: en el detalle de partida, evaluar relaciones únicamente entre participantes visibles del mismo equipo; mostrar cliques máximos de 3–5 y parejas detectadas solo cuando no estén contenidas en un grupo mayor. Etiquetar siempre como `Posible premade`, añadiendo `evidencia alta` cuando todas las parejas superen el umbral fuerte.
+- Razón: los dúos también son útiles, pero repetir cada pareja de un grupo produciría ruido. El historial no demuestra que los jugadores hayan entrado juntos en esa partida.
+- Consecuencias: cada grupo recibe un código determinista `P1`, `P2`, etc. y un tono visual; código, etiqueta y lista de integrantes garantizan que el color no sea el único identificador. Los solapamientos legítimos muestran varias insignias en el jugador.

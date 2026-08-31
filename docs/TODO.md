@@ -56,6 +56,8 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] S5-004: exponer red ego `/api/v1/players/{puuid}/network` con límites, truncation metadata y orden estable.
 - [ ] S5-005: crear grafo progresivo con alternativa tabular funcional y accesible.
 - [ ] S5-006: mostrar familiaridad y grupos usando evidencia anterior y participantes visibles.
+  - [x] Mostrar posibles premades de 2–5 jugadores en el detalle, con etiqueta prudente, código textual y color por grupo.
+  - [ ] Integrar familiaridad histórica contextual y sus estados de evidencia.
 - [ ] S5-007: perfil relacionado con resumen local; navegación sin sincronización automática y con estado de frescura.
 
 ## Sprint 6 — planificado

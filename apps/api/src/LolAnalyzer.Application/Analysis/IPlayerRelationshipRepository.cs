@@ -18,4 +18,8 @@ public interface IPlayerRelationshipRepository
         RelationshipConfidence minimumConfidence,
         int minimumScore,
         CancellationToken cancellationToken);
+
+    Task<MatchPremadeGroupInput?> LoadMatchPremadeGroupInputAsync(
+        string riotMatchId,
+        CancellationToken cancellationToken);
 }

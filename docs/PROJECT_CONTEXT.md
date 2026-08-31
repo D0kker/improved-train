@@ -20,6 +20,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - S5-002 incorpora un cálculo puro de familiaridad por partida: usa únicamente historial anterior según `(occurred_at, riot_match_id)`, entrega conocidos/desconocidos/denominador/porcentaje y carga el historial en bloque desde PostgreSQL.
 - S5-003 detecta cliques máximos de 3–5 jugadores a partir de parejas clasificadas, conserva solapamientos legítimos y aplica límites configurables antes de la integración en contratos/UI.
 - S5-004 expone una red ego de profundidad uno mediante `/api/v1/players/{puuid}/network`, con orden estable heredado de relaciones, filtros por confianza/score, límites configurables y metadata de truncamiento.
+- S5-006 está en curso: el detalle de partida ya identifica posibles premades por equipo, muestra dúos no contenidos y cliques máximos de 3–5, y los distingue mediante código textual/tono y nivel prudente de evidencia; la familiaridad contextual aún está pendiente.
 - El worker base está separado y saludable; los jobs persistentes pertenecen a Sprint 6.
 - No se ha seleccionado una licencia.
 
@@ -34,7 +35,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 ## Riesgos y preguntas abiertas
 
 - Las políticas, límites y requisitos legales de Riot son temporales; deben verificarse en documentación oficial antes de integrar o publicar.
-- Sprint 5 está iniciado; el siguiente alcance es la visualización accesible y progresiva de S5-005.
+- Sprint 5 está iniciado; S5-006 está parcialmente implementada y S5-005 continúa pendiente.
 - Los jobs, deduplicación concurrente y rate limiting global se decidirán e implementarán en Sprint 6.
 - `ARC-001` medirá .NET frente a Go en ARM64; el benchmark no autoriza una migración.
 - Falta decidir la licencia del repositorio.
@@ -49,6 +50,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - La skill del repositorio queda en `.agents/skills/lol-network-analyzer` y la memoria se habilita mediante `.codex/config.toml`.
 - Frontend: lint, 4 pruebas, type-check, formato, build local y build Docker exitosos.
 - .NET: 41 pruebas unitarias y 12 de integración exitosas tras S5-004; `dotnet format --verify-no-changes`, `docker compose config` y build Release de la API pasan.
+- S5-006 parcial: 41 pruebas unitarias y 13 de integración; el contrato de detalle cubre dos grupos, un dúo, un clique de tres, niveles de evidencia y exclusión entre equipos.
 - Frontend: 5 pruebas, lint, type-check, formato y build Docker exitosos tras añadir la vista de relaciones.
 - Runtime: los cinco servicios están saludables; `/`, `/api/health` y `/openapi/v1.json` responden 200 dentro del contenedor publicado y un jugador inexistente devuelve 404.
 - PostgreSQL aplicó `InitialCreate`, `AddPlayerEncounters` y `AddPlayerRelationships`; ambas tablas nuevas existen.
@@ -58,8 +60,9 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - Una verificación efímera de familiaridad contra PostgreSQL obtuvo `known=1`, `unknown=0`, `percentage=100` usando tres partidas sintéticas y eliminó esos datos al terminar.
 - Frontend: los enlaces de conexiones y jugadores recurrentes a perfiles codifican correctamente Riot IDs con espacios o `/`; tests, lint, type-check, formato, build Next.js y build Docker pasan. El contenedor web quedó saludable tras recreación.
 - Runtime posterior a S5-004: la API fue reconstruida/recreada, los cinco servicios permanecen saludables, `/health` responde `Healthy` y la nueva ruta `/network` devuelve un 404 controlado para un jugador inexistente.
+- Frontend posterior a la presentación de premades: 6 pruebas, lint, type-check, Prettier y build Next.js/Docker aprobados; API y web fueron recreadas, `/health` responde `Healthy` y la ruta dinámica de detalle renderiza.
 - Se verificaron el 2026-08-30 las políticas oficiales vigentes de Riot: el producto se mantiene post-partida, no desanonimiza jugadores ocultos y trata relaciones como inferencias. Referencias: https://developer.riotgames.com/policies/general y https://developer.riotgames.com/docs/lol
 
 ## Próximo paso
 
-Implementar S5-005: consumir la red ego con visualización progresiva y alternativa tabular accesible. S5-006 integrará posteriormente familiaridad y grupos en el detalle de partida.
+Completar S5-006 con familiaridad histórica contextual y después continuar S5-005: consumir la red ego con visualización progresiva y alternativa tabular accesible.

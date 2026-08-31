@@ -78,6 +78,8 @@ builder.Services.AddScoped<MatchIngestionService>();
 builder.Services.AddScoped<IPlayerAnalysisRepository, PlayerAnalysisRepository>();
 builder.Services.AddScoped<RepeatedPlayerAnalysisService>();
 builder.Services.AddScoped<MatchFamiliarityService>();
+builder.Services.AddScoped<MatchPremadeGroupService>();
+builder.Services.AddScoped<MatchDetailQueryService>();
 builder.Services.AddScoped<IPlayerRelationshipRepository, PlayerRelationshipRepository>();
 builder.Services.AddScoped<PlayerRelationshipAnalysisService>();
 builder.Services.AddScoped<PlayerRelationshipQueryService>();
@@ -278,7 +280,7 @@ app.MapGet("/api/v1/players/{puuid}/matches", async Task<IResult> (
 
 app.MapGet("/api/v1/matches/{matchId}", async Task<IResult> (
     string matchId,
-    IPlayerAnalysisRepository repository,
+    MatchDetailQueryService queryService,
     CancellationToken cancellationToken) =>
 {
     if (string.IsNullOrWhiteSpace(matchId))
@@ -286,7 +288,7 @@ app.MapGet("/api/v1/matches/{matchId}", async Task<IResult> (
         return Results.BadRequest();
     }
 
-    var match = await repository.GetMatchDetailAsync(matchId, cancellationToken).ConfigureAwait(false);
+    var match = await queryService.GetAsync(matchId, cancellationToken).ConfigureAwait(false);
     return match is null ? Results.NotFound() : Results.Ok(match);
 });
 

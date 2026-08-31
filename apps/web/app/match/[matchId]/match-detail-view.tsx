@@ -7,9 +7,16 @@ import {
   apiPath,
   fetchJson,
   type MatchDetail,
+  type MatchPremadeGroup,
   type MatchParticipant,
 } from "@/src/api";
 import { formatDate, formatDuration, queueLabel } from "@/src/format";
+import {
+  groupCode,
+  groupLabel,
+  groupTone,
+  groupsForParticipant,
+} from "@/src/premade-groups";
 
 export function MatchDetailView({ matchId }: { matchId: string }) {
   const [match, setMatch] = useState<MatchDetail | null>(null);
@@ -89,11 +96,16 @@ export function MatchDetailView({ matchId }: { matchId: string }) {
               </div>
             </section>
 
+            <PremadeSummary groups={match.premadeGroups} />
+
             <div className="teams-grid">
               {match.teams.map((team, index) => (
                 <TeamCard
                   key={team.teamId}
                   participants={team.participants}
+                  premadeGroups={match.premadeGroups.filter(
+                    (group) => group.teamId === team.teamId,
+                  )}
                   teamId={team.teamId}
                   title={teamName(team.teamId, index)}
                 />
@@ -120,10 +132,12 @@ function MatchLoading() {
 
 function TeamCard({
   participants,
+  premadeGroups,
   teamId,
   title,
 }: {
   participants: MatchParticipant[];
+  premadeGroups: MatchPremadeGroup[];
   teamId: number;
   title: string;
 }) {
@@ -144,29 +158,103 @@ function TeamCard({
       ) : (
         <ol className="participant-list">
           {participants.map((participant, index) => (
-            <li
+            <ParticipantRow
               key={participant.puuid || `${participant.championName}-${index}`}
-            >
-              <span className="position-label">
-                {positionName(participant.teamPosition, index)}
-              </span>
-              <div>
-                <strong>{participant.championName}</strong>
-                <span>{playerName(participant)}</span>
-              </div>
-              <p>
-                <strong>
-                  {participant.kills} / {participant.deaths} /{" "}
-                  {participant.assists}
-                </strong>
-                <span>K / D / A</span>
-              </p>
-            </li>
+              groups={groupsForParticipant(premadeGroups, participant.puuid)}
+              index={index}
+              participant={participant}
+            />
           ))}
         </ol>
       )}
     </section>
   );
+}
+
+function ParticipantRow({
+  groups,
+  index,
+  participant,
+}: {
+  groups: MatchPremadeGroup[];
+  index: number;
+  participant: MatchParticipant;
+}) {
+  return (
+    <li>
+      <span className="position-label">
+        {positionName(participant.teamPosition, index)}
+      </span>
+      <div>
+        <strong>{participant.championName}</strong>
+        <span>{playerName(participant)}</span>
+        {groups.length > 0 ? (
+          <span className="premade-memberships">
+            {groups.map((group) => (
+              <span
+                className={`premade-code tone-${groupTone(group.groupNumber)}`}
+                aria-label={`Grupo ${groupCode(group.groupNumber)}: ${groupLabel(group)}`}
+                key={group.groupNumber}
+                title={groupLabel(group)}
+              >
+                {groupCode(group.groupNumber)}
+              </span>
+            ))}
+          </span>
+        ) : null}
+      </div>
+      <p>
+        <strong>
+          {participant.kills} / {participant.deaths} / {participant.assists}
+        </strong>
+        <span>K / D / A</span>
+      </p>
+    </li>
+  );
+}
+
+function PremadeSummary({ groups }: { groups: MatchPremadeGroup[] }) {
+  return (
+    <section className="premade-summary" aria-labelledby="premade-title">
+      <div className="section-title-row">
+        <div>
+          <p className="eyebrow">Inferencia histórica</p>
+          <h2 id="premade-title">Posibles premades en esta partida</h2>
+        </div>
+        <p className="section-note">No confirma que hayan entrado juntos.</p>
+      </div>
+      {groups.length === 0 ? (
+        <p className="muted-copy">
+          No hay evidencia suficiente para señalar un grupo recurrente.
+        </p>
+      ) : (
+        <ul className="premade-group-list">
+          {groups.map((group) => (
+            <li key={group.groupNumber}>
+              <span
+                className={`premade-code tone-${groupTone(group.groupNumber)}`}
+              >
+                {groupCode(group.groupNumber)}
+              </span>
+              <div>
+                <strong>{groupLabel(group)}</strong>
+                <span>
+                  Equipo {group.teamId} ·{" "}
+                  {group.members.map(memberName).join(", ")}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function memberName(member: MatchPremadeGroup["members"][number]): string {
+  return member.tagLine
+    ? `${member.gameName}#${member.tagLine}`
+    : member.gameName || "Jugador identificado";
 }
 
 function playerName(participant: MatchParticipant): string {

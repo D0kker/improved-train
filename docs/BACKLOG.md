@@ -167,6 +167,9 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Issue:** #44.
 - **Prioridad:** P1.
 - **Criterio ajustado:** evidencia estrictamente anterior, grupos inferidos solo entre participantes visibles y estados explícitos para historial insuficiente/incompleto.
+- **Estado:** en curso; la presentación de premades quedó implementada, familiaridad contextual permanece pendiente.
+- **Entrega parcial:** el detalle expone dúos no contenidos y cliques máximos de 3–5 por equipo. La UI usa `P1`, `P2`, etc., cinco tonos reutilizables y una leyenda textual; distingue `Posible premade` de `Posible premade · evidencia alta` y aclara que no confirma que hayan entrado juntos.
+- **Evidencia parcial:** contrato cubierto con dos grupos, niveles distintos, exclusión de relaciones entre rivales y ausencia de lenguaje `verified`; 41 pruebas unitarias, 13 de integración y 6 pruebas frontend aprobadas, además de lint, type-check, formato y builds Docker de API/web.
 
 ### S5-007 — Perfil relacionado con resumen local
 

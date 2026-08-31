@@ -119,9 +119,24 @@ public sealed record MatchTeamDetail(
     int TeamId,
     IReadOnlyList<MatchParticipantDetail> Participants);
 
+public sealed record MatchPremadeGroupMember(
+    string Puuid,
+    string GameName,
+    string TagLine);
+
+public sealed record MatchPremadeGroup(
+    int GroupNumber,
+    int TeamId,
+    string Classification,
+    string Label,
+    IReadOnlyList<MatchPremadeGroupMember> Members);
+
 public sealed record MatchDetail(
     string RiotMatchId,
     int? QueueId,
     DateTimeOffset? GameStartTimestamp,
     int? GameDurationSeconds,
-    IReadOnlyList<MatchTeamDetail> Teams);
+    IReadOnlyList<MatchTeamDetail> Teams)
+{
+    public IReadOnlyList<MatchPremadeGroup> PremadeGroups { get; init; } = [];
+}

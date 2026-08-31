@@ -126,5 +126,9 @@ public sealed class PlayerRelationshipAnalyzerTests
             RelationshipConfidence minimumConfidence,
             int minimumScore,
             CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<MatchPremadeGroupInput?> LoadMatchPremadeGroupInputAsync(
+            string riotMatchId,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

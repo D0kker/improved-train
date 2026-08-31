@@ -92,12 +92,27 @@ export interface MatchTeam {
   participants: MatchParticipant[];
 }
 
+export interface MatchPremadeGroupMember {
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+}
+
+export interface MatchPremadeGroup {
+  groupNumber: number;
+  teamId: number;
+  classification: "PossiblePremade" | "LikelyPremade";
+  label: "possible premade" | "possible premade · high evidence";
+  members: MatchPremadeGroupMember[];
+}
+
 export interface MatchDetail {
   riotMatchId: string;
   queueId: number | null;
   gameStartTimestamp: string | null;
   gameDurationSeconds: number | null;
   teams: MatchTeam[];
+  premadeGroups: MatchPremadeGroup[];
 }
 
 export class ApiError extends Error {

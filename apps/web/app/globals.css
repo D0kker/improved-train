@@ -673,6 +673,87 @@ td > span,
   margin-bottom: 0;
 }
 
+.premade-summary {
+  border: 1px solid var(--border-soft);
+  border-radius: 1.2rem;
+  padding: 1.2rem;
+  background: rgb(10 23 20 / 72%);
+}
+
+.premade-group-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.premade-group-list li {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  border: 1px solid var(--border-soft);
+  border-radius: 0.9rem;
+  padding: 0.8rem;
+}
+
+.premade-group-list strong,
+.premade-group-list span {
+  display: block;
+}
+
+.premade-group-list div > span {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.premade-memberships {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.45rem !important;
+}
+
+.premade-code {
+  display: inline-grid !important;
+  min-width: 2rem;
+  height: 1.55rem;
+  margin: 0 !important;
+  place-items: center;
+  border: 1px solid currentcolor;
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  font-size: 0.68rem !important;
+  font-weight: 900;
+}
+
+.premade-code.tone-1 {
+  color: #67e8f9;
+  background: rgb(6 182 212 / 14%);
+}
+
+.premade-code.tone-2 {
+  color: #fcd34d;
+  background: rgb(245 158 11 / 14%);
+}
+
+.premade-code.tone-3 {
+  color: #c4b5fd;
+  background: rgb(139 92 246 / 14%);
+}
+
+.premade-code.tone-4 {
+  color: #fda4af;
+  background: rgb(244 63 94 / 14%);
+}
+
+.premade-code.tone-5 {
+  color: #86efac;
+  background: rgb(34 197 94 / 14%);
+}
+
 .participant-list {
   margin: 0;
   padding: 0;

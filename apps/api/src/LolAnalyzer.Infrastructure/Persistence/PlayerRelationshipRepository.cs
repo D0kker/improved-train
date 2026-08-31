@@ -165,12 +165,74 @@ public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext)
             rows.Select(ToQueryItem).ToArray());
     }
 
-    private static PlayerRelationshipQueryItem ToQueryItem(RelationshipQueryRow row)
+    public async Task<MatchPremadeGroupInput?> LoadMatchPremadeGroupInputAsync(
+        string riotMatchId,
+        CancellationToken cancellationToken)
     {
-        if (!RelationshipConfidenceExtensions.TryParseLabel(row.RelationshipConfidence, out var confidence))
+        var participants = await dbContext.MatchParticipants
+            .AsNoTracking()
+            .Where(participant => participant.Match.RiotMatchId == riotMatchId)
+            .OrderBy(participant => participant.TeamId)
+            .ThenBy(participant => participant.ParticipantId)
+            .Select(participant => new MatchPremadeParticipant(
+                participant.PlayerId,
+                participant.Player.Puuid,
+                participant.Player.GameName,
+                participant.Player.TagLine,
+                participant.TeamId))
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+        if (participants.Length == 0)
+        {
+            var matchExists = await dbContext.Matches
+                .AsNoTracking()
+                .AnyAsync(match => match.RiotMatchId == riotMatchId, cancellationToken)
+                .ConfigureAwait(false);
+            return matchExists ? new MatchPremadeGroupInput([], []) : null;
+        }
+
+        var playerIds = participants.Select(participant => participant.PlayerId).ToArray();
+        var relationships = await dbContext.PlayerRelationships
+            .AsNoTracking()
+            .Where(relationship =>
+                playerIds.Contains(relationship.PlayerAId)
+                && playerIds.Contains(relationship.PlayerBId))
+            .OrderBy(relationship => relationship.PlayerAId)
+            .ThenBy(relationship => relationship.PlayerBId)
+            .Select(relationship => new
+            {
+                relationship.PlayerAId,
+                relationship.PlayerBId,
+                relationship.MatchesTogether,
+                relationship.SameTeamMatches,
+                relationship.RelationshipConfidence,
+            })
+            .ToArrayAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return new MatchPremadeGroupInput(
+            participants,
+            relationships.Select(relationship => new MatchPremadeRelationship(
+                relationship.PlayerAId,
+                relationship.PlayerBId,
+                relationship.MatchesTogether,
+                relationship.SameTeamMatches,
+                ParseConfidence(relationship.RelationshipConfidence))).ToArray());
+    }
+
+    private static RelationshipConfidence ParseConfidence(string label)
+    {
+        if (!RelationshipConfidenceExtensions.TryParseLabel(label, out var confidence))
         {
             throw new InvalidDataException("A persisted relationship contains an unsupported confidence label.");
         }
+
+        return confidence;
+    }
+
+    private static PlayerRelationshipQueryItem ToQueryItem(RelationshipQueryRow row)
+    {
+        var confidence = ParseConfidence(row.RelationshipConfidence);
 
         return new PlayerRelationshipQueryItem(
             row.OtherPlayerPuuid,

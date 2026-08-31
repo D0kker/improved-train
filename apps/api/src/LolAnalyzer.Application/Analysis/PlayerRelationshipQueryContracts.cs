@@ -78,3 +78,21 @@ public sealed record PlayerNetwork(
     IReadOnlyList<PlayerNetworkNode> Nodes,
     IReadOnlyList<PlayerNetworkEdge> Edges,
     PlayerNetworkMetadata Metadata);
+
+public sealed record MatchPremadeParticipant(
+    Guid PlayerId,
+    string Puuid,
+    string GameName,
+    string TagLine,
+    int TeamId);
+
+public sealed record MatchPremadeRelationship(
+    Guid PlayerAId,
+    Guid PlayerBId,
+    int MatchesTogether,
+    int SameTeamMatches,
+    RelationshipConfidence RelationshipConfidence);
+
+public sealed record MatchPremadeGroupInput(
+    IReadOnlyList<MatchPremadeParticipant> Participants,
+    IReadOnlyList<MatchPremadeRelationship> Relationships);

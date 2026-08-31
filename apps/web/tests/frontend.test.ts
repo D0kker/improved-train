@@ -9,6 +9,12 @@ import {
   playerSyncPath,
 } from "../src/api.ts";
 import { formatDuration, formatPercent, winRate } from "../src/format.ts";
+import {
+  groupCode,
+  groupLabel,
+  groupTone,
+  groupsForParticipant,
+} from "../src/premade-groups.ts";
 
 test("API paths remain same-origin and encode user-controlled segments", () => {
   assert.equal(
@@ -49,4 +55,30 @@ test("presentation helpers normalize percentages and durations", () => {
   assert.equal(formatPercent(1), "1%");
   assert.equal(winRate(3, 4), "75%");
   assert.equal(winRate(0, 0), "—");
+});
+
+test("premade groups remain distinguishable without relying on color", () => {
+  const groups = [
+    {
+      groupNumber: 1,
+      teamId: 100,
+      classification: "LikelyPremade" as const,
+      label: "possible premade · high evidence" as const,
+      members: [{ puuid: "a", gameName: "Ana", tagLine: "LAN" }],
+    },
+    {
+      groupNumber: 6,
+      teamId: 200,
+      classification: "PossiblePremade" as const,
+      label: "possible premade" as const,
+      members: [{ puuid: "a", gameName: "Ana", tagLine: "LAN" }],
+    },
+  ];
+
+  assert.equal(groupCode(1), "P1");
+  assert.equal(groupCode(6), "P6");
+  assert.equal(groupTone(1), groupTone(6));
+  assert.equal(groupLabel(groups[0]), "Posible premade · evidencia alta");
+  assert.equal(groupsForParticipant(groups, "a").length, 2);
+  assert.deepEqual(groupsForParticipant(groups, "unknown"), []);
 });
