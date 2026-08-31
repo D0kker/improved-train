@@ -15,6 +15,8 @@ public sealed class LolAnalyzerDbContext(DbContextOptions<LolAnalyzerDbContext> 
 
     public DbSet<PlayerRelationship> PlayerRelationships => Set<PlayerRelationship>();
 
+    public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Player>(entity =>
@@ -102,6 +104,25 @@ public sealed class LolAnalyzerDbContext(DbContextOptions<LolAnalyzerDbContext> 
                 .WithMany()
                 .HasForeignKey(relationship => relationship.PlayerBId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AnalysisJob>(entity =>
+        {
+            entity.ToTable("analysis_jobs", table =>
+            {
+                table.HasCheckConstraint(
+                    "ck_analysis_jobs_requested_count",
+                    "requested_count >= 1 AND requested_count <= 200");
+                table.HasCheckConstraint(
+                    "ck_analysis_jobs_progress",
+                    "matches_processed >= 0 AND matches_processed <= requested_count");
+            });
+            entity.HasKey(job => job.Id);
+            entity.Property(job => job.Puuid).HasMaxLength(128).IsRequired();
+            entity.Property(job => job.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+            entity.Property(job => job.ErrorCode).HasMaxLength(64);
+            entity.HasIndex(job => new { job.Status, job.CreatedAt });
+            entity.HasIndex(job => new { job.Puuid, job.CreatedAt });
         });
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

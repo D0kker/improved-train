@@ -24,7 +24,7 @@ flowchart LR
   Worker --> Riot
 ```
 
-Solo Next.js se publica al host. API, worker, PostgreSQL y Redis permanecen en la red privada. Sprint 2 usa sincronización API acotada a 20 partidas; los jobs persistentes y la exclusión concurrente global se resuelven en Sprint 6.
+Solo Next.js se publica al host. API, worker, PostgreSQL y Redis permanecen en la red privada. El endpoint síncrono de Sprint 2 continúa acotado a 20 partidas durante la transición. Sprint 6 persiste solicitudes de hasta 200 partidas en PostgreSQL mediante `analysis_jobs`; API crea/consulta y el worker reclamará/transicionará esos jobs en la siguiente entrega. Redis no es la fuente de verdad durable.
 
 ## Monorepo implementado
 

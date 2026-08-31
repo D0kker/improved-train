@@ -23,6 +23,8 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - S5-005 muestra la red ego mediante SVG nativo y tabla equivalente, con filtros, zoom/pan por controles, selección accesible, truncamiento y estados de carga/vacío/error sin añadir dependencias.
 - S5-006 identifica posibles premades por equipo y muestra familiaridad histórica según el owner transportado desde el historial, con estados explícitos y solo evidencia anterior.
 - S5-007 hace lookup local-first, muestra frescura del resumen y reserva las llamadas de sincronización para el botón explícito de actualización.
+- S6-001 está en curso: `analysis_jobs` y su migración hacen durable el contrato start/status; `POST /api/v1/players/{puuid}/analysis` acepta `matchCount` de 1–200, responde `202` con `Location`, y `GET /api/v1/jobs/{jobId}` devuelve estado/progreso sin stack traces. El worker aún no reclama ni procesa estos jobs.
+- Validación parcial de S6-001 (2026-08-31): 43 pruebas unitarias y 17 de integración; build Docker de API; migración `202608310001_AddAnalysisJobs` aplicada sobre PostgreSQL; creación runtime en estado `queued`; y consulta del mismo GUID después de reiniciar la API.
 - Los Riot IDs visibles del detalle y de la leyenda de premades enlazan al perfil mediante el componente compartido; datos incompletos permanecen como texto y no provocan sincronización automática.
 - El worker base está separado y saludable; los jobs persistentes pertenecen a Sprint 6.
 - No se ha seleccionado una licencia.
@@ -70,4 +72,4 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 
 ## Próximo paso
 
-Implementar S6-001: formalizar jobs persistentes con estados, progreso, error seguro y endpoints start/status antes de mover la sincronización al worker.
+Continuar S6-001: implementar claim y transiciones atómicas en el worker, procesamiento/progreso, cancelación y recuperación tras reinicio; mantener la historia abierta hasta validar esa ruta completa.

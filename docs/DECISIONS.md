@@ -159,3 +159,11 @@
 - Decisión: resolver primero Riot ID desde PostgreSQL y cargar resumen, relaciones e historial sin sincronizar; ACCOUNT-V1 se usa para IDs ausentes y MATCH-V5 solo tras la acción explícita `Actualizar 20 partidas`.
 - Razón: navegar entre perfiles debe ser rápido, reutilizar datos y no consumir cuota externa por efecto lateral.
 - Consecuencias: el resumen expone la fecha local de actualización; los datos vacíos se muestran como tales y los Riot IDs siguen siendo atributos mutables sobre PUUID. Refresh durable y programado pertenece a Sprint 6.
+
+## D-021 — PostgreSQL es la fuente durable de jobs
+
+- Fecha: 2026-08-31
+- Estado: aceptada para Sprint 6
+- Decisión: persistir el estado completo de cada análisis en PostgreSQL y hacer que el worker reclame trabajo desde esa fuente. Redis podrá acelerar señales o coordinación, pero nunca será la única copia del job.
+- Razón: un reinicio de API, worker o Redis no debe perder solicitudes ni su progreso; además, el endpoint de estado necesita una lectura durable y auditable.
+- Consecuencias: `analysis_jobs` conserva estado, progreso, código de error seguro y timestamps; los índices `(status, created_at)` y `(puuid, created_at)` preparan claim y deduplicación. La siguiente entrega de S6-001 implementará transiciones atómicas y recuperación de jobs interrumpidos.

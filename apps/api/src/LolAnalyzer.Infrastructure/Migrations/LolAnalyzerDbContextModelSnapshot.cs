@@ -18,6 +18,28 @@ public partial class LolAnalyzerDbContextModelSnapshot : ModelSnapshot
         modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
         modelBuilder.HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+        modelBuilder.Entity("LolAnalyzer.Domain.Entities.AnalysisJob", entity =>
+        {
+            entity.Property<Guid>("Id").HasColumnType("uuid").HasColumnName("id");
+            entity.Property<DateTimeOffset?>("CompletedAt").HasColumnType("timestamp with time zone").HasColumnName("completed_at");
+            entity.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone").HasColumnName("created_at");
+            entity.Property<string>("ErrorCode").HasMaxLength(64).HasColumnType("character varying(64)").HasColumnName("error_code");
+            entity.Property<int>("MatchesProcessed").HasColumnType("integer").HasColumnName("matches_processed");
+            entity.Property<string>("Puuid").IsRequired().HasMaxLength(128).HasColumnType("character varying(128)").HasColumnName("puuid");
+            entity.Property<int>("RequestedCount").HasColumnType("integer").HasColumnName("requested_count");
+            entity.Property<DateTimeOffset?>("StartedAt").HasColumnType("timestamp with time zone").HasColumnName("started_at");
+            entity.Property<LolAnalyzer.Domain.Entities.AnalysisJobStatus>("Status").HasMaxLength(16).HasColumnType("character varying(16)").HasColumnName("status");
+            entity.Property<DateTimeOffset>("UpdatedAt").HasColumnType("timestamp with time zone").HasColumnName("updated_at");
+            entity.HasKey("Id");
+            entity.HasIndex("Puuid", "CreatedAt");
+            entity.HasIndex("Status", "CreatedAt");
+            entity.ToTable("analysis_jobs", table =>
+            {
+                table.HasCheckConstraint("ck_analysis_jobs_progress", "matches_processed >= 0 AND matches_processed <= requested_count");
+                table.HasCheckConstraint("ck_analysis_jobs_requested_count", "requested_count >= 1 AND requested_count <= 200");
+            });
+        });
+
         modelBuilder.Entity("LolAnalyzer.Domain.Entities.Match", entity =>
         {
             entity.Property<Guid>("Id").HasColumnType("uuid").HasColumnName("id");

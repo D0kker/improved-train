@@ -63,7 +63,10 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 
 ## Sprint 6 — iniciado
 
-- [ ] Jobs persistentes, exclusión de duplicados y sincronización incremental.
+- [ ] S6-001: formalizar jobs persistentes.
+  - [x] Definir contrato durable, migración PostgreSQL y endpoints `POST /players/{puuid}/analysis` / `GET /jobs/{jobId}`.
+  - [ ] Implementar claim/transiciones del worker, progreso, error seguro, cancelación y recuperación tras reinicio.
+- [ ] Exclusión de duplicados y sincronización incremental.
 - [ ] Rate limiting, caché, refresh, observabilidad, índices medidos sobre consultas reales y pruebas de resiliencia.
 
 ## Sprint 7 — planificado

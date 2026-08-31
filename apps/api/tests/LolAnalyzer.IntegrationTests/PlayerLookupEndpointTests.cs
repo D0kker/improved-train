@@ -1,6 +1,9 @@
 using System.Net;
+using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Net.Http.Json;
 using LolAnalyzer.Application.Analysis;
+using LolAnalyzer.Application.Jobs;
 using LolAnalyzer.Application.Matches;
 using LolAnalyzer.Application.Players;
 using LolAnalyzer.Application.Riot;
@@ -87,6 +90,54 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
             cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AnalysisJobStartPersistsQueuedStateAndStatusEndpointReturnsIt()
+    {
+        using var client = _factory.CreateClient();
+
+        var start = await client.PostAsJsonAsync(
+            "/api/v1/players/test-owner-puuid/analysis",
+            new { matchCount = 70 },
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Accepted, start.StatusCode);
+        using var startedBody = JsonDocument.Parse(
+            await start.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        var jobId = startedBody.RootElement.GetProperty("jobId").GetGuid();
+        Assert.Equal("queued", startedBody.RootElement.GetProperty("status").GetString());
+        Assert.Equal(70, startedBody.RootElement.GetProperty("matchesRequested").GetInt32());
+        Assert.Equal(0, startedBody.RootElement.GetProperty("matchesProcessed").GetInt32());
+        Assert.Equal($"/api/v1/jobs/{jobId}", start.Headers.Location?.OriginalString);
+
+        var status = await client.GetAsync(
+            $"/api/v1/jobs/{jobId}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, status.StatusCode);
+        using var statusBody = JsonDocument.Parse(
+            await status.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(jobId, statusBody.RootElement.GetProperty("jobId").GetGuid());
+        Assert.Equal("test-owner-puuid", statusBody.RootElement.GetProperty("puuid").GetString());
+        Assert.Equal(JsonValueKind.Null, statusBody.RootElement.GetProperty("errorCode").ValueKind);
+    }
+
+    [Fact]
+    public async Task AnalysisJobEndpointsRejectInvalidCountsAndUnknownJobs()
+    {
+        using var client = _factory.CreateClient();
+
+        var invalid = await client.PostAsJsonAsync(
+            "/api/v1/players/test-owner-puuid/analysis",
+            new { matchCount = 201 },
+            cancellationToken: TestContext.Current.CancellationToken);
+        var unknown = await client.GetAsync(
+            $"/api/v1/jobs/{Guid.NewGuid()}",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
     }
 
     [Fact]
@@ -293,12 +344,35 @@ public sealed class LolAnalyzerApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IMatchRepository>();
             services.RemoveAll<IPlayerAnalysisRepository>();
             services.RemoveAll<IPlayerRelationshipRepository>();
+            services.RemoveAll<IAnalysisJobRepository>();
             services.AddSingleton<IRiotApiClient>(new SimulatedRiotApiClient());
             services.AddSingleton<IPlayerRepository>(new InMemoryPlayerRepository());
             services.AddSingleton<IMatchRepository>(new InMemoryMatchRepository());
             services.AddSingleton<IPlayerAnalysisRepository>(new InMemoryPlayerAnalysisRepository());
             services.AddSingleton<IPlayerRelationshipRepository>(new InMemoryPlayerRelationshipRepository());
+            services.AddSingleton<IAnalysisJobRepository>(new InMemoryAnalysisJobRepository());
         });
+    }
+}
+
+internal sealed class InMemoryAnalysisJobRepository : IAnalysisJobRepository
+{
+    private readonly ConcurrentDictionary<Guid, AnalysisJob> _jobs = new();
+
+    public Task AddAsync(AnalysisJob job, CancellationToken cancellationToken)
+    {
+        if (!_jobs.TryAdd(job.Id, job))
+        {
+            throw new InvalidOperationException("The analysis job already exists.");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<AnalysisJob?> FindAsync(Guid jobId, CancellationToken cancellationToken)
+    {
+        _jobs.TryGetValue(jobId, out var job);
+        return Task.FromResult(job);
     }
 }
 

@@ -1,5 +1,6 @@
 using System.Net;
 using LolAnalyzer.Application.Analysis;
+using LolAnalyzer.Application.Jobs;
 using LolAnalyzer.Application.Matches;
 using LolAnalyzer.Application.Players;
 using LolAnalyzer.Application.Riot;
@@ -70,7 +71,10 @@ builder.Services.AddSingleton<PossiblePremadeDetector>();
 builder.Services.AddSingleton(premadeGroupDetectionOptions);
 builder.Services.AddSingleton<PossiblePremadeGroupDetector>();
 builder.Services.AddSingleton(playerNetworkOptions);
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
+builder.Services.AddScoped<IAnalysisJobRepository, AnalysisJobRepository>();
+builder.Services.AddScoped<AnalysisJobService>();
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<PlayerLookupService>();
 builder.Services.AddScoped<IMatchRepository, MatchRepository>();
@@ -160,6 +164,36 @@ app.MapGet("/api/v1/players/by-riot-id/{gameName}/{tagLine}", async Task<IResult
             statusCode: StatusCodes.Status503ServiceUnavailable,
             title: "Riot API is not configured.");
     }
+});
+
+app.MapPost("/api/v1/players/{puuid}/analysis", async Task<IResult> (
+    string puuid,
+    StartAnalysisRequest request,
+    AnalysisJobService jobService,
+    CancellationToken cancellationToken) =>
+{
+    const int maximumCount = 200;
+    if (string.IsNullOrWhiteSpace(puuid) || request.MatchCount is < 1 or > maximumCount)
+    {
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["analysis"] = [$"puuid is required and count must be between 1 and {maximumCount}."],
+        });
+    }
+
+    var job = await jobService
+        .StartAsync(puuid, request.MatchCount, cancellationToken)
+        .ConfigureAwait(false);
+    return Results.Accepted($"/api/v1/jobs/{job.JobId}", job);
+});
+
+app.MapGet("/api/v1/jobs/{jobId:guid}", async Task<IResult> (
+    Guid jobId,
+    AnalysisJobService jobService,
+    CancellationToken cancellationToken) =>
+{
+    var job = await jobService.FindAsync(jobId, cancellationToken).ConfigureAwait(false);
+    return job is null ? Results.NotFound() : Results.Ok(job);
 });
 
 app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
@@ -381,6 +415,8 @@ app.MapGet("/api/v1/players/{puuid}/network", async Task<IResult> (
 app.Run();
 
 internal sealed record PlayerResponse(string Puuid, string GameName, string TagLine, string PlatformRegion);
+
+internal sealed record StartAnalysisRequest(int MatchCount);
 
 public partial class Program
 {

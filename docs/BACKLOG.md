@@ -189,6 +189,15 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 
 - Mantener jobs persistentes, exclusión concurrente, sincronización incremental, caché, rate limiting y observabilidad como núcleo del sprint.
 - Incorporar de GM-03 únicamente mediciones reproducibles sobre consultas reales e índices PostgreSQL justificados con planes/latencias antes y después; no usar objetivos arbitrarios como `<50 ms`.
+
+### S6-001 — Formalizar jobs persistentes
+
+- **Issue:** #25.
+- **Prioridad:** P0.
+- **Estado:** en curso desde 2026-08-31.
+- **Primera entrega:** `analysis_jobs` persiste solicitudes de 1–200 partidas, estados tipados, progreso, código de error seguro y timestamps. La API estable inicia mediante body `matchCount`, responde `202` con `Location` y permite consultar el job por GUID.
+- **Decisión:** PostgreSQL es la fuente durable; Redis queda como apoyo opcional. Pendiente: claim/transiciones atómicas en worker, cancelación y prueba de recuperación tras reinicio antes de cerrar la historia.
+- **Evidencia parcial:** 43 pruebas unitarias y 17 de integración aprobadas; migración aplicada en PostgreSQL real, creación `queued` verificada y el mismo job siguió consultable después de reiniciar la API. API y los cinco servicios quedaron saludables.
 - Probar reintentos, `429`, timeout y degradación con HTTP simulado; CI nunca consume Riot.
 - Los análisis de sinergia de línea o `performance delta` no reemplazan este alcance y requieren una historia futura separada por su riesgo de convertirse en una métrica de habilidad no permitida.
 
