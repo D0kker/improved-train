@@ -105,13 +105,16 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] GM-04: rate limiting revisado; confirma límites por routing, `429`/`Retry-After`, concurrencia y cancelación ya implementados. No se añade Polly ni coordinación distribuida fuera del alcance actual.
 - [x] GM-05: caché revisada; confirma Redis opcional, fallback en memoria, TTL/invalidation y hash de PUUID ya implementados. No se sustituye la abstracción actual por HybridCache sin necesidad medida.
 - [x] GM-06: refresh revisado; confirma opt-in, límites, claim durable y exclusión de jobs ya implementados. Jitter/circuit breaker quedan como mejoras futuras sujetas a una historia y medición explícitas.
-- [ ] Gemini listo para investigación: GM-07 y GM-08 cubren observabilidad y resiliencia de Sprint 6 ya cerrado; se revisarán solo si el PO aporta resultados nuevos.
-- [ ] Gemini listo para investigación: GM-09 a GM-11 cubren cumplimiento Riot, privacidad/threat model y despliegue/continuidad de Sprint 7.
-- [ ] Gemini listo para investigación: GM-12 diseña el benchmark ARC-001 .NET frente a Go en ARM64.
+- [x] GM-07: observabilidad revisada; confirma métricas agregadas, logs redactados y health aislado ya publicados. No se incorpora exporter/SaaS ni metas de coste sin necesidad operativa.
+- [x] GM-08: resiliencia revisada; confirma pruebas de worker, 429, Redis y `EXPLAIN ANALYZE` ya realizadas. No se crean índices nuevos sin medición sobre consulta representativa.
+- [x] GM-09: auditoría Riot revisada; se conserva post-partida, inferencia prudente y go/no-go. Se rechazan como no verificadas un SLA de 24 h y un webhook concreto; se crea S7-011 para custom matches/opt-in.
+- [x] GM-10: threat model revisado; requisitos útiles permanecen en S7-002/S7-004 sin inventar retención, asesoría legal ni endpoint de borrado.
+- [x] GM-11: continuidad revisada; refina S7-005–S7-008 con HTTPS, red privada, backups restaurables e incidentes, sin desplegar ni añadir Caddy todavía.
+- [x] GM-12: diseño ARC-001 revisado; sirve como punto de partida reproducible sin autorizar prototipo Go, umbrales rígidos ni migración.
 
 ## Arquitectura
 
-- [ ] Ejecutar `ARC-001`, benchmark reproducible .NET frente a Go en ARM64.
+- [ ] Ejecutar `ARC-001`, benchmark reproducible .NET frente a Go en ARM64; el corpus, métricas y decisión final no se infieren de una sola investigación.
 
 ## Antes de una V1 pública
 

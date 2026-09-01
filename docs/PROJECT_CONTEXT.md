@@ -34,6 +34,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - Sprint 7 inició en `docs/RIOT_READINESS.md`: fuentes oficiales revalidadas el 2026-08-31, matriz de requisitos, inventario inicial y estado público `NO-GO` hasta completar dependencias.
 - S7-010 conserva la evaluación futura del crédito Azure y Azure DevOps; no hay activación, migración ni decisión de adoptar Azure.
 - S8-007 registra íconos oficiales de campeón/perfil mediante Data Dragon, con fallback accesible; las oportunidades relevantes nuevas se convierten primero en historias trazables y no amplían silenciosamente el sprint en curso.
+- S7-011 registra la protección futura de historial de custom matches: antes de cualquier exposición pública se clasificará la cola y se bloqueará por defecto hasta definir el opt-in aplicable. No habilita RSO ni autenticación por sí misma.
 - Los Riot IDs visibles del detalle y de la leyenda de premades enlazan al perfil mediante el componente compartido; datos incompletos permanecen como texto y no provocan sincronización automática.
 - El worker base está separado y saludable; los jobs persistentes pertenecen a Sprint 6.
 - No se ha seleccionado una licencia.
@@ -90,4 +91,4 @@ Continuar S7-001/S7-002 y tomar las historias técnicas de seguridad/continuidad
 ## Investigación delegable a Gemini
 
 - El tablero tiene el carril `Para Gemini`: Codex deja allí prompts de investigación; el PO pasa el contenido a Gemini y mueve la tarjeta a `Listo para Codex` cuando adjunta el resultado.
-- GM-04–GM-06 fueron revisados el 2026-08-31: confirman rate limiting, caché y refresh ya implementados en Sprint 6; no introducen dependencias ni cambios fuera de alcance. GM-07–GM-08 siguen disponibles solo para evidencia adicional de observabilidad/resiliencia; GM-09–GM-11 cubren cumplimiento, privacidad y operación de Sprint 7; GM-12 prepara ARC-001 sin autorizar una migración a Go.
+- GM-04–GM-12 fueron revisados el 2026-08-31. Confirman el cierre de Sprint 6 y refinan Sprint 7/ARC-001; se rechazaron plazos, endpoints, métricas y migraciones no respaldados. S7-011 captura la brecha concreta de custom matches/opt-in detectada en GM-09.

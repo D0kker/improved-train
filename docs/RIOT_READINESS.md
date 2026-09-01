@@ -17,6 +17,7 @@ Esto es una lista técnica de preparación, no asesoría legal ni evidencia de a
 | Mostrar boilerplate visible y no aparentar endorsement | aún no incorporado a UI pública | completar S7-003 con texto vigente |
 | Monetización solo registrada en estado Approved/Acknowledged; free tier permitido con ads y cobro solo por valor transformativo | monetización futura, no implementada | consultar a Riot si el modelo concreto genera dudas |
 | Riot puede transmitir identificadores de solicitudes de datos por sus canales | no existe flujo operativo | definir recepción, trazabilidad, borrado/exportación y evidencia |
+| El historial de custom matches tiene restricciones específicas de visibilidad pública | todavía no se clasifica para exposición | S7-011 bloquea por defecto esa exposición hasta definir el opt-in aplicable |
 
 Fuentes primarias: [General Policies](https://developer.riotgames.com/policies/general), [League of Legends policy](https://developer.riotgames.com/docs/lol), [Developer Portal y tipos de key](https://developer.riotgames.com/docs/portal), [API Terms](https://developer.riotgames.com/terms) y [Production key FAQ](https://developer.riotgames.com/docs/faqs).
 

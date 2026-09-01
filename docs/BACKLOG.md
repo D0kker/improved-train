@@ -263,6 +263,7 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **S7-004/#36:** threat model; secretos solo en runtime; rate limiting propio; validación y errores seguros; CORS/CSP/headers; contenedores no-root; DB/Redis privados y escaneo de dependencias/imágenes.
 - **S7-005–009/#34–#39:** HTTPS, backups restaurables, indexación prudente, incident response y auditoría go/no-go con evidencia.
 - **S7-010/#65:** evaluar Azure como staging opcional; verificar el crédito específico de la cuenta, coste/alertas, secretos, red privada y ventaja concreta frente a GitHub/Raspberry antes de cualquier PoC.
+- **S7-011/#67:** proteger la exposición pública de custom matches; clasificar cola, bloquear por defecto y definir opt-in aplicable antes de indexar o publicar. No introduce RSO sin una historia posterior.
 - Autenticación/RSO solo se incorporará si una función pública concreta la necesita y tras confirmar acceso Production; no se agrega por defecto al MVP privado.
 
 ## Sprint 8 — creado y refinado
@@ -334,6 +335,14 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Estado:** investigaciones revisadas por Codex el 2026-08-31.
 - **Resultado incorporado:** las tres confirman el diseño ya publicado en Sprint 6: límite por proceso/routing con `Retry-After` y cancelación; caché Redis derivada con fallback en memoria y claves hash; y schedules opt-in durables reclamados con `SKIP LOCKED` y deduplicación de jobs.
 - **No incorporado aún:** Polly/HybridCache, jitter de schedule y circuit breaker automático. Son alternativas o ampliaciones que exigen una historia, medición y evaluación de operación; no se añaden solo por la investigación.
+
+### GM-07 a GM-12 — Observabilidad, resiliencia, readiness y benchmark
+
+- **Issues:** #59 a #64.
+- **Estado:** investigaciones revisadas por Codex el 2026-08-31.
+- **Adoptado selectivamente:** respaldan la observabilidad/redacción, la matriz de resiliencia, el threat model, el despliegue progresivo y la preparación de ARC-001 ya ubicados en Sprints 6–7/arquitectura.
+- **Correcciones:** no se adoptan porcentajes de CPU, almacenamiento, éxito o rendimiento como SLA; tampoco un plazo de 24 h, webhook o endpoint de borrado específico sin respaldo oficial actual. `relationship_score` permanece como evidencia relacional explícita, no como ranking de habilidad, MMR o ELO.
+- **Nueva historia:** S7-011 cubre la exposición futura de custom matches y opt-in porque es una restricción distinta de la privacidad general.
 
 ## Por hacer
 
