@@ -167,3 +167,51 @@
 - Decisión: persistir el estado completo de cada análisis en PostgreSQL y hacer que el worker reclame trabajo desde esa fuente. Redis podrá acelerar señales o coordinación, pero nunca será la única copia del job.
 - Razón: un reinicio de API, worker o Redis no debe perder solicitudes ni su progreso; además, el endpoint de estado necesita una lectura durable y auditable.
 - Consecuencias: `analysis_jobs` conserva estado, progreso, código de error seguro y timestamps; los índices `(status, created_at)` y `(puuid, created_at)` preparan claim y deduplicación. La siguiente entrega de S6-001 implementará transiciones atómicas y recuperación de jobs interrumpidos.
+
+## D-022 — Exclusión durable por solicitud y por match
+
+- Fecha: 2026-08-31
+- Estado: aceptada para Sprint 6
+- Decisión: impedir jobs activos equivalentes con un índice único parcial por `(puuid, requested_count)` y serializar la escritura concurrente de un mismo `riot_match_id` mediante un advisory lock transaccional PostgreSQL.
+- Razón: una comprobación previa en aplicación no cierra carreras entre procesos; tanto jobs duplicados como descargas simultáneas pueden llegar desde varias instancias.
+- Consecuencias: solicitudes `Queued`/`Running` equivalentes devuelven el job existente, mientras estados terminales permiten reintento. Dos análisis pueden compartir matches sin duplicarlos ni convertir una colisión esperable en fallo del job.
+
+## D-023 — Carril de investigación Para Gemini
+
+- Fecha: 2026-08-31
+- Estado: aceptada por el PO
+- Decisión: añadir el estado `Para Gemini` al tablero. Codex deja allí únicamente historias de investigación con prompt y entregable; el PO las envía a Gemini y mueve la tarjeta a `Listo para Codex` al adjuntar la investigación.
+- Razón: separa investigación externa de trabajo de implementación y mantiene al PO como quien decide qué resultados entran al carril de Codex.
+- Consecuencias: `Para Gemini` no autoriza cambios de código ni cierra historias. Codex revisa fuentes, alcance y compatibilidad antes de incorporar cualquier recomendación.
+
+## D-024 — Rate limiting Riot coordinado por proceso y routing
+
+- Fecha: 2026-08-31
+- Estado: aceptada para Sprint 6
+- Decisión: todas las llamadas Riot de un proceso pasan por un singleton `IRiotRateLimiter` con concurrencia configurable y cooldown compartido para el routing regional configurado. Un 429 registra `Retry-After`; si falta, el cliente usa backoff exponencial acotado y un número finito de reintentos.
+- Razón: Riot exige detener llamadas durante `Retry-After`, mientras un retry HTTP genérico no coordina llamadas concurrentes y puede multiplicar solicitudes. El worker concentra la ingesta masiva y el API limita el lookup puntual.
+- Consecuencias: la cancelación interrumpe tanto espera como petición; las pruebas usan HTTP simulado. API y worker aún tienen limitadores separados, por lo que un futuro despliegue con múltiples réplicas deberá introducir coordinación distribuida y revalidar límites oficiales antes de escalar.
+
+## D-025 — Caché derivada con Redis y fallback en memoria
+
+- Fecha: 2026-08-31
+- Estado: aceptada para Sprint 6
+- Decisión: exponer `ICacheService` con TTL e invalidación por tags; usar Redis como caché compartida y memoria local como fallback. Cachear inicialmente el resumen derivado y representar PUUID en claves/tags mediante SHA-256.
+- Razón: Redis reduce lecturas repetidas, pero una dependencia temporal no debe reemplazar PostgreSQL ni hacer que su caída impida consultar datos persistidos. Los tags evitan `SCAN` durante invalidación.
+- Consecuencias: completar un job o una sincronización invalida el owner; un miss, payload inválido o fallo Redis vuelve a PostgreSQL. El fallback puede conservar una lectura hasta su TTL si otra instancia pierde Redis simultáneamente, por lo que no se usa para información autoritativa ni permanente.
+
+## D-026 — Refresh programado opt-in mediante jobs durables
+
+- Fecha: 2026-08-31
+- Estado: aceptada para Sprint 6
+- Decisión: persistir como máximo un schedule por PUUID, desactivado por defecto, con frecuencia de 15 minutos a 7 días y cantidad de 1–200 partidas. El worker reclama una ejecución vencida con `SKIP LOCKED`, avanza `next_run_at` y crea el job mediante la exclusión activa existente.
+- Razón: el refresh debe ser explícito, reintentable y seguro ante varios workers; no se permiten timers por usuario en memoria ni solapes que consuman Riot innecesariamente.
+- Consecuencias: desactivar no borra historial ni jobs; un schedule no reclama Riot directamente, solo encola un job durable. La frecuencia inicial es fija por schedule y una ampliación a cuotas, ventanas o múltiples regiones requiere una historia posterior.
+
+## D-027 — Observabilidad agregada y segura por proceso
+
+- Fecha: 2026-08-31
+- Estado: aceptada para Sprint 6
+- Decisión: instrumentar con `System.Diagnostics.Metrics` y un snapshot interno por proceso, usando etiquetas de baja cardinalidad. Los logs HTTP incluyen correlación, método, estado y duración, pero omiten ruta/query e identidades de jugador.
+- Razón: las rutas contienen Riot ID o PUUID y no son necesarias para operar el MVP; los instrumentos nativos permiten conectar OpenTelemetry después sin imponer ahora un proveedor o dependencia adicional.
+- Consecuencias: API y worker exponen `/metrics` únicamente en su red interna actual. Un despliegue público deberá restringir esa superficie y decidir collector/exporter en S7; nunca se agregan API key, raw payload o identificadores de jugador como labels.

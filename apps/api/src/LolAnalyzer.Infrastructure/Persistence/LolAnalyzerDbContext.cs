@@ -17,6 +17,8 @@ public sealed class LolAnalyzerDbContext(DbContextOptions<LolAnalyzerDbContext> 
 
     public DbSet<AnalysisJob> AnalysisJobs => Set<AnalysisJob>();
 
+    public DbSet<PlayerRefreshSchedule> PlayerRefreshSchedules => Set<PlayerRefreshSchedule>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Player>(entity =>
@@ -123,6 +125,26 @@ public sealed class LolAnalyzerDbContext(DbContextOptions<LolAnalyzerDbContext> 
             entity.Property(job => job.ErrorCode).HasMaxLength(64);
             entity.HasIndex(job => new { job.Status, job.CreatedAt });
             entity.HasIndex(job => new { job.Puuid, job.CreatedAt });
+            entity.HasIndex(job => new { job.Puuid, job.RequestedCount })
+                .IsUnique()
+                .HasDatabaseName("ux_analysis_jobs_active_request")
+                .HasFilter("status IN ('Queued', 'Running')");
+        });
+
+        modelBuilder.Entity<PlayerRefreshSchedule>(entity =>
+        {
+            entity.ToTable("player_refresh_schedules", table =>
+            {
+                table.HasCheckConstraint(
+                    "ck_player_refresh_schedules_requested_count",
+                    "requested_count >= 1 AND requested_count <= 200");
+                table.HasCheckConstraint(
+                    "ck_player_refresh_schedules_interval",
+                    "interval_minutes >= 15 AND interval_minutes <= 10080");
+            });
+            entity.HasKey(schedule => schedule.Puuid);
+            entity.Property(schedule => schedule.Puuid).HasMaxLength(128).IsRequired();
+            entity.HasIndex(schedule => new { schedule.Enabled, schedule.NextRunAt });
         });
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())

@@ -9,7 +9,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 ## Estado real
 
 - El repositorio contiene web Next.js, API .NET, worker, PostgreSQL, Redis, pruebas, CI y la especificación original.
-- Foundation y Sprints 1–5 están implementados; Sprint 6 inicia con la formalización de jobs persistentes.
+- Foundation y Sprints 1–6 están implementados localmente; Sprint 7 inició con auditoría Riot e inventario de datos.
 - `docs/SPEC_ANALYSIS.md` registra fortalezas, tensiones y el orden recomendado para Sprint 1.
 - El stack Docker está activo con cinco servicios saludables y solo la web publicada en `0.0.0.0:38080`.
 - ACCOUNT-V1 resuelve Riot ID a PUUID; MATCH-V5 ingesta hasta 20 partidas, consulta primero PostgreSQL, conserva raw JSONB y normaliza participantes.
@@ -23,8 +23,16 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - S5-005 muestra la red ego mediante SVG nativo y tabla equivalente, con filtros, zoom/pan por controles, selección accesible, truncamiento y estados de carga/vacío/error sin añadir dependencias.
 - S5-006 identifica posibles premades por equipo y muestra familiaridad histórica según el owner transportado desde el historial, con estados explícitos y solo evidencia anterior.
 - S5-007 hace lookup local-first, muestra frescura del resumen y reserva las llamadas de sincronización para el botón explícito de actualización.
-- S6-001 está en curso: `analysis_jobs` y su migración hacen durable el contrato start/status; `POST /api/v1/players/{puuid}/analysis` acepta `matchCount` de 1–200, responde `202` con `Location`, y `GET /api/v1/jobs/{jobId}` devuelve estado/progreso sin stack traces. El worker aún no reclama ni procesa estos jobs.
-- Validación parcial de S6-001 (2026-08-31): 43 pruebas unitarias y 17 de integración; build Docker de API; migración `202608310001_AddAnalysisJobs` aplicada sobre PostgreSQL; creación runtime en estado `queued`; y consulta del mismo GUID después de reiniciar la API.
+- S6-001 tiene sus criterios implementados localmente: API start/status/cancel, claim atómico `SKIP LOCKED`, lotes/progreso, estados terminales seguros, requeue al apagar y recuperación por lease. Se validó sin Riot `queued → running → failed`, cancelación y recuperación stale; los datos sintéticos se eliminaron.
+- S6-002 excluye solicitudes activas equivalentes con un índice único parcial PostgreSQL; una carrera real de dos peticiones devolvió el mismo job y, después de cancelarlo, una nueva petición creó otro GUID.
+- S6-003 pagina hasta 200 IDs desde el progreso durable, reutiliza `riot_match_id` globalmente y serializa la persistencia concurrente del mismo match con advisory lock. La prueba 190/200 descarga exactamente 10 detalles.
+- S6-004 centraliza las llamadas Riot de cada proceso mediante `IRiotRateLimiter`: concurrencia configurable, cooldown compartido por routing, `Retry-After`, backoff acotado y cancelación. La ingesta masiva permanece en el worker; varias réplicas requerirán coordinación distribuida.
+- S6-005 incorpora `ICacheService`, Redis con fallback en memoria, TTL configurable y tags hash por jugador. El resumen se lee desde caché cuando existe y vuelve a PostgreSQL ante miss/fallo; jobs y sync invalidan tras reconstruir.
+- S6-006 agrega schedules durables opt-in por PUUID, frecuencia/cantidad acotadas, claim `SKIP LOCKED` y creación idempotente de jobs sin solapes. La migración está aplicada en runtime; API y worker están saludables.
+- S6-007 agrega métricas operativas nativas y snapshots internos en API/worker. Los logs HTTP son estructurados pero omiten path, query, PUUID, Riot ID, payloads y secretos.
+- S6-008 verificó reinicio del worker, degradación con Redis caído, deduplicación y 429 simulados; las consultas reales usaron los índices previstos. `docs/OPERATIONS_RUNBOOK.md` contiene evidencia reproducible.
+- Sprint 7 inició en `docs/RIOT_READINESS.md`: fuentes oficiales revalidadas el 2026-08-31, matriz de requisitos, inventario inicial y estado público `NO-GO` hasta completar dependencias.
+- S7-010 conserva la evaluación futura del crédito Azure y Azure DevOps; no hay activación, migración ni decisión de adoptar Azure.
 - Los Riot IDs visibles del detalle y de la leyenda de premades enlazan al perfil mediante el componente compartido; datos incompletos permanecen como texto y no provocan sincronización automática.
 - El worker base está separado y saludable; los jobs persistentes pertenecen a Sprint 6.
 - No se ha seleccionado una licencia.
@@ -42,7 +50,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 
 - Las políticas, límites y requisitos legales de Riot son temporales; deben verificarse en documentación oficial antes de integrar o publicar.
 - Sprint 5 está completado; Sprint 6 debe comenzar por S6-001 porque deduplicación, refresh e incrementalidad dependen del contrato de jobs.
-- Los jobs, deduplicación concurrente y rate limiting global se decidirán e implementarán en Sprint 6.
+- Sprint 6 está cerrado técnicamente; falta integrar/publicar el conjunto para cerrar sus tarjetas remotas.
 - `ARC-001` medirá .NET frente a Go en ARM64; el benchmark no autoriza una migración.
 - Falta decidir la licencia del repositorio.
 - Falta definir contraseñas locales seguras y la estrategia inicial de migraciones/health checks sin introducir secretos en Git.
@@ -68,8 +76,17 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - Runtime posterior a S5-004: la API fue reconstruida/recreada, los cinco servicios permanecen saludables, `/health` responde `Healthy` y la nueva ruta `/network` devuelve un 404 controlado para un jugador inexistente.
 - Frontend posterior a la presentación de premades: 6 pruebas, lint, type-check, Prettier y build Next.js/Docker aprobados; API y web fueron recreadas, `/health` responde `Healthy` y la ruta dinámica de detalle renderiza.
 - Navegación desde detalle: el componente compartido enlaza Riot IDs completos tanto en las filas de participantes como en la leyenda de premades; pruebas frontend, lint, type-check, Prettier y build local/Docker pasan, y la web recreada queda saludable.
+- S6-004: 48 pruebas unitarias y 18 de integración .NET, `dotnet format --verify-no-changes` y builds Docker de API/worker exitosos. Los casos HTTP simulados cubren 429 con `Retry-After`, reintento acotado, concurrencia y cancelación; no se llamó a Riot.
+- S6-005: 51 pruebas unitarias y 18 de integración; formato y builds Docker aprobados. Redis real creó y sirvió el resumen cacheado; con Redis detenido la misma lectura funcionó desde memoria, luego Redis se restauró y los cinco servicios quedaron saludables.
+- S6-006: 54 pruebas unitarias y 20 de integración; migración `player_refresh_schedules` aplicada y endpoint de refresh validado con 404 controlado para jugador inexistente. API/worker permanecen saludables sin llamada a Riot.
+- Cierre Sprint 6: 55 pruebas unitarias y 20 de integración; formato .NET, `docker compose config`, builds de API/worker, métricas internas y cinco health checks aprobados. Redis caído y reinicio del worker se probaron de forma reversible.
 - Se verificaron el 2026-08-30 las políticas oficiales vigentes de Riot: el producto se mantiene post-partida, no desanonimiza jugadores ocultos y trata relaciones como inferencias. Referencias: https://developer.riotgames.com/policies/general y https://developer.riotgames.com/docs/lol
 
 ## Próximo paso
 
-Continuar S6-001: implementar claim y transiciones atómicas en el worker, procesamiento/progreso, cancelación y recuperación tras reinicio; mantener la historia abierta hasta validar esa ruta completa.
+Integrar/publicar el cierre de Sprint 6 y continuar S7-001/S7-002 sin abrir el servicio público hasta completar el go/no-go.
+
+## Investigación delegable a Gemini
+
+- El tablero tiene el carril `Para Gemini`: Codex deja allí prompts de investigación; el PO pasa el contenido a Gemini y mueve la tarjeta a `Listo para Codex` cuando adjunta el resultado.
+- GM-04–GM-08 refinan el trabajo pendiente de Sprint 6; GM-09–GM-11 cubren cumplimiento, privacidad y operación de Sprint 7; GM-12 prepara ARC-001 sin autorizar una migración a Go.

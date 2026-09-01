@@ -121,6 +121,17 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
         Assert.Equal(jobId, statusBody.RootElement.GetProperty("jobId").GetGuid());
         Assert.Equal("test-owner-puuid", statusBody.RootElement.GetProperty("puuid").GetString());
         Assert.Equal(JsonValueKind.Null, statusBody.RootElement.GetProperty("errorCode").ValueKind);
+
+        var cancel = await client.PostAsync(
+            $"/api/v1/jobs/{jobId}/cancel",
+            content: null,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, cancel.StatusCode);
+        using var cancelledBody = JsonDocument.Parse(
+            await cancel.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        Assert.Equal("cancelled", cancelledBody.RootElement.GetProperty("status").GetString());
+        Assert.NotEqual(JsonValueKind.Null, cancelledBody.RootElement.GetProperty("completedAt").ValueKind);
     }
 
     [Fact]
@@ -138,6 +149,73 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
 
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+    }
+
+    [Fact]
+    public async Task RefreshScheduleRequiresExplicitOptInAndCanBeDisabled()
+    {
+        using var client = _factory.CreateClient();
+
+        var enabled = await client.PutAsJsonAsync(
+            "/api/v1/players/test-owner-puuid/refresh-schedule",
+            new { enabled = true, intervalMinutes = 60, matchCount = 100 },
+            TestContext.Current.CancellationToken);
+        var read = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/refresh-schedule",
+            TestContext.Current.CancellationToken);
+        var disabled = await client.PutAsJsonAsync(
+            "/api/v1/players/test-owner-puuid/refresh-schedule",
+            new { enabled = false, intervalMinutes = 60, matchCount = 100 },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, enabled.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, read.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, disabled.StatusCode);
+        using var disabledBody = JsonDocument.Parse(
+            await disabled.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        Assert.False(disabledBody.RootElement.GetProperty("enabled").GetBoolean());
+    }
+
+    [Fact]
+    public async Task RefreshScheduleRejectsUnsafeFrequencyAndUnknownPlayer()
+    {
+        using var client = _factory.CreateClient();
+
+        var invalid = await client.PutAsJsonAsync(
+            "/api/v1/players/test-owner-puuid/refresh-schedule",
+            new { enabled = true, intervalMinutes = 14, matchCount = 20 },
+            TestContext.Current.CancellationToken);
+        var unknown = await client.PutAsJsonAsync(
+            "/api/v1/players/unknown/refresh-schedule",
+            new { enabled = true, intervalMinutes = 60, matchCount = 20 },
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+    }
+
+    [Fact]
+    public async Task EquivalentActiveAnalysisRequestsReturnTheSamePersistentJob()
+    {
+        using var client = _factory.CreateClient();
+        var puuid = $"duplicate-{Guid.NewGuid():N}";
+
+        var first = await client.PostAsJsonAsync(
+            $"/api/v1/players/{puuid}/analysis",
+            new { matchCount = 40 },
+            TestContext.Current.CancellationToken);
+        var second = await client.PostAsJsonAsync(
+            $"/api/v1/players/{puuid}/analysis",
+            new { matchCount = 40 },
+            TestContext.Current.CancellationToken);
+
+        using var firstBody = JsonDocument.Parse(
+            await first.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        using var secondBody = JsonDocument.Parse(
+            await second.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(
+            firstBody.RootElement.GetProperty("jobId").GetGuid(),
+            secondBody.RootElement.GetProperty("jobId").GetGuid());
     }
 
     [Fact]
@@ -345,28 +423,85 @@ public sealed class LolAnalyzerApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<IPlayerAnalysisRepository>();
             services.RemoveAll<IPlayerRelationshipRepository>();
             services.RemoveAll<IAnalysisJobRepository>();
+            services.RemoveAll<IPlayerRefreshScheduleRepository>();
             services.AddSingleton<IRiotApiClient>(new SimulatedRiotApiClient());
             services.AddSingleton<IPlayerRepository>(new InMemoryPlayerRepository());
             services.AddSingleton<IMatchRepository>(new InMemoryMatchRepository());
             services.AddSingleton<IPlayerAnalysisRepository>(new InMemoryPlayerAnalysisRepository());
             services.AddSingleton<IPlayerRelationshipRepository>(new InMemoryPlayerRelationshipRepository());
             services.AddSingleton<IAnalysisJobRepository>(new InMemoryAnalysisJobRepository());
+            services.AddSingleton<IPlayerRefreshScheduleRepository>(new InMemoryRefreshScheduleRepository());
         });
     }
+}
+
+internal sealed class InMemoryRefreshScheduleRepository : IPlayerRefreshScheduleRepository
+{
+    private readonly ConcurrentDictionary<string, PlayerRefreshSchedule> schedules = new();
+
+    public Task<PlayerRefreshSchedule?> FindAsync(string puuid, CancellationToken cancellationToken)
+    {
+        schedules.TryGetValue(puuid, out var schedule);
+        return Task.FromResult(schedule);
+    }
+
+    public Task<PlayerRefreshSchedule?> UpsertAsync(
+        string puuid,
+        int requestedCount,
+        int intervalMinutes,
+        bool enabled,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (puuid != "test-owner-puuid")
+        {
+            return Task.FromResult<PlayerRefreshSchedule?>(null);
+        }
+
+        var schedule = new PlayerRefreshSchedule
+        {
+            Puuid = puuid,
+            RequestedCount = requestedCount,
+            IntervalMinutes = intervalMinutes,
+            Enabled = enabled,
+            NextRunAt = now.AddMinutes(intervalMinutes),
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        schedules[puuid] = schedule;
+        return Task.FromResult<PlayerRefreshSchedule?>(schedule);
+    }
+
+    public Task<PlayerRefreshSchedule?> ClaimNextDueAsync(
+        DateTimeOffset now,
+        CancellationToken cancellationToken) => Task.FromResult<PlayerRefreshSchedule?>(null);
 }
 
 internal sealed class InMemoryAnalysisJobRepository : IAnalysisJobRepository
 {
     private readonly ConcurrentDictionary<Guid, AnalysisJob> _jobs = new();
+    private readonly object _gate = new();
 
-    public Task AddAsync(AnalysisJob job, CancellationToken cancellationToken)
+    public Task<AnalysisJob> AddOrGetActiveAsync(AnalysisJob job, CancellationToken cancellationToken)
     {
-        if (!_jobs.TryAdd(job.Id, job))
+        lock (_gate)
         {
-            throw new InvalidOperationException("The analysis job already exists.");
-        }
+            var active = _jobs.Values.FirstOrDefault(candidate =>
+                candidate.Puuid == job.Puuid
+                && candidate.RequestedCount == job.RequestedCount
+                && candidate.Status is AnalysisJobStatus.Queued or AnalysisJobStatus.Running);
+            if (active is not null)
+            {
+                return Task.FromResult(active);
+            }
 
-        return Task.CompletedTask;
+            if (!_jobs.TryAdd(job.Id, job))
+            {
+                throw new InvalidOperationException("The analysis job already exists.");
+            }
+
+            return Task.FromResult(job);
+        }
     }
 
     public Task<AnalysisJob?> FindAsync(Guid jobId, CancellationToken cancellationToken)
@@ -374,6 +509,108 @@ internal sealed class InMemoryAnalysisJobRepository : IAnalysisJobRepository
         _jobs.TryGetValue(jobId, out var job);
         return Task.FromResult(job);
     }
+
+    public Task<AnalysisJob?> ClaimNextAsync(
+        DateTimeOffset now,
+        DateTimeOffset staleBefore,
+        CancellationToken cancellationToken)
+    {
+        var job = _jobs.Values
+            .Where(candidate => candidate.Status == AnalysisJobStatus.Queued
+                || (candidate.Status == AnalysisJobStatus.Running && candidate.UpdatedAt < staleBefore))
+            .OrderBy(candidate => candidate.CreatedAt)
+            .FirstOrDefault();
+        if (job is not null)
+        {
+            job.Status = AnalysisJobStatus.Running;
+            job.StartedAt ??= now;
+            job.UpdatedAt = now;
+        }
+
+        return Task.FromResult(job);
+    }
+
+    public Task UpdateProgressAsync(
+        Guid jobId,
+        int matchesProcessed,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (_jobs.TryGetValue(jobId, out var job) && job.Status == AnalysisJobStatus.Running)
+        {
+            job.MatchesProcessed = matchesProcessed;
+            job.UpdatedAt = now;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task CompleteAsync(
+        Guid jobId,
+        int matchesProcessed,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (_jobs.TryGetValue(jobId, out var job) && job.Status == AnalysisJobStatus.Running)
+        {
+            job.Status = AnalysisJobStatus.Completed;
+            job.MatchesProcessed = matchesProcessed;
+            job.UpdatedAt = now;
+            job.CompletedAt = now;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task FailAsync(
+        Guid jobId,
+        string errorCode,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (_jobs.TryGetValue(jobId, out var job) && job.Status == AnalysisJobStatus.Running)
+        {
+            job.Status = AnalysisJobStatus.Failed;
+            job.ErrorCode = errorCode;
+            job.UpdatedAt = now;
+            job.CompletedAt = now;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task RequeueAsync(
+        Guid jobId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (_jobs.TryGetValue(jobId, out var job) && job.Status == AnalysisJobStatus.Running)
+        {
+            job.Status = AnalysisJobStatus.Queued;
+            job.UpdatedAt = now;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task<AnalysisJob?> CancelAsync(
+        Guid jobId,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        if (_jobs.TryGetValue(jobId, out var job)
+            && job.Status is AnalysisJobStatus.Queued or AnalysisJobStatus.Running)
+        {
+            job.Status = AnalysisJobStatus.Cancelled;
+            job.UpdatedAt = now;
+            job.CompletedAt = now;
+        }
+
+        return Task.FromResult(job);
+    }
+
+    public Task<bool> IsCancelledAsync(Guid jobId, CancellationToken cancellationToken) =>
+        Task.FromResult(_jobs.TryGetValue(jobId, out var job) && job.Status == AnalysisJobStatus.Cancelled);
 }
 
 internal sealed class SimulatedRiotApiClient : IRiotApiClient

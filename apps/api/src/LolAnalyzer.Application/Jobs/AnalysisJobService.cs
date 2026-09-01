@@ -19,13 +19,23 @@ public sealed class AnalysisJobService(IAnalysisJobRepository repository, TimePr
             UpdatedAt = now,
         };
 
-        await repository.AddAsync(job, cancellationToken).ConfigureAwait(false);
-        return Map(job);
+        var activeJob = await repository
+            .AddOrGetActiveAsync(job, cancellationToken)
+            .ConfigureAwait(false);
+        return Map(activeJob);
     }
 
     public async Task<AnalysisJobView?> FindAsync(Guid jobId, CancellationToken cancellationToken)
     {
         var job = await repository.FindAsync(jobId, cancellationToken).ConfigureAwait(false);
+        return job is null ? null : Map(job);
+    }
+
+    public async Task<AnalysisJobView?> CancelAsync(Guid jobId, CancellationToken cancellationToken)
+    {
+        var job = await repository
+            .CancelAsync(jobId, timeProvider.GetUtcNow(), cancellationToken)
+            .ConfigureAwait(false);
         return job is null ? null : Map(job);
     }
 

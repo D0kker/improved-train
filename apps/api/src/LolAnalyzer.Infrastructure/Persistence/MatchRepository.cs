@@ -32,10 +32,19 @@ public sealed class MatchRepository(LolAnalyzerDbContext dbContext) : IMatchRepo
         string platformRegion,
         CancellationToken cancellationToken)
     {
+        await using var transaction = await dbContext.Database
+            .BeginTransactionAsync(cancellationToken)
+            .ConfigureAwait(false);
+        await dbContext.Database
+            .ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock(hashtextextended({match.RiotMatchId}, 0));",
+                cancellationToken)
+            .ConfigureAwait(false);
         if (await dbContext.Matches.AnyAsync(
                 existing => existing.RiotMatchId == match.RiotMatchId,
                 cancellationToken).ConfigureAwait(false))
         {
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             return false;
         }
 
@@ -122,6 +131,7 @@ public sealed class MatchRepository(LolAnalyzerDbContext dbContext) : IMatchRepo
         }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return true;
     }
 }

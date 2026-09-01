@@ -1,14 +1,19 @@
 using System.Net;
 using LolAnalyzer.Application.Analysis;
+using LolAnalyzer.Application.Caching;
 using LolAnalyzer.Application.Jobs;
 using LolAnalyzer.Application.Matches;
+using LolAnalyzer.Application.Observability;
 using LolAnalyzer.Application.Players;
 using LolAnalyzer.Application.Riot;
 using LolAnalyzer.Infrastructure.Health;
+using LolAnalyzer.Infrastructure.Caching;
 using LolAnalyzer.Infrastructure.Persistence;
 using LolAnalyzer.Infrastructure.Riot;
+using LolAnalyzer.Api;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,10 +31,22 @@ if (int.TryParse(builder.Configuration["RIOT_REQUEST_CONCURRENCY"], out var conf
     riotOptions.RequestConcurrency = configuredConcurrency;
 }
 
-if (riotOptions.RequestTimeoutSeconds <= 0 || riotOptions.RequestConcurrency is < 1 or > 5)
+if (int.TryParse(builder.Configuration["RIOT_MAX_RETRY_ATTEMPTS"], out var configuredRetryAttempts))
 {
-    throw new InvalidOperationException("Riot timeout must be positive and concurrency must be between 1 and 5.");
+    riotOptions.MaxRetryAttempts = configuredRetryAttempts;
 }
+
+if (int.TryParse(builder.Configuration["RIOT_BASE_RETRY_DELAY_MILLISECONDS"], out var configuredBaseRetryDelay))
+{
+    riotOptions.BaseRetryDelayMilliseconds = configuredBaseRetryDelay;
+}
+
+if (int.TryParse(builder.Configuration["RIOT_MAX_RETRY_DELAY_SECONDS"], out var configuredMaxRetryDelay))
+{
+    riotOptions.MaxRetryDelaySeconds = configuredMaxRetryDelay;
+}
+
+riotOptions.Validate();
 
 var relationshipScoreOptions = builder.Configuration
     .GetSection(RelationshipScoreOptions.SectionName)
@@ -51,6 +68,15 @@ var playerNetworkOptions = builder.Configuration
     .GetSection(PlayerNetworkOptions.SectionName)
     .Get<PlayerNetworkOptions>() ?? new PlayerNetworkOptions();
 playerNetworkOptions.Validate();
+var cacheOptions = builder.Configuration
+    .GetSection(CacheOptions.SectionName)
+    .Get<CacheOptions>() ?? new CacheOptions();
+if (int.TryParse(builder.Configuration["CACHE_PLAYER_SUMMARY_TTL_SECONDS"], out var configuredSummaryTtl))
+{
+    cacheOptions.PlayerSummaryTtlSeconds = configuredSummaryTtl;
+}
+
+cacheOptions.Validate();
 
 var postgresConnectionString = BuildPostgresConnectionString(builder.Configuration)
     ?? throw new InvalidOperationException("ConnectionStrings:Postgres or POSTGRES_HOST must be configured.");
@@ -71,10 +97,27 @@ builder.Services.AddSingleton<PossiblePremadeDetector>();
 builder.Services.AddSingleton(premadeGroupDetectionOptions);
 builder.Services.AddSingleton<PossiblePremadeGroupDetector>();
 builder.Services.AddSingleton(playerNetworkOptions);
+builder.Services.AddSingleton(cacheOptions);
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddSingleton<OperationalMetrics>();
+builder.Services.AddSingleton<IRiotRateLimiter, RiotRateLimiter>();
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(new ConfigurationOptions
+{
+    EndPoints = { { redisHost, redisPort } },
+    AbortOnConnectFail = false,
+    ConnectRetry = 1,
+    ConnectTimeout = 500,
+    AsyncTimeout = 500,
+    SyncTimeout = 500,
+}));
+builder.Services.AddSingleton<IRedisCacheStore, StackExchangeRedisCacheStore>();
+builder.Services.AddSingleton<MemoryCacheService>();
+builder.Services.AddSingleton<ICacheService, RedisCacheService>();
 builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
 builder.Services.AddScoped<IAnalysisJobRepository, AnalysisJobRepository>();
 builder.Services.AddScoped<AnalysisJobService>();
+builder.Services.AddScoped<IPlayerRefreshScheduleRepository, PlayerRefreshScheduleRepository>();
+builder.Services.AddScoped<PlayerRefreshScheduleService>();
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
 builder.Services.AddScoped<PlayerLookupService>();
 builder.Services.AddScoped<IMatchRepository, MatchRepository>();
@@ -84,6 +127,7 @@ builder.Services.AddScoped<RepeatedPlayerAnalysisService>();
 builder.Services.AddScoped<MatchFamiliarityService>();
 builder.Services.AddScoped<MatchPremadeGroupService>();
 builder.Services.AddScoped<MatchDetailQueryService>();
+builder.Services.AddScoped<PlayerSummaryQueryService>();
 builder.Services.AddScoped<IPlayerRelationshipRepository, PlayerRelationshipRepository>();
 builder.Services.AddScoped<PlayerRelationshipAnalysisService>();
 builder.Services.AddScoped<PlayerRelationshipQueryService>();
@@ -91,18 +135,14 @@ builder.Services.AddScoped<PlayerNetworkQueryService>();
 builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
     {
         client.BaseAddress = riotOptions.GetRegionalBaseUri();
-        client.Timeout = Timeout.InfiniteTimeSpan;
-    })
-    .AddStandardResilienceHandler(options =>
-    {
-        options.TotalRequestTimeout.Timeout = TimeSpan.FromSeconds(riotOptions.RequestTimeoutSeconds);
-        options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(riotOptions.RequestTimeoutSeconds);
+        client.Timeout = TimeSpan.FromSeconds(riotOptions.RequestTimeoutSeconds);
     });
 builder.Services.AddHealthChecks()
     .AddCheck<PostgresHealthCheck>("postgresql", tags: ["ready"])
     .AddCheck("redis", new RedisHealthCheck(redisHost, redisPort), tags: ["ready"]);
 
 var app = builder.Build();
+app.UseMiddleware<SafeRequestLoggingMiddleware>();
 
 if (builder.Configuration.GetValue("Database:ApplyMigrations", true))
 {
@@ -118,6 +158,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = registration => registration.Tags.Contains("ready") });
+app.MapGet("/metrics", (OperationalMetrics metrics) => Results.Ok(metrics.Snapshot()));
 
 app.MapGet("/api/v1/players/by-riot-id/{gameName}/{tagLine}", async Task<IResult> (
     string gameName,
@@ -196,12 +237,62 @@ app.MapGet("/api/v1/jobs/{jobId:guid}", async Task<IResult> (
     return job is null ? Results.NotFound() : Results.Ok(job);
 });
 
+app.MapPost("/api/v1/jobs/{jobId:guid}/cancel", async Task<IResult> (
+    Guid jobId,
+    AnalysisJobService jobService,
+    CancellationToken cancellationToken) =>
+{
+    var job = await jobService.CancelAsync(jobId, cancellationToken).ConfigureAwait(false);
+    return job is null ? Results.NotFound() : Results.Ok(job);
+});
+
+app.MapGet("/api/v1/players/{puuid}/refresh-schedule", async Task<IResult> (
+    string puuid,
+    PlayerRefreshScheduleService scheduleService,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(puuid))
+    {
+        return Results.BadRequest();
+    }
+
+    var schedule = await scheduleService.FindAsync(puuid, cancellationToken).ConfigureAwait(false);
+    return schedule is null ? Results.NotFound() : Results.Ok(schedule);
+});
+
+app.MapPut("/api/v1/players/{puuid}/refresh-schedule", async Task<IResult> (
+    string puuid,
+    ConfigureRefreshScheduleRequest request,
+    PlayerRefreshScheduleService scheduleService,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(puuid)
+        || request.MatchCount is < 1 or > PlayerRefreshScheduleService.MaximumRequestedCount
+        || request.IntervalMinutes is < PlayerRefreshScheduleService.MinimumIntervalMinutes
+            or > PlayerRefreshScheduleService.MaximumIntervalMinutes)
+    {
+        return Results.ValidationProblem(new Dictionary<string, string[]>
+        {
+            ["schedule"] = ["puuid is required, matchCount must be 1-200 and intervalMinutes must be 15-10080."],
+        });
+    }
+
+    var schedule = await scheduleService.ConfigureAsync(
+        puuid,
+        request.MatchCount,
+        request.IntervalMinutes,
+        request.Enabled,
+        cancellationToken).ConfigureAwait(false);
+    return schedule is null ? Results.NotFound() : Results.Ok(schedule);
+});
+
 app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
     string puuid,
     int? count,
     MatchIngestionService ingestionService,
     RepeatedPlayerAnalysisService analysisService,
     PlayerRelationshipAnalysisService relationshipAnalysisService,
+    ICacheService cache,
     RiotOptions options,
     CancellationToken cancellationToken) =>
 {
@@ -225,6 +316,7 @@ app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
         var relationshipAnalysis = await relationshipAnalysisService
             .RebuildAsync(cancellationToken)
             .ConfigureAwait(false);
+        await cache.RemoveTagAsync(PlayerCacheKeys.Tag(puuid), cancellationToken).ConfigureAwait(false);
         return Results.Ok(new
         {
             result.RequestedCount,
@@ -259,7 +351,7 @@ app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
 
 app.MapGet("/api/v1/players/{puuid}/summary", async Task<IResult> (
     string puuid,
-    IPlayerAnalysisRepository repository,
+    PlayerSummaryQueryService queryService,
     CancellationToken cancellationToken) =>
 {
     if (string.IsNullOrWhiteSpace(puuid))
@@ -267,7 +359,7 @@ app.MapGet("/api/v1/players/{puuid}/summary", async Task<IResult> (
         return Results.BadRequest();
     }
 
-    var summary = await repository.GetSummaryAsync(puuid, cancellationToken).ConfigureAwait(false);
+    var summary = await queryService.GetAsync(puuid, cancellationToken).ConfigureAwait(false);
     return summary is null ? Results.NotFound() : Results.Ok(summary);
 });
 
@@ -417,6 +509,8 @@ app.Run();
 internal sealed record PlayerResponse(string Puuid, string GameName, string TagLine, string PlatformRegion);
 
 internal sealed record StartAnalysisRequest(int MatchCount);
+
+internal sealed record ConfigureRefreshScheduleRequest(bool Enabled, int IntervalMinutes, int MatchCount);
 
 public partial class Program
 {

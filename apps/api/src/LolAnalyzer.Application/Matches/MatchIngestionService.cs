@@ -1,20 +1,31 @@
 using LolAnalyzer.Application.Riot;
+using LolAnalyzer.Application.Observability;
 
 namespace LolAnalyzer.Application.Matches;
 
 public sealed class MatchIngestionService(
     IRiotApiClient riotApiClient,
     IMatchRepository matchRepository,
-    MatchIngestionOptions options)
+    MatchIngestionOptions options,
+    OperationalMetrics metrics)
 {
     public async Task<MatchSyncResult> SynchronizeAsync(
         string puuid,
+        int count,
+        string platformRegion,
+        CancellationToken cancellationToken) =>
+        await SynchronizeAsync(puuid, start: 0, count, platformRegion, cancellationToken).ConfigureAwait(false);
+
+    public async Task<MatchSyncResult> SynchronizeAsync(
+        string puuid,
+        int start,
         int count,
         string platformRegion,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(puuid);
         ArgumentException.ThrowIfNullOrWhiteSpace(platformRegion);
+        ArgumentOutOfRangeException.ThrowIfNegative(start);
         ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 100);
         if (options.RequestConcurrency is < 1 or > 5)
@@ -23,7 +34,7 @@ public sealed class MatchIngestionService(
         }
 
         var matchIds = (await riotApiClient
-                .GetMatchIdsAsync(puuid, start: 0, count: count, cancellationToken: cancellationToken)
+                .GetMatchIdsAsync(puuid, start, count, cancellationToken)
                 .ConfigureAwait(false))
             .Where(matchId => !string.IsNullOrWhiteSpace(matchId))
             .Distinct(StringComparer.Ordinal)
@@ -68,6 +79,7 @@ public sealed class MatchIngestionService(
             }
         }
 
+        metrics.RecordMatchesIngested(persistedCount);
         return new MatchSyncResult(
             RequestedCount: count,
             MatchIdsReturned: matchIds.Length,

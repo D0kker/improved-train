@@ -32,6 +32,10 @@ public partial class LolAnalyzerDbContextModelSnapshot : ModelSnapshot
             entity.Property<DateTimeOffset>("UpdatedAt").HasColumnType("timestamp with time zone").HasColumnName("updated_at");
             entity.HasKey("Id");
             entity.HasIndex("Puuid", "CreatedAt");
+            entity.HasIndex("Puuid", "RequestedCount")
+                .IsUnique()
+                .HasDatabaseName("ux_analysis_jobs_active_request")
+                .HasFilter("status IN ('Queued', 'Running')");
             entity.HasIndex("Status", "CreatedAt");
             entity.ToTable("analysis_jobs", table =>
             {
@@ -70,6 +74,25 @@ public partial class LolAnalyzerDbContextModelSnapshot : ModelSnapshot
             entity.HasKey("Id");
             entity.HasIndex("Puuid").IsUnique();
             entity.ToTable("players", (string)null);
+        });
+
+        modelBuilder.Entity("LolAnalyzer.Domain.Entities.PlayerRefreshSchedule", entity =>
+        {
+            entity.Property<string>("Puuid").IsRequired().HasMaxLength(128).HasColumnType("character varying(128)").HasColumnName("puuid");
+            entity.Property<DateTimeOffset>("CreatedAt").HasColumnType("timestamp with time zone").HasColumnName("created_at");
+            entity.Property<bool>("Enabled").HasColumnType("boolean").HasColumnName("enabled");
+            entity.Property<int>("IntervalMinutes").HasColumnType("integer").HasColumnName("interval_minutes");
+            entity.Property<DateTimeOffset?>("LastEnqueuedAt").HasColumnType("timestamp with time zone").HasColumnName("last_enqueued_at");
+            entity.Property<DateTimeOffset>("NextRunAt").HasColumnType("timestamp with time zone").HasColumnName("next_run_at");
+            entity.Property<int>("RequestedCount").HasColumnType("integer").HasColumnName("requested_count");
+            entity.Property<DateTimeOffset>("UpdatedAt").HasColumnType("timestamp with time zone").HasColumnName("updated_at");
+            entity.HasKey("Puuid");
+            entity.HasIndex("Enabled", "NextRunAt");
+            entity.ToTable("player_refresh_schedules", table =>
+            {
+                table.HasCheckConstraint("ck_player_refresh_schedules_interval", "interval_minutes >= 15 AND interval_minutes <= 10080");
+                table.HasCheckConstraint("ck_player_refresh_schedules_requested_count", "requested_count >= 1 AND requested_count <= 200");
+            });
         });
 
         modelBuilder.Entity("LolAnalyzer.Domain.Entities.MatchParticipant", entity =>

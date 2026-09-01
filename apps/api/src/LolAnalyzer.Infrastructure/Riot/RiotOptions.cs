@@ -14,6 +14,40 @@ public sealed class RiotOptions
 
     public int RequestConcurrency { get; set; } = 3;
 
+    public int MaxRetryAttempts { get; set; } = 2;
+
+    public int BaseRetryDelayMilliseconds { get; set; } = 250;
+
+    public int MaxRetryDelaySeconds { get; set; } = 120;
+
+    public void Validate()
+    {
+        if (RequestTimeoutSeconds <= 0)
+        {
+            throw new InvalidOperationException("Riot request timeout must be positive.");
+        }
+
+        if (RequestConcurrency is < 1 or > 5)
+        {
+            throw new InvalidOperationException("Riot request concurrency must be between 1 and 5.");
+        }
+
+        if (MaxRetryAttempts is < 0 or > 5)
+        {
+            throw new InvalidOperationException("Riot retry attempts must be between 0 and 5.");
+        }
+
+        if (BaseRetryDelayMilliseconds is < 1 or > 10000)
+        {
+            throw new InvalidOperationException("Riot base retry delay must be between 1 and 10000 milliseconds.");
+        }
+
+        if (MaxRetryDelaySeconds is < 1 or > 900)
+        {
+            throw new InvalidOperationException("Riot maximum retry delay must be between 1 and 900 seconds.");
+        }
+    }
+
     public Uri GetRegionalBaseUri()
     {
         var routing = RegionalRouting.Trim().ToLowerInvariant();

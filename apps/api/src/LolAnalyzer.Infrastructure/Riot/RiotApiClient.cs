@@ -2,11 +2,17 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LolAnalyzer.Application.Observability;
 using LolAnalyzer.Application.Riot;
 
 namespace LolAnalyzer.Infrastructure.Riot;
 
-public sealed class RiotApiClient(HttpClient httpClient, RiotOptions options) : IRiotApiClient
+public sealed class RiotApiClient(
+    HttpClient httpClient,
+    RiotOptions options,
+    IRiotRateLimiter rateLimiter,
+    TimeProvider timeProvider,
+    OperationalMetrics metrics) : IRiotApiClient
 {
     public async Task<RiotAccount?> GetAccountByRiotIdAsync(
         string gameName,
@@ -17,7 +23,7 @@ public sealed class RiotApiClient(HttpClient httpClient, RiotOptions options) : 
         ArgumentException.ThrowIfNullOrWhiteSpace(tagLine);
 
         var path = $"riot/account/v1/accounts/by-riot-id/{Uri.EscapeDataString(gameName)}/{Uri.EscapeDataString(tagLine)}";
-        using var response = await SendGetAsync(path, cancellationToken).ConfigureAwait(false);
+        using var response = await SendGetAsync(path, "account", cancellationToken).ConfigureAwait(false);
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
@@ -52,7 +58,7 @@ public sealed class RiotApiClient(HttpClient httpClient, RiotOptions options) : 
         ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 100);
 
         var path = $"lol/match/v5/matches/by-puuid/{Uri.EscapeDataString(puuid)}/ids?start={start}&count={count}";
-        using var response = await SendGetAsync(path, cancellationToken).ConfigureAwait(false);
+        using var response = await SendGetAsync(path, "match_ids", cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -69,7 +75,7 @@ public sealed class RiotApiClient(HttpClient httpClient, RiotOptions options) : 
         ArgumentException.ThrowIfNullOrWhiteSpace(riotMatchId);
 
         var path = $"lol/match/v5/matches/{Uri.EscapeDataString(riotMatchId)}";
-        using var response = await SendGetAsync(path, cancellationToken).ConfigureAwait(false);
+        using var response = await SendGetAsync(path, "match", cancellationToken).ConfigureAwait(false);
 
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
@@ -92,16 +98,67 @@ public sealed class RiotApiClient(HttpClient httpClient, RiotOptions options) : 
         }
     }
 
-    private async Task<HttpResponseMessage> SendGetAsync(string path, CancellationToken cancellationToken)
+    private async Task<HttpResponseMessage> SendGetAsync(
+        string path,
+        string endpoint,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(options.ApiKey))
         {
             throw new InvalidOperationException("RIOT_API_KEY must be configured at runtime before calling Riot.");
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, path);
-        request.Headers.TryAddWithoutValidation("X-Riot-Token", options.ApiKey);
-        return await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        for (var attempt = 0; ; attempt++)
+        {
+            HttpResponseMessage response;
+            using (await rateLimiter.AcquireAsync(cancellationToken).ConfigureAwait(false))
+            using (var request = new HttpRequestMessage(HttpMethod.Get, path))
+            {
+                request.Headers.TryAddWithoutValidation("X-Riot-Token", options.ApiKey);
+                response = await httpClient.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            metrics.RecordRiotRequest(endpoint, (int)response.StatusCode);
+
+            if (response.StatusCode != HttpStatusCode.TooManyRequests)
+            {
+                return response;
+            }
+
+            var retryAfter = GetRetryDelay(response, attempt);
+            rateLimiter.RegisterRetryAfter(retryAfter);
+
+            if (attempt >= options.MaxRetryAttempts || retryAfter > TimeSpan.FromSeconds(options.MaxRetryDelaySeconds))
+            {
+                return response;
+            }
+
+            response.Dispose();
+        }
+    }
+
+    private TimeSpan GetRetryDelay(HttpResponseMessage response, int attempt)
+    {
+        var retryAfter = response.Headers.RetryAfter;
+        if (retryAfter?.Delta is { } delta)
+        {
+            return delta > TimeSpan.Zero ? delta : TimeSpan.FromMilliseconds(options.BaseRetryDelayMilliseconds);
+        }
+
+        if (retryAfter?.Date is { } date)
+        {
+            var delay = date - timeProvider.GetUtcNow();
+            return delay > TimeSpan.Zero ? delay : TimeSpan.FromMilliseconds(options.BaseRetryDelayMilliseconds);
+        }
+
+        var exponent = Math.Min(attempt, 30);
+        var delayMilliseconds = options.BaseRetryDelayMilliseconds * Math.Pow(2, exponent);
+        return TimeSpan.FromMilliseconds(Math.Min(
+            delayMilliseconds,
+            TimeSpan.FromSeconds(options.MaxRetryDelaySeconds).TotalMilliseconds));
     }
 
     private static RiotMatchData ParseMatch(string rawJson)

@@ -61,21 +61,32 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
   - [x] Integrar familiaridad histórica contextual y sus estados de evidencia.
 - [x] S5-007: perfil relacionado con resumen local; navegación sin sincronización automática y con estado de frescura.
 
-## Sprint 6 — iniciado
+## Sprint 6 — completado localmente
 
-- [ ] S6-001: formalizar jobs persistentes.
+- [x] S6-001: formalizar jobs persistentes.
   - [x] Definir contrato durable, migración PostgreSQL y endpoints `POST /players/{puuid}/analysis` / `GET /jobs/{jobId}`.
-  - [ ] Implementar claim/transiciones del worker, progreso, error seguro, cancelación y recuperación tras reinicio.
-- [ ] Exclusión de duplicados y sincronización incremental.
-- [ ] Rate limiting, caché, refresh, observabilidad, índices medidos sobre consultas reales y pruebas de resiliencia.
+  - [x] Implementar claim/transiciones del worker, progreso, error seguro, cancelación y recuperación tras reinicio.
+- [x] S6-002: excluir solicitudes activas equivalentes mediante índice parcial PostgreSQL y retorno idempotente del job existente.
+- [x] S6-003: sincronizar incrementalmente en páginas, reutilizar matches globales y reconstruir agregados; el caso 190/200 descarga 10 detalles.
+- [x] S6-004: centralizar concurrencia Riot por proceso/routing, respetar `Retry-After`, aplicar backoff acotado y cancelación cooperativa con HTTP simulado.
+- [x] S6-005: abstraer caché Redis/memoria, TTL configurable e invalidación de resumen al completar o sincronizar.
+- [x] S6-006: refresh programado opt-in con frecuencia configurable, claim durable sin solapes y desactivación segura.
+- [x] S6-007: instrumentar logs seguros y métricas agregadas de requests, Riot/429, ingesta, caché y jobs sin identificadores ni payloads.
+- [x] S6-008: verificar reinicio, deduplicación, 429, Redis caído y consultas reales; documentar planes y runbook reproducible.
 
 ## Sprint 7 — planificado
 
-- [ ] Cumplimiento Riot y revisión actual de registro, acceso Production, monetización transformativa y canales de solicitudes de eliminación.
-- [ ] Inventario, retención, eliminación y exportación de datos; Privacy Policy, Terms y disclaimer antes de publicación.
+- [ ] S7-001: cumplimiento Riot y revisión actual de registro, acceso Production, monetización transformativa y canales de solicitudes de eliminación.
+  - [x] Crear matriz inicial con fuentes oficiales verificadas el 2026-08-31.
+  - [ ] Obtener registro/auditoría y acceso Production antes de abrir el producto.
+- [ ] S7-002: inventario, retención, eliminación y exportación de datos.
+  - [x] Crear inventario técnico inicial y límites de logging/exposición.
+  - [ ] Aprobar periodos, contacto y proceso operativo antes de publicar.
+- [ ] S7-003: Privacy Policy, Terms y disclaimer antes de publicación.
 - [ ] Threat model, secretos de runtime, rate limiting propio, validación, errores seguros, headers/CORS/CSP, contenedores no-root y escaneo de dependencias.
 - [ ] HTTPS, superficie privada de PostgreSQL/Redis, backups probados y runbook de incidentes.
 - [ ] Indexación, incident response y auditoría go/no-go de V1.
+- [ ] S7-010: evaluar el crédito Azure como staging opcional, con coste acotado y sin duplicar GitHub ni migrar el MVP prematuramente.
 
 ## Sprint 8 — creado y refinado
 
@@ -90,6 +101,9 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 
 - [x] GM-02: investigación contrastada; requisitos confirmables se trasladaron a Sprint 7 y se descartaron plazos/afirmaciones sin fuente oficial suficiente.
 - [x] GM-03: refinamiento aplicado selectivamente; rendimiento/operación permanece en Sprint 6, seguridad/privacidad en Sprint 7 y monetización después del go/no-go público.
+- [ ] Gemini listo para investigación: GM-04 a GM-08 cubren rate limiting, caché, refresh, observabilidad y resiliencia de Sprint 6.
+- [ ] Gemini listo para investigación: GM-09 a GM-11 cubren cumplimiento Riot, privacidad/threat model y despliegue/continuidad de Sprint 7.
+- [ ] Gemini listo para investigación: GM-12 diseña el benchmark ARC-001 .NET frente a Go en ARM64.
 
 ## Arquitectura
 

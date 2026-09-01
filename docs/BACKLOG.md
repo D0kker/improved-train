@@ -194,11 +194,65 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 
 - **Issue:** #25.
 - **Prioridad:** P0.
-- **Estado:** en curso desde 2026-08-31.
+- **Estado:** criterios implementados localmente el 2026-08-31; tarjeta en curso hasta integrar/publicar el Sprint 6.
 - **Primera entrega:** `analysis_jobs` persiste solicitudes de 1–200 partidas, estados tipados, progreso, código de error seguro y timestamps. La API estable inicia mediante body `matchCount`, responde `202` con `Location` y permite consultar el job por GUID.
-- **Decisión:** PostgreSQL es la fuente durable; Redis queda como apoyo opcional. Pendiente: claim/transiciones atómicas en worker, cancelación y prueba de recuperación tras reinicio antes de cerrar la historia.
-- **Evidencia parcial:** 43 pruebas unitarias y 17 de integración aprobadas; migración aplicada en PostgreSQL real, creación `queued` verificada y el mismo job siguió consultable después de reiniciar la API. API y los cinco servicios quedaron saludables.
-- Probar reintentos, `429`, timeout y degradación con HTTP simulado; CI nunca consume Riot.
+- **Decisión:** PostgreSQL es la fuente durable; Redis queda como apoyo opcional. El worker usa claim atómico con `FOR UPDATE SKIP LOCKED`, lotes configurables, progreso durable y lease para recuperar trabajo vencido.
+- **Evidencia:** cancelación `queued` persistida; job `running` stale recuperado por un worker reiniciado; fallo sin key traducido a `riot_not_configured`, sin consumir Riot. Los registros sintéticos se eliminaron.
+
+### S6-002 — Evitar jobs duplicados
+
+- **Issue:** #23.
+- **Prioridad:** P0.
+- **Estado:** criterios implementados localmente; tarjeta en curso hasta integrar/publicar el Sprint 6.
+- **Evidencia:** índice único parcial `(puuid, requested_count)` para estados `Queued`/`Running`; dos solicitudes concurrentes reales devolvieron el mismo GUID. Tras cancelar, una solicitud equivalente creó un GUID nuevo. Los registros sintéticos se eliminaron.
+
+### S6-003 — Implementar sincronización incremental
+
+- **Issue:** #24.
+- **Prioridad:** P0.
+- **Estado:** criterios implementados localmente; tarjeta en curso hasta integrar/publicar el Sprint 6.
+- **Evidencia:** el worker pagina desde el progreso persistido, consulta PostgreSQL antes de cada detalle y reconstruye encounters del owner y relaciones. Una prueba 190/200 solicita páginas `0`/`100` y descarga exactamente 10 detalles. Un advisory lock transaccional por `riot_match_id` evita carreras entre jugadores.
+
+### S6-004 — Endurecer rate limiting y concurrencia Riot
+
+- **Issue:** #26.
+- **Prioridad:** P0.
+- **Estado:** criterios implementados localmente; tarjeta en curso hasta integrar/publicar el Sprint 6.
+- **Implementación:** `IRiotRateLimiter` comparte un semáforo configurable y una ventana de enfriamiento entre todas las llamadas Riot del proceso para el routing configurado. El cliente reconstruye cada petición, respeta `Retry-After`, usa backoff exponencial acotado cuando falta el header, detiene reintentos excesivos y propaga cancelación.
+- **Límite explícito:** API y worker tienen un limitador por proceso; la ingesta masiva se concentra en el worker. Un despliegue con múltiples réplicas requerirá coordinación distribuida antes de aumentar capacidad.
+- **Evidencia:** 48 pruebas unitarias y 18 de integración sin llamadas a Riot; casos simulados cubren `429 → éxito`, espera excesiva sin reintento, concurrencia máxima y cancelación durante cooldown. Formato .NET y builds Docker de API/worker aprobados.
+
+### S6-005 — Implementar caché abstraída
+
+- **Issue:** #30.
+- **Prioridad:** P1.
+- **Estado:** criterios implementados localmente; tarjeta en curso hasta integrar/publicar el Sprint 6.
+- **Implementación:** `ICacheService` define lectura, escritura con TTL e invalidación por tag. `RedisCacheService` serializa mediante Redis y usa `MemoryCacheService` como fallback; las claves/tag de jugador llevan hash SHA-256 del PUUID. El primer consumidor es el resumen del jugador con TTL configurable.
+- **Consistencia:** PostgreSQL sigue siendo la fuente de verdad. El worker invalida el tag del owner antes de completar un job y la sincronización síncrona invalida tras reconstruir; un payload inválido se trata como miss y una caída Redis nunca bloquea las escrituras persistentes.
+- **Evidencia:** 51 pruebas unitarias y 18 de integración; fallback, invalidación y payload inválido cubiertos. En runtime Redis creó la clave, sirvió la segunda lectura y, detenido brevemente, la API mantuvo el resumen desde memoria; Redis se restauró y los cinco servicios quedaron saludables.
+
+### S6-006 — Agregar refresh programado seguro
+
+- **Issue:** #28.
+- **Prioridad:** P1.
+- **Estado:** criterios implementados localmente; tarjeta en curso hasta integrar/publicar el Sprint 6.
+- **Implementación:** `player_refresh_schedules` persiste un único schedule por PUUID. La configuración exige opt-in explícito, limita frecuencia a 15–10080 minutos y cantidad a 1–200; el worker reclama con `FOR UPDATE SKIP LOCKED`, avanza `next_run_at` y crea el job mediante la exclusión durable existente.
+- **Evidencia:** 54 pruebas unitarias y 20 de integración; reloj inyectable cubre configuración, avance único y schedule deshabilitado. Migración aplicada en PostgreSQL; API/worker recreados y saludables; endpoint desconocido devuelve 404 controlado sin Riot.
+
+### S6-007 — Incorporar observabilidad y redacción
+
+- **Issue:** #27.
+- **Estado:** implementada y validada localmente.
+- **Implementación:** `OperationalMetrics` publica instrumentos .NET y snapshot interno por proceso para requests, Riot/429, matches persistidos, hits/misses/fallback de caché y jobs/duración. API registra logs estructurados con correlación, método, status y duración sin path ni identificadores.
+- **Evidencia:** 55 pruebas unitarias y 20 de integración; builds API/worker; `/metrics`, liveness y readiness comprobados con cero llamadas a Riot.
+
+### S6-008 — Verificar resiliencia operativa
+
+- **Issue:** #29.
+- **Estado:** completada localmente.
+- **Evidencia:** worker recreado sobre estado durable; Redis detenido/restaurado con resumen local disponible; deduplicación y 429 cubiertos; `EXPLAIN ANALYZE` eligió los índices de jobs, schedules, encounters y ambos lados de relationships sobre 2,632/12,358 filas.
+- **Runbook:** `docs/OPERATIONS_RUNBOOK.md` conserva escenarios, planes y límites del corpus sin convertir latencias locales en SLA.
+
 - Los análisis de sinergia de línea o `performance delta` no reemplazan este alcance y requieren una historia futura separada por su riesgo de convertirse en una métrica de habilidad no permitida.
 
 ## Sprint 7 — cumplimiento, privacidad y seguridad planificados
@@ -208,6 +262,7 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **S7-003/#33:** Privacy Policy, Terms y disclaimer versionados, con revisión PO/legal.
 - **S7-004/#36:** threat model; secretos solo en runtime; rate limiting propio; validación y errores seguros; CORS/CSP/headers; contenedores no-root; DB/Redis privados y escaneo de dependencias/imágenes.
 - **S7-005–009/#34–#39:** HTTPS, backups restaurables, indexación prudente, incident response y auditoría go/no-go con evidencia.
+- **S7-010/#65:** evaluar Azure como staging opcional; verificar el crédito específico de la cuenta, coste/alertas, secretos, red privada y ventaja concreta frente a GitHub/Raspberry antes de cualquier PoC.
 - Autenticación/RSO solo se incorporará si una función pública concreta la necesita y tras confirmar acceso Production; no se agrega por defecto al MVP privado.
 
 ## Sprint 8 — creado y refinado

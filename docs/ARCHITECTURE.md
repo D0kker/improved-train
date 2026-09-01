@@ -24,7 +24,11 @@ flowchart LR
   Worker --> Riot
 ```
 
-Solo Next.js se publica al host. API, worker, PostgreSQL y Redis permanecen en la red privada. El endpoint síncrono de Sprint 2 continúa acotado a 20 partidas durante la transición. Sprint 6 persiste solicitudes de hasta 200 partidas en PostgreSQL mediante `analysis_jobs`; API crea/consulta y el worker reclamará/transicionará esos jobs en la siguiente entrega. Redis no es la fuente de verdad durable.
+Solo Next.js se publica al host. API, worker, PostgreSQL y Redis permanecen en la red privada. El endpoint síncrono de Sprint 2 continúa acotado a 20 partidas durante la transición. Sprint 6 persiste solicitudes de hasta 200 partidas en PostgreSQL mediante `analysis_jobs`; API crea/consulta/cancela y el worker reclama con bloqueo no bloqueante, pagina, actualiza progreso y recupera leases vencidos. Redis no es la fuente de verdad durable.
+
+Cada proceso que llama a Riot usa un único `IRiotRateLimiter` para el routing regional configurado: limita concurrencia, comparte el cooldown indicado por `Retry-After` y permite cancelación. La ingesta masiva vive en el worker; esta primera versión no afirma coordinación distribuida entre réplicas y deberá evolucionar antes de escalar horizontalmente.
+
+`ICacheService` mantiene PostgreSQL como fuente de verdad. La implementación principal escribe en Redis con TTL e índice de tags, y conserva memoria local como fallback temporal cuando Redis falla. El resumen del jugador es el primer contrato cacheado; completar un job o terminar la sincronización síncrona invalida el tag hash del owner. Un miss o payload inválido vuelve a PostgreSQL y nunca modifica datos persistidos.
 
 ## Monorepo implementado
 
