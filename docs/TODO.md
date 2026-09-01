@@ -121,6 +121,10 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [ ] S10-006: implementar indexación pública controlada.
 - [ ] S10-007: ejecutar auditoría final y mantener NO-GO ante cualquier P0.
 
+## Experiencia futura — fuera de los sprints activos
+
+- [ ] UX-001/#82: reevaluar con feedback si el grafo debe mejorarse, simplificarse, ocultarse o eliminarse. Mientras tanto permanece funcional y no recibe inversión adicional.
+
 ## Investigación revisada
 
 - [x] GM-02: investigación contrastada; requisitos confirmables se trasladaron a Sprint 7 y se descartaron plazos/afirmaciones sin fuente oficial suficiente.

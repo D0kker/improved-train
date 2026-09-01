@@ -21,6 +21,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - S5-003 detecta cliques máximos de 3–5 jugadores a partir de parejas clasificadas, conserva solapamientos legítimos y aplica límites configurables antes de la integración en contratos/UI.
 - S5-004 expone una red ego de profundidad uno mediante `/api/v1/players/{puuid}/network`, con orden estable heredado de relaciones, filtros por confianza/score, límites configurables y metadata de truncamiento.
 - S5-005 muestra la red ego mediante SVG nativo y tabla equivalente, con filtros, zoom/pan por controles, selección accesible, truncamiento y estados de carga/vacío/error sin añadir dependencias.
+- Por decisión del PO, el grafo actual queda congelado: permanece disponible y funcional, pero no recibirá más inversión en Sprints 7–8. `UX-001/#82` conserva una reevaluación futura basada en utilidad real, sin bloquear el roadmap.
 - S5-006 identifica posibles premades por equipo y muestra familiaridad histórica según el owner transportado desde el historial, con estados explícitos y solo evidencia anterior.
 - S5-007 hace lookup local-first, muestra frescura del resumen y reserva las llamadas de sincronización para el botón explícito de actualización.
 - S6-001 tiene sus criterios implementados localmente: API start/status/cancel, claim atómico `SKIP LOCKED`, lotes/progreso, estados terminales seguros, requeue al apagar y recuperación por lease. Se validó sin Riot `queued → running → failed`, cancelación y recuperación stale; los datos sintéticos se eliminaron.

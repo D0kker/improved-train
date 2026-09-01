@@ -389,6 +389,13 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Prioridad:** P1
 - **Criterios de aceptación:** comparar con una carga equivalente memoria RSS, arranque, throughput/latencia, tamaño de imagen, tiempo de build, persistencia/jobs y coste de migración; registrar mediciones reproducibles y una recomendación. El benchmark no autoriza una migración sin decisión explícita del PO.
 
+### UX-001 — Reevaluar utilidad del grafo social
+
+- **Issue:** #82.
+- **Prioridad:** P2.
+- **Estado actual:** el grafo permanece funcional, sin nuevas mejoras ni dependencia para Sprints 7–8.
+- **Criterios futuros:** usar feedback/evidencia para comparar mejorar, simplificar, ocultar o eliminar; cualquier mejora debe responder una pregunta concreta antes de aumentar profundidad o añadir dependencias.
+
 ## Bloqueado
 
 - **GOV-001** requiere que el propietario elija la licencia.

@@ -239,3 +239,11 @@
 - Decisión: Sprint 9 validará una beta privada multi-región y Sprint 10 preparará un lanzamiento público sostenible. Ambos dependen del go/no-go de cumplimiento/seguridad; publicidad y premium son experimentos reversibles posteriores, no activaciones ni pagos.
 - Razón: el objetivo mundial y económico necesita evidencia de utilidad, capacidad, privacidad y coste antes de ampliar tráfico o monetizar.
 - Consecuencias: crear/refinar las historias no autoriza desplegar, activar Azure/anuncios, integrar pagos ni declarar GO. Esas acciones requieren sus criterios y autorización explícita correspondientes.
+
+## D-031 — Congelar inversión en el grafo social actual
+
+- Fecha: 2026-08-31
+- Estado: aceptada por el PO
+- Decisión: mantener funcionando el grafo de profundidad uno tal como está, pero no invertir más tiempo en ampliarlo durante Sprints 7–8 ni convertirlo en dependencia de nuevas funcionalidades.
+- Razón: el PO no encuentra útil o clara la visualización actual; tablas, historial A–B, recurrentes, posibles premades y rankings responden mejor las preguntas prioritarias del producto.
+- Consecuencias: no se elimina código, API o datos ahora. `UX-001/#82` lo reevaluará únicamente con feedback o petición posterior, comparando mejorar, simplificar, ocultar o retirar de forma reversible.
