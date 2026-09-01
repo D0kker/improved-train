@@ -38,6 +38,7 @@ export interface MatchListItem {
   queueId: number | null;
   gameStartTimestamp: string | null;
   gameDurationSeconds: number | null;
+  championId: number;
   championName: string;
   kills: number;
   deaths: number;
@@ -115,6 +116,7 @@ export interface MatchParticipant {
   puuid?: string;
   gameName?: string;
   tagLine?: string;
+  championId: number;
   championName: string;
   teamPosition?: string;
   kills: number;

@@ -310,6 +310,30 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Prioridad:** P1.
 - **Objetivo:** mostrar íconos de campeón y, cuando el contrato lo permita, perfil mediante Data Dragon oficial, con adaptador tipado, versión controlada, caché acotada y fallbacks textuales accesibles.
 - **Límites:** las imágenes no llaman Riot desde el browser, no usan API key ni raw JSON y no sustituyen nombre, texto alternativo o información semántica. Depende de Sprint 7 para cualquier exposición pública y acompaña S8-005.
+- **Estado:** completada el 2026-08-31 para los datos disponibles. Historial y detalle reciben `championId`; una ruta servidor resuelve el catálogo oficial 16.17.1, valida PNG, cachea y entrega fallback ante fallo. Profile icon permanece fuera porque el contrato actual no lo contiene.
+- **Evidencia:** pruebas frontend, lint, type-check, formato y build; 55 unitarias y 20 integraciones .NET; builds Docker API/web, cinco servicios saludables y PNG oficial servido en runtime.
+
+## Sprint 9 — beta privada multi-región
+
+- **S9-001/#68 (P1):** historia padre; beta controlada, operable y sin monetización.
+- **S9-002/#69 (P0):** región y onboarding internacional sin asumir LAN ni cambiar PUUID.
+- **S9-003/#70 (P1):** experiencia ES/EN, formatos y zonas horarias consistentes.
+- **S9-004/#71 (P1):** feedback y analítica de baja cardinalidad sin identidades de jugador.
+- **S9-005/#72 (P0):** capacidad, cuotas, backpressure y degradación medidos sin Riot en CI.
+- **S9-006/#73 (P0):** acceso beta y protección de abuso; RSO solo si una función/requisito concreto lo justifica.
+- **S9-007/#74 (P1):** go/no-go, aprendizaje, soporte y rollback de beta.
+- **Dependencia:** go/no-go aplicable de Sprint 7 y entregas esenciales de Sprint 8. No abre el servicio ni activa publicidad.
+
+## Sprint 10 — lanzamiento público sostenible
+
+- **S10-001/#75 (P1):** historia padre; lanzamiento gradual compatible con Riot y sostenible.
+- **S10-002/#76 (P0):** dominio, HTTPS, rollout, presupuesto y rollback; desplegar requiere orden explícita.
+- **S10-003/#77 (P1):** publicidad compatible, consentida, no invasiva y reversible; no se activa en la historia.
+- **S10-004/#78 (P1):** costes e `Infrastructure Coverage Ratio` con supuestos visibles.
+- **S10-005/#79 (P2):** validar valor Premium sin pagos ni suscripciones.
+- **S10-006/#80 (P1):** indexación pública controlada, opt-out y desindexación.
+- **S10-007/#81 (P0):** auditoría final; cualquier P0 abierto mantiene `NO-GO` y GO requiere al PO.
+- **Dependencia:** beta favorable, acceso Production/registro Riot y requisitos públicos de Sprint 7 cerrados.
 
 ## Investigación Gemini
 

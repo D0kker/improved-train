@@ -24,6 +24,7 @@ import {
   winRate,
 } from "@/src/format";
 import { PlayerProfileLink } from "@/src/player-profile-link";
+import { ChampionIcon } from "@/src/champion-icon";
 import { PlayerNetworkSection } from "./player-network-section";
 
 interface PlayerDashboardProps {
@@ -453,8 +454,14 @@ function MatchHistory({
                 {match.win ? "Victoria" : "Derrota"}
               </span>
               <div className="match-champion">
-                <strong>{match.championName}</strong>
-                <span>{queueLabel(match.queueId)}</span>
+                <ChampionIcon
+                  championId={match.championId}
+                  championName={match.championName}
+                />
+                <span className="match-champion-copy">
+                  <strong>{match.championName}</strong>
+                  <span>{queueLabel(match.queueId)}</span>
+                </span>
               </div>
               <div className="kda">
                 <strong>

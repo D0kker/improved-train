@@ -23,6 +23,13 @@ import {
   networkNodeRadius,
   positionNetworkNodes,
 } from "../src/network.ts";
+import {
+  championCatalogUrl,
+  championIconPath,
+  championImageUrl,
+  dataDragonVersion,
+} from "../src/data-dragon.ts";
+import { browserSecurityHeaders } from "../src/security-headers.ts";
 
 test("API paths remain same-origin and encode user-controlled segments", () => {
   assert.equal(
@@ -155,4 +162,30 @@ test("premade groups remain distinguishable without relying on color", () => {
   assert.equal(groupLabel(groups[0]), "Posible premade · evidencia alta");
   assert.equal(groupsForParticipant(groups, "a").length, 2);
   assert.deepEqual(groupsForParticipant(groups, "unknown"), []);
+});
+
+test("Data Dragon assets remain same-origin, validated and versioned", () => {
+  assert.equal(championIconPath(1), "/api/assets/champions/1");
+  assert.equal(championIconPath(0), null);
+  assert.equal(dataDragonVersion("16.17.1"), "16.17.1");
+  assert.equal(dataDragonVersion("latest/../../"), "16.17.1");
+  assert.equal(
+    championCatalogUrl("16.17.1"),
+    "https://ddragon.leagueoflegends.com/cdn/16.17.1/data/en_US/champion.json",
+  );
+  assert.equal(
+    championImageUrl("16.17.1", "MonkeyKing"),
+    "https://ddragon.leagueoflegends.com/cdn/16.17.1/img/champion/MonkeyKing.png",
+  );
+  assert.equal(championImageUrl("16.17.1", "../secret"), null);
+});
+
+test("browser security policy blocks framing and external connections", () => {
+  const headers = Object.fromEntries(
+    browserSecurityHeaders.map(({ key, value }) => [key, value]),
+  );
+  assert.match(headers["Content-Security-Policy"], /frame-ancestors 'none'/);
+  assert.match(headers["Content-Security-Policy"], /connect-src 'self'/);
+  assert.equal(headers["X-Content-Type-Options"], "nosniff");
+  assert.equal(headers["X-Frame-Options"], "DENY");
 });

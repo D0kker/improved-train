@@ -32,8 +32,10 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - S6-007 agrega métricas operativas nativas y snapshots internos en API/worker. Los logs HTTP son estructurados pero omiten path, query, PUUID, Riot ID, payloads y secretos.
 - S6-008 verificó reinicio del worker, degradación con Redis caído, deduplicación y 429 simulados; las consultas reales usaron los índices previstos. `docs/OPERATIONS_RUNBOOK.md` contiene evidencia reproducible.
 - Sprint 7 inició en `docs/RIOT_READINESS.md`: fuentes oficiales revalidadas el 2026-08-31, matriz de requisitos, inventario inicial y estado público `NO-GO` hasta completar dependencias.
+- S7-004 está en curso: `docs/THREAT_MODEL.md` cubre fronteras y respuesta ante compromiso; web/API emiten headers defensivos, la API limita cuerpos a 64 KiB y aplica backpressure concurrente a `/api/v1`. CORS permanece deshabilitado y forwarded headers no se confían hasta definir el proxy. Faltan escaneo reproducible, límite por cliente en el borde y credenciales/operación públicas.
 - S7-010 conserva la evaluación futura del crédito Azure y Azure DevOps; no hay activación, migración ni decisión de adoptar Azure.
-- S8-007 registra íconos oficiales de campeón/perfil mediante Data Dragon, con fallback accesible; las oportunidades relevantes nuevas se convierten primero en historias trazables y no amplían silenciosamente el sprint en curso.
+- S8-007 muestra íconos oficiales de campeón en historial y detalle mediante un proxy Data Dragon same-origin, versionado, cacheado y con fallback accesible. El dato de profile icon no existe aún en el contrato, por lo que no se inventó ni se añadió SUMMONER-V4; podrá ampliarse cuando una historia aporte el dato de forma compatible.
+- Sprints 9 y 10 están creados en el tablero: beta privada multi-región (#68–#74) y lanzamiento público sostenible (#75–#81). Planificarlos no autoriza despliegue, publicidad, pagos ni GO público.
 - S7-011 registra la protección futura de historial de custom matches: antes de cualquier exposición pública se clasificará la cola y se bloqueará por defecto hasta definir el opt-in aplicable. No habilita RSO ni autenticación por sí misma.
 - Los Riot IDs visibles del detalle y de la leyenda de premades enlazan al perfil mediante el componente compartido; datos incompletos permanecen como texto y no provocan sincronización automática.
 - El worker base está separado y saludable; los jobs persistentes pertenecen a Sprint 6.
@@ -82,11 +84,12 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - S6-005: 51 pruebas unitarias y 18 de integración; formato y builds Docker aprobados. Redis real creó y sirvió el resumen cacheado; con Redis detenido la misma lectura funcionó desde memoria, luego Redis se restauró y los cinco servicios quedaron saludables.
 - S6-006: 54 pruebas unitarias y 20 de integración; migración `player_refresh_schedules` aplicada y endpoint de refresh validado con 404 controlado para jugador inexistente. API/worker permanecen saludables sin llamada a Riot.
 - Cierre Sprint 6: 55 pruebas unitarias y 20 de integración; formato .NET, `docker compose config`, builds de API/worker, métricas internas y cinco health checks aprobados. Redis caído y reinicio del worker se probaron de forma reversible.
+- S7-004/S8-007: 55 pruebas unitarias y 20 de integración .NET; pruebas, lint, type-check, formato y build Next.js; `docker compose config` y builds Docker de API/web aprobados. Los cinco servicios quedaron saludables; web/API devolvieron headers defensivos y `/api/assets/champions/1` sirvió un PNG oficial de 30.267 bytes con caché.
 - Se verificaron el 2026-08-30 las políticas oficiales vigentes de Riot: el producto se mantiene post-partida, no desanonimiza jugadores ocultos y trata relaciones como inferencias. Referencias: https://developer.riotgames.com/policies/general y https://developer.riotgames.com/docs/lol
 
 ## Próximo paso
 
-Continuar S7-001/S7-002 y tomar las historias técnicas de seguridad/continuidad que el PO mueva a `Listo para Codex`, sin abrir el servicio público hasta completar el go/no-go.
+Continuar S7-004 con escaneo de supply chain y límites de borde; después tomar S8-002/S8-003 o las historias que el PO priorice, sin abrir el servicio público hasta completar el go/no-go.
 
 ## Investigación delegable a Gemini
 

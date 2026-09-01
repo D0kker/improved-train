@@ -223,3 +223,19 @@
 - Decisión: toda oportunidad material detectada durante código, investigación o revisión se registra como historia futura antes de quedar fuera de la conversación. La historia incluye prioridad, alcance, criterios, dependencias y límites.
 - Razón: conservar ideas importantes —como los íconos oficiales— sin colarlas en el sprint activo ni perder su contexto de seguridad, accesibilidad, coste o cumplimiento.
 - Consecuencias: la captura no autoriza implementación automática ni reordena el sprint actual; el PO mantiene la prioridad moviendo historias a `Listo para Codex`.
+
+## D-029 — Activos de campeón mediante proxy Data Dragon acotado
+
+- Fecha: 2026-08-31
+- Estado: aceptada para S8-007
+- Decisión: resolver el ID numérico de campeón contra un catálogo Data Dragon versionado y servir el PNG desde una ruta same-origin del servidor con host fijo, caché, validación de tipo y fallback textual.
+- Razón: los nombres no coinciden siempre con el identificador de asset y una llamada directa por fila desde el browser aumenta dependencia, superficie y acoplamiento al CDN.
+- Consecuencias: `DATA_DRAGON_VERSION` no es secreto y se actualiza de forma explícita; un fallo externo devuelve 404 y la UI conserva nombre/KDA. El ícono de perfil espera un contrato oficial que aporte ese dato y no añade SUMMONER-V4 silenciosamente.
+
+## D-030 — Beta antes de lanzamiento y monetización
+
+- Fecha: 2026-08-31
+- Estado: planificada por solicitud del PO
+- Decisión: Sprint 9 validará una beta privada multi-región y Sprint 10 preparará un lanzamiento público sostenible. Ambos dependen del go/no-go de cumplimiento/seguridad; publicidad y premium son experimentos reversibles posteriores, no activaciones ni pagos.
+- Razón: el objetivo mundial y económico necesita evidencia de utilidad, capacidad, privacidad y coste antes de ampliar tráfico o monetizar.
+- Consecuencias: crear/refinar las historias no autoriza desplegar, activar Azure/anuncios, integrar pagos ni declarar GO. Esas acciones requieren sus criterios y autorización explícita correspondientes.

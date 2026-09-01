@@ -1,4 +1,5 @@
 using System.Net;
+using System.Threading.RateLimiting;
 using LolAnalyzer.Application.Analysis;
 using LolAnalyzer.Application.Caching;
 using LolAnalyzer.Application.Jobs;
@@ -12,10 +13,19 @@ using LolAnalyzer.Infrastructure.Persistence;
 using LolAnalyzer.Infrastructure.Riot;
 using LolAnalyzer.Api;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 64 * 1024);
+var apiConcurrencyLimit = builder.Configuration.GetValue("API_CONCURRENCY_LIMIT", 32);
+var apiQueueLimit = builder.Configuration.GetValue("API_QUEUE_LIMIT", 32);
+if (apiConcurrencyLimit is < 1 or > 512 || apiQueueLimit is < 0 or > 1024)
+{
+    throw new InvalidOperationException(
+        "API_CONCURRENCY_LIMIT must be 1-512 and API_QUEUE_LIMIT must be 0-1024.");
+}
 
 var riotOptions = builder.Configuration.GetSection(RiotOptions.SectionName).Get<RiotOptions>() ?? new RiotOptions();
 riotOptions.ApiKey = builder.Configuration["RIOT_API_KEY"] ?? riotOptions.ApiKey;
@@ -86,6 +96,21 @@ var redisPort = int.TryParse(builder.Configuration["REDIS_PORT"], out var config
     : builder.Configuration.GetValue("Redis:Port", 6379);
 
 builder.Services.AddOpenApi();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        context.Request.Path.StartsWithSegments("/api/v1")
+            ? RateLimitPartition.GetConcurrencyLimiter(
+                "public-api",
+                _ => new ConcurrencyLimiterOptions
+                {
+                    PermitLimit = apiConcurrencyLimit,
+                    QueueLimit = apiQueueLimit,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                })
+            : RateLimitPartition.GetNoLimiter("internal"));
+});
 builder.Services.AddSingleton(riotOptions);
 builder.Services.AddSingleton(new MatchIngestionOptions { RequestConcurrency = riotOptions.RequestConcurrency });
 builder.Services.AddSingleton(relationshipScoreOptions);
@@ -143,6 +168,19 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 app.UseMiddleware<SafeRequestLoggingMiddleware>();
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        context.Response.Headers.XContentTypeOptions = "nosniff";
+        context.Response.Headers.XFrameOptions = "DENY";
+        context.Response.Headers["Referrer-Policy"] = "same-origin";
+        context.Response.Headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=()";
+        return Task.CompletedTask;
+    });
+    await next(context).ConfigureAwait(false);
+});
+app.UseRateLimiter();
 
 if (builder.Configuration.GetValue("Database:ApplyMigrations", true))
 {

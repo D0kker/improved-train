@@ -84,6 +84,9 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
   - [ ] Aprobar periodos, contacto y proceso operativo antes de publicar.
 - [ ] S7-003: Privacy Policy, Terms y disclaimer antes de publicación.
 - [ ] Threat model, secretos de runtime, rate limiting propio, validación, errores seguros, headers/CORS/CSP, contenedores no-root y escaneo de dependencias.
+  - [x] Documentar threat model, política CORS/proxy y respuesta ante compromiso de key.
+  - [x] Añadir headers defensivos, límite de cuerpo y backpressure concurrente; verificar contenedores de aplicación no-root.
+  - [ ] Añadir límite por cliente en el borde confiable y escaneo reproducible de dependencias/imágenes.
 - [ ] HTTPS, superficie privada de PostgreSQL/Redis, backups probados y runbook de incidentes.
 - [ ] Indexación, incident response y auditoría go/no-go de V1.
 - [ ] S7-010: evaluar el crédito Azure como staging opcional, con coste acotado y sin duplicar GitHub ni migrar el MVP prematuramente.
@@ -96,7 +99,27 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [ ] S8-004: exponer contratos paginados y acotados de relación e insights.
 - [ ] S8-005: crear UI accesible de historial, tendencias e insights.
 - [ ] S8-006: generar tarjeta compartible bajo demanda, sin publicación automática ni IDs internos.
-- [ ] S8-007: incorporar íconos oficiales de campeón/perfil con Data Dragon, fallbacks textuales y accesibilidad.
+- [x] S8-007: incorporar íconos oficiales de campeón con Data Dragon, proxy/caché acotados y fallback accesible; profile icon espera un contrato que aporte el dato.
+
+## Sprint 9 — beta privada multi-región
+
+- [ ] S9-001: cerrar la historia padre de beta privada controlada.
+- [ ] S9-002: resolver región y onboarding internacional sin duplicar identidades.
+- [ ] S9-003: localizar la experiencia en español e inglés.
+- [ ] S9-004: incorporar feedback y analítica respetuosos de privacidad.
+- [ ] S9-005: validar capacidad, cuotas, backpressure y degradación.
+- [ ] S9-006: controlar acceso y abuso durante la beta.
+- [ ] S9-007: ejecutar go/no-go, aprendizaje, soporte y rollback de beta.
+
+## Sprint 10 — lanzamiento público sostenible
+
+- [ ] S10-001: cerrar la historia padre de lanzamiento público.
+- [ ] S10-002: diseñar dominio, rollout, presupuesto y rollback.
+- [ ] S10-003: evaluar publicidad compatible, consentida y no invasiva.
+- [ ] S10-004: medir costes e Infrastructure Coverage Ratio.
+- [ ] S10-005: validar propuesta Premium sin integrar pagos.
+- [ ] S10-006: implementar indexación pública controlada.
+- [ ] S10-007: ejecutar auditoría final y mantener NO-GO ante cualquier P0.
 
 ## Investigación revisada
 

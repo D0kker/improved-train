@@ -58,6 +58,12 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
         var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
+        Assert.Equal("same-origin", response.Headers.GetValues("Referrer-Policy").Single());
+        Assert.Equal(
+            "camera=(), geolocation=(), microphone=()",
+            response.Headers.GetValues("Permissions-Policy").Single());
     }
 
     [Fact]
@@ -745,7 +751,7 @@ internal sealed class InMemoryPlayerAnalysisRepository : IPlayerAnalysisReposito
                 page,
                 pageSize,
                 1,
-                [new PlayerMatchListItem("TEST_1", 420, DateTimeOffset.UnixEpoch, 1200, "Annie", 0, 0, 0, false)])
+                [new PlayerMatchListItem("TEST_1", 420, DateTimeOffset.UnixEpoch, 1200, 1, "Annie", 0, 0, 0, false)])
             : null);
 
     public Task<MatchDetail?> GetMatchDetailAsync(string riotMatchId, CancellationToken cancellationToken) =>

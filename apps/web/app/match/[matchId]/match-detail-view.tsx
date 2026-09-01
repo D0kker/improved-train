@@ -17,6 +17,7 @@ import {
   groupTone,
   groupsForParticipant,
 } from "@/src/premade-groups";
+import { ChampionIcon } from "@/src/champion-icon";
 import { PlayerProfileLink } from "@/src/player-profile-link";
 
 export function MatchDetailView({
@@ -242,26 +243,32 @@ function ParticipantRow({
       <span className="position-label">
         {positionName(participant.teamPosition, index)}
       </span>
-      <div>
-        <strong>{participant.championName}</strong>
-        <PlayerProfileLink
-          gameName={participant.gameName}
-          tagLine={participant.tagLine}
+      <div className="participant-identity">
+        <ChampionIcon
+          championId={participant.championId}
+          championName={participant.championName}
         />
-        {groups.length > 0 ? (
-          <span className="premade-memberships">
-            {groups.map((group) => (
-              <span
-                className={`premade-code tone-${groupTone(group.groupNumber)}`}
-                aria-label={`Grupo ${groupCode(group.groupNumber)}: ${groupLabel(group)}`}
-                key={group.groupNumber}
-                title={groupLabel(group)}
-              >
-                {groupCode(group.groupNumber)}
-              </span>
-            ))}
-          </span>
-        ) : null}
+        <div>
+          <strong>{participant.championName}</strong>
+          <PlayerProfileLink
+            gameName={participant.gameName}
+            tagLine={participant.tagLine}
+          />
+          {groups.length > 0 ? (
+            <span className="premade-memberships">
+              {groups.map((group) => (
+                <span
+                  className={`premade-code tone-${groupTone(group.groupNumber)}`}
+                  aria-label={`Grupo ${groupCode(group.groupNumber)}: ${groupLabel(group)}`}
+                  key={group.groupNumber}
+                  title={groupLabel(group)}
+                >
+                  {groupCode(group.groupNumber)}
+                </span>
+              ))}
+            </span>
+          ) : null}
+        </div>
       </div>
       <p>
         <strong>

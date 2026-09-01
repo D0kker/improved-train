@@ -49,6 +49,8 @@ services:
       RIOT_BASE_RETRY_DELAY_MILLISECONDS: ${RIOT_BASE_RETRY_DELAY_MILLISECONDS:-250}
       RIOT_MAX_RETRY_DELAY_SECONDS: ${RIOT_MAX_RETRY_DELAY_SECONDS:-120}
       CACHE_PLAYER_SUMMARY_TTL_SECONDS: ${CACHE_PLAYER_SUMMARY_TTL_SECONDS:-300}
+      API_CONCURRENCY_LIMIT: ${API_CONCURRENCY_LIMIT:-32}
+      API_QUEUE_LIMIT: ${API_QUEUE_LIMIT:-32}
     depends_on:
       postgres:
         condition: service_healthy
@@ -105,6 +107,7 @@ services:
       dockerfile: Dockerfile
     environment:
       API_BASE_URL: http://api:8080
+      DATA_DRAGON_VERSION: ${DATA_DRAGON_VERSION:-16.17.1}
     depends_on:
       api:
         condition: service_healthy

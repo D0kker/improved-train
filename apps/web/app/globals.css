@@ -554,6 +554,38 @@ td > span,
   gap: 0.65rem;
 }
 
+.match-champion,
+.participant-identity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.match-champion-copy,
+.participant-identity > div {
+  min-width: 0;
+}
+
+.champion-icon,
+.champion-icon-fallback {
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  object-fit: cover;
+}
+
+.champion-icon-fallback {
+  display: grid;
+  place-items: center;
+  background: rgb(97 226 180 / 9%);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
 .match-card {
   display: grid;
   grid-template-columns:
