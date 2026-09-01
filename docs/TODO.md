@@ -96,6 +96,7 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [ ] S8-004: exponer contratos paginados y acotados de relación e insights.
 - [ ] S8-005: crear UI accesible de historial, tendencias e insights.
 - [ ] S8-006: generar tarjeta compartible bajo demanda, sin publicación automática ni IDs internos.
+- [ ] S8-007: incorporar íconos oficiales de campeón/perfil con Data Dragon, fallbacks textuales y accesibilidad.
 
 ## Investigación revisada
 

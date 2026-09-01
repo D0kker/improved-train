@@ -215,3 +215,11 @@
 - Decisión: instrumentar con `System.Diagnostics.Metrics` y un snapshot interno por proceso, usando etiquetas de baja cardinalidad. Los logs HTTP incluyen correlación, método, estado y duración, pero omiten ruta/query e identidades de jugador.
 - Razón: las rutas contienen Riot ID o PUUID y no son necesarias para operar el MVP; los instrumentos nativos permiten conectar OpenTelemetry después sin imponer ahora un proveedor o dependencia adicional.
 - Consecuencias: API y worker exponen `/metrics` únicamente en su red interna actual. Un despliegue público deberá restringir esa superficie y decidir collector/exporter en S7; nunca se agregan API key, raw payload o identificadores de jugador como labels.
+
+## D-028 — Capturar oportunidades relevantes como backlog trazable
+
+- Fecha: 2026-08-31
+- Estado: aceptada por el PO
+- Decisión: toda oportunidad material detectada durante código, investigación o revisión se registra como historia futura antes de quedar fuera de la conversación. La historia incluye prioridad, alcance, criterios, dependencias y límites.
+- Razón: conservar ideas importantes —como los íconos oficiales— sin colarlas en el sprint activo ni perder su contexto de seguridad, accesibilidad, coste o cumplimiento.
+- Consecuencias: la captura no autoriza implementación automática ni reordena el sprint actual; el PO mantiene la prioridad moviendo historias a `Listo para Codex`.

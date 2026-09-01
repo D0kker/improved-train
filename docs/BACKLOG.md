@@ -303,6 +303,13 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Prioridad:** P2.
 - **Criterios:** generación explícita bajo demanda, vista previa, texto alternativo y descarga local; sin publicación automática, PUUID, secretos ni datos no visibles. Requiere decisiones de privacidad de Sprint 7 antes de exposición pública.
 
+### S8-007 — Incorporar íconos oficiales y accesibles
+
+- **Issue:** #66.
+- **Prioridad:** P1.
+- **Objetivo:** mostrar íconos de campeón y, cuando el contrato lo permita, perfil mediante Data Dragon oficial, con adaptador tipado, versión controlada, caché acotada y fallbacks textuales accesibles.
+- **Límites:** las imágenes no llaman Riot desde el browser, no usan API key ni raw JSON y no sustituyen nombre, texto alternativo o información semántica. Depende de Sprint 7 para cualquier exposición pública y acompaña S8-005.
+
 ## Investigación Gemini
 
 ### GM-02 — Requisitos Riot y estrategia de servicio público
@@ -329,6 +336,10 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **No incorporado aún:** Polly/HybridCache, jitter de schedule y circuit breaker automático. Son alternativas o ampliaciones que exigen una historia, medición y evaluación de operación; no se añaden solo por la investigación.
 
 ## Por hacer
+
+### Captura de oportunidades
+
+- Toda oportunidad material detectada durante implementación, investigación o revisión se registra como historia futura con prioridad, criterios, dependencias y límites antes de considerarla trabajo. La captura no cambia el sprint activo ni equivale a una decisión de implementación.
 
 ### GOV-001 — Elegir licencia
 

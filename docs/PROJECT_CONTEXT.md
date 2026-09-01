@@ -33,6 +33,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - S6-008 verificó reinicio del worker, degradación con Redis caído, deduplicación y 429 simulados; las consultas reales usaron los índices previstos. `docs/OPERATIONS_RUNBOOK.md` contiene evidencia reproducible.
 - Sprint 7 inició en `docs/RIOT_READINESS.md`: fuentes oficiales revalidadas el 2026-08-31, matriz de requisitos, inventario inicial y estado público `NO-GO` hasta completar dependencias.
 - S7-010 conserva la evaluación futura del crédito Azure y Azure DevOps; no hay activación, migración ni decisión de adoptar Azure.
+- S8-007 registra íconos oficiales de campeón/perfil mediante Data Dragon, con fallback accesible; las oportunidades relevantes nuevas se convierten primero en historias trazables y no amplían silenciosamente el sprint en curso.
 - Los Riot IDs visibles del detalle y de la leyenda de premades enlazan al perfil mediante el componente compartido; datos incompletos permanecen como texto y no provocan sincronización automática.
 - El worker base está separado y saludable; los jobs persistentes pertenecen a Sprint 6.
 - No se ha seleccionado una licencia.
