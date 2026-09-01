@@ -50,7 +50,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 
 - Las políticas, límites y requisitos legales de Riot son temporales; deben verificarse en documentación oficial antes de integrar o publicar.
 - Sprint 5 está completado; Sprint 6 debe comenzar por S6-001 porque deduplicación, refresh e incrementalidad dependen del contrato de jobs.
-- Sprint 6 está cerrado técnicamente; falta integrar/publicar el conjunto para cerrar sus tarjetas remotas.
+- Sprint 6 está integrado y publicado en `origin/main` mediante `8505212`; sus ocho tarjetas están completadas.
 - `ARC-001` medirá .NET frente a Go en ARM64; el benchmark no autoriza una migración.
 - Falta decidir la licencia del repositorio.
 - Falta definir contraseñas locales seguras y la estrategia inicial de migraciones/health checks sin introducir secretos en Git.
@@ -84,9 +84,9 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 
 ## Próximo paso
 
-Integrar/publicar el cierre de Sprint 6 y continuar S7-001/S7-002 sin abrir el servicio público hasta completar el go/no-go.
+Continuar S7-001/S7-002 y tomar las historias técnicas de seguridad/continuidad que el PO mueva a `Listo para Codex`, sin abrir el servicio público hasta completar el go/no-go.
 
 ## Investigación delegable a Gemini
 
 - El tablero tiene el carril `Para Gemini`: Codex deja allí prompts de investigación; el PO pasa el contenido a Gemini y mueve la tarjeta a `Listo para Codex` cuando adjunta el resultado.
-- GM-04–GM-08 refinan el trabajo pendiente de Sprint 6; GM-09–GM-11 cubren cumplimiento, privacidad y operación de Sprint 7; GM-12 prepara ARC-001 sin autorizar una migración a Go.
+- GM-04–GM-06 fueron revisados el 2026-08-31: confirman rate limiting, caché y refresh ya implementados en Sprint 6; no introducen dependencias ni cambios fuera de alcance. GM-07–GM-08 siguen disponibles solo para evidencia adicional de observabilidad/resiliencia; GM-09–GM-11 cubren cumplimiento, privacidad y operación de Sprint 7; GM-12 prepara ARC-001 sin autorizar una migración a Go.

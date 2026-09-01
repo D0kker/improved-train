@@ -101,7 +101,10 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 
 - [x] GM-02: investigación contrastada; requisitos confirmables se trasladaron a Sprint 7 y se descartaron plazos/afirmaciones sin fuente oficial suficiente.
 - [x] GM-03: refinamiento aplicado selectivamente; rendimiento/operación permanece en Sprint 6, seguridad/privacidad en Sprint 7 y monetización después del go/no-go público.
-- [ ] Gemini listo para investigación: GM-04 a GM-08 cubren rate limiting, caché, refresh, observabilidad y resiliencia de Sprint 6.
+- [x] GM-04: rate limiting revisado; confirma límites por routing, `429`/`Retry-After`, concurrencia y cancelación ya implementados. No se añade Polly ni coordinación distribuida fuera del alcance actual.
+- [x] GM-05: caché revisada; confirma Redis opcional, fallback en memoria, TTL/invalidation y hash de PUUID ya implementados. No se sustituye la abstracción actual por HybridCache sin necesidad medida.
+- [x] GM-06: refresh revisado; confirma opt-in, límites, claim durable y exclusión de jobs ya implementados. Jitter/circuit breaker quedan como mejoras futuras sujetas a una historia y medición explícitas.
+- [ ] Gemini listo para investigación: GM-07 y GM-08 cubren observabilidad y resiliencia de Sprint 6 ya cerrado; se revisarán solo si el PO aporta resultados nuevos.
 - [ ] Gemini listo para investigación: GM-09 a GM-11 cubren cumplimiento Riot, privacidad/threat model y despliegue/continuidad de Sprint 7.
 - [ ] Gemini listo para investigación: GM-12 diseña el benchmark ARC-001 .NET frente a Go en ARM64.
 

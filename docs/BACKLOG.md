@@ -321,6 +321,13 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Resultado útil:** medición de índices/caché/resiliencia para Sprint 6; threat model, rate limiting propio, secretos, headers, contenedores y escaneo para Sprint 7; Data Dragon como opción visual futura.
 - **Ajustes:** seguridad y privacidad permanecen en Sprint 7; no se reemplazan jobs/operación de Sprint 6 por métricas de juego; monetización queda condicionada al go/no-go público y no se crea un Sprint 9 artificial.
 
+### GM-04 a GM-06 — Rate limiting, caché y refresh
+
+- **Issues:** #56, #57 y #58.
+- **Estado:** investigaciones revisadas por Codex el 2026-08-31.
+- **Resultado incorporado:** las tres confirman el diseño ya publicado en Sprint 6: límite por proceso/routing con `Retry-After` y cancelación; caché Redis derivada con fallback en memoria y claves hash; y schedules opt-in durables reclamados con `SKIP LOCKED` y deduplicación de jobs.
+- **No incorporado aún:** Polly/HybridCache, jitter de schedule y circuit breaker automático. Son alternativas o ampliaciones que exigen una historia, medición y evaluación de operación; no se añaden solo por la investigación.
+
 ## Por hacer
 
 ### GOV-001 — Elegir licencia
