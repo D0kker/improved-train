@@ -1,11 +1,13 @@
-# LoL Network Analyzer
+# PROJECT ECHO
 
-Sistema de análisis histórico y post-partida para descubrir jugadores recurrentes, relaciones y patrones dentro del historial de League of Legends. Comienza como una herramienta personal y aspira a convertirse en un sitio público útil para muchas personas en distintas regiones del mundo.
+Aplicación histórica y post-partida de League of Legends enfocada en una pregunta: **¿con quién ya había jugado antes?** El nombre técnico interno continúa siendo `LolAnalyzer` para evitar una migración cosmética de namespaces.
 
-Los Sprints 1–4 están implementados; Sprint 5 está refinado y Sprint 8 creado. La fuente funcional y técnica continúa siendo [`lol_network_analyzer_spec.md`](lol_network_analyzer_spec.md).
+La base funcional de los Sprints 1–6 está implementada. ECHO-1 reduce la experiencia a encuentros conocidos, jugadores recurrentes y familiaridad histórica sin eliminar las capacidades existentes.
 
 ## Enfoque del producto
 
+- Distinguir jugadores conocidos (al menos un encuentro) de jugadores recurrentes (dos o más).
+- Mostrar cuántos participantes de una partida ya habían aparecido antes y quiénes eran.
 - Identificar jugadores por PUUID, no por nombre visible.
 - Reutilizar partidas persistidas para reducir llamadas a Riot.
 - Distinguir encuentros como aliado y como rival.
@@ -34,7 +36,9 @@ El detalle y la separación entre estado planificado e implementado están en [`
 - [x] Sprint 2: ingesta acotada, raw JSONB, normalización y deduplicación de partidas.
 - [x] Sprint 3: encounters, analizador de repetidos, APIs de lectura y primeras vistas funcionales.
 - [x] Sprint 4: relaciones, detector prudente, API paginada y vista web.
-- [ ] Sprint 5: familiaridad, grupos y red social.
+- [x] Sprint 5: familiaridad, grupos y red social.
+- [x] Sprint 6: jobs persistentes, worker, resiliencia, caché y operación.
+- [x] ECHO-1: enfoque de producto y validación de la experiencia central.
 - [ ] Sprint 8: insights históricos y tarjetas compartibles seguras.
 
 Consulta [`docs/TODO.md`](docs/TODO.md) para el roadmap y [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) antes de comenzar una nueva sesión.
@@ -43,11 +47,18 @@ Consulta [`docs/TODO.md`](docs/TODO.md) para el roadmap y [`docs/PROJECT_CONTEXT
 
 ```bash
 cp .env.example .env
+# Modo mínimo: PostgreSQL + API + worker + web; caché en memoria.
 docker compose up -d --build
 docker compose ps
 ```
 
-La web es el único servicio publicado al host: `http://localhost:38080`. En la máquina actual también responde en `http://192.168.100.55:38080`. La portada y `/api/health` funcionan sin una key; las operaciones Riot devuelven un `503` controlado mientras `RIOT_API_KEY` no esté configurada.
+Redis es opcional. Para habilitar caché compartida con fallback local:
+
+```bash
+CACHE_PROVIDER=redis docker compose --profile redis up -d --build
+```
+
+La web es el único servicio publicado al host: `http://localhost:38080`. PostgreSQL, API, worker y Redis permanecen privados. La portada y `/api/health` funcionan sin una key; las operaciones Riot devuelven un error controlado mientras `RIOT_API_KEY` no esté configurada.
 
 ## Secretos
 

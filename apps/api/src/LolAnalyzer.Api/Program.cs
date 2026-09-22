@@ -81,6 +81,7 @@ playerNetworkOptions.Validate();
 var cacheOptions = builder.Configuration
     .GetSection(CacheOptions.SectionName)
     .Get<CacheOptions>() ?? new CacheOptions();
+cacheOptions.Provider = builder.Configuration["CACHE_PROVIDER"] ?? cacheOptions.Provider;
 if (int.TryParse(builder.Configuration["CACHE_PLAYER_SUMMARY_TTL_SECONDS"], out var configuredSummaryTtl))
 {
     cacheOptions.PlayerSummaryTtlSeconds = configuredSummaryTtl;
@@ -126,18 +127,25 @@ builder.Services.AddSingleton(cacheOptions);
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddSingleton<OperationalMetrics>();
 builder.Services.AddSingleton<IRiotRateLimiter, RiotRateLimiter>();
-builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(new ConfigurationOptions
-{
-    EndPoints = { { redisHost, redisPort } },
-    AbortOnConnectFail = false,
-    ConnectRetry = 1,
-    ConnectTimeout = 500,
-    AsyncTimeout = 500,
-    SyncTimeout = 500,
-}));
-builder.Services.AddSingleton<IRedisCacheStore, StackExchangeRedisCacheStore>();
 builder.Services.AddSingleton<MemoryCacheService>();
-builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+if (cacheOptions.UsesRedis)
+{
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(new ConfigurationOptions
+    {
+        EndPoints = { { redisHost, redisPort } },
+        AbortOnConnectFail = false,
+        ConnectRetry = 1,
+        ConnectTimeout = 500,
+        AsyncTimeout = 500,
+        SyncTimeout = 500,
+    }));
+    builder.Services.AddSingleton<IRedisCacheStore, StackExchangeRedisCacheStore>();
+    builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+}
+else
+{
+    builder.Services.AddSingleton<ICacheService>(services => services.GetRequiredService<MemoryCacheService>());
+}
 builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
 builder.Services.AddScoped<IAnalysisJobRepository, AnalysisJobRepository>();
 builder.Services.AddScoped<AnalysisJobService>();
@@ -162,9 +170,12 @@ builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
         client.BaseAddress = riotOptions.GetRegionalBaseUri();
         client.Timeout = TimeSpan.FromSeconds(riotOptions.RequestTimeoutSeconds);
     });
-builder.Services.AddHealthChecks()
-    .AddCheck<PostgresHealthCheck>("postgresql", tags: ["ready"])
-    .AddCheck("redis", new RedisHealthCheck(redisHost, redisPort), tags: ["ready"]);
+var healthChecks = builder.Services.AddHealthChecks()
+    .AddCheck<PostgresHealthCheck>("postgresql", tags: ["ready"]);
+if (cacheOptions.UsesRedis)
+{
+    healthChecks.AddCheck("redis", new RedisHealthCheck(redisHost, redisPort), tags: ["ready"]);
+}
 
 var app = builder.Build();
 app.UseMiddleware<SafeRequestLoggingMiddleware>();
@@ -352,7 +363,7 @@ app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
             .ConfigureAwait(false);
         var analysis = await analysisService.RebuildAsync(puuid, cancellationToken).ConfigureAwait(false);
         var relationshipAnalysis = await relationshipAnalysisService
-            .RebuildAsync(cancellationToken)
+            .UpdateIncrementallyAsync(result.PersistedMatchIds, cancellationToken)
             .ConfigureAwait(false);
         await cache.RemoveTagAsync(PlayerCacheKeys.Tag(puuid), cancellationToken).ConfigureAwait(false);
         return Results.Ok(new
@@ -413,6 +424,20 @@ app.MapGet("/api/v1/players/{puuid}/encounters", async Task<IResult> (
 
     var encounters = await repository.GetRepeatedPlayersAsync(puuid, cancellationToken).ConfigureAwait(false);
     return encounters is null ? Results.NotFound() : Results.Ok(encounters);
+});
+
+app.MapGet("/api/v1/players/{puuid}/known-players", async Task<IResult> (
+    string puuid,
+    IPlayerAnalysisRepository repository,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(puuid))
+    {
+        return Results.BadRequest();
+    }
+
+    var knownPlayers = await repository.GetKnownPlayersAsync(puuid, cancellationToken).ConfigureAwait(false);
+    return knownPlayers is null ? Results.NotFound() : Results.Ok(knownPlayers);
 });
 
 app.MapGet("/api/v1/players/{puuid}/matches", async Task<IResult> (

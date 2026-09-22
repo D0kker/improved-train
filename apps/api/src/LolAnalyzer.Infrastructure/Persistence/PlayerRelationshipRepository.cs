@@ -2,25 +2,116 @@ using System.Data;
 using LolAnalyzer.Application.Analysis;
 using LolAnalyzer.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LolAnalyzer.Infrastructure.Persistence;
 
 public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext) : IPlayerRelationshipRepository
 {
-    public async Task<IReadOnlyList<RelationshipMatchSnapshot>> LoadMatchesAsync(
+    private const string RelationshipUpdateLockSql =
+        "SELECT pg_advisory_xact_lock(hashtextextended('lol-analyzer:player-relationships', 0));";
+
+    public async Task<IPlayerRelationshipUpdateScope> BeginIncrementalUpdateAsync(
+        IReadOnlyCollection<string> changedRiotMatchIds,
         int batchSize,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(changedRiotMatchIds);
         ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
-        var snapshots = new List<RelationshipMatchSnapshot>();
-        await using var transaction = await dbContext.Database
-            .BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
+        var transaction = await dbContext.Database
+            // READ COMMITTED takes its data snapshots after the advisory lock is acquired.
+            // A waiting updater therefore observes the previous updater's committed upserts.
+            .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
             .ConfigureAwait(false);
+        try
+        {
+            await dbContext.Database
+                .ExecuteSqlRawAsync(RelationshipUpdateLockSql, cancellationToken)
+                .ConfigureAwait(false);
+            var changedIds = changedRiotMatchIds
+                .Where(matchId => !string.IsNullOrWhiteSpace(matchId))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            var changedMatches = await dbContext.Matches
+                .AsNoTracking()
+                .Where(match => changedIds.Contains(match.RiotMatchId))
+                .Select(match => match.Id)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (changedMatches.Count == 0)
+            {
+                return new PlayerRelationshipUpdateScope(
+                    dbContext,
+                    transaction,
+                    new IncrementalRelationshipAnalysisInput(0, [], []));
+            }
 
+            var changedParticipants = await dbContext.MatchParticipants
+                .AsNoTracking()
+                .Where(participant => changedMatches.Contains(participant.MatchId))
+                .Select(participant => new ParticipantRow(
+                    participant.MatchId,
+                    participant.PlayerId,
+                    participant.TeamId))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var affectedPlayerIds = changedParticipants
+                .Select(participant => participant.PlayerId)
+                .ToHashSet();
+            var affectedMatchIds = await dbContext.MatchParticipants
+                .AsNoTracking()
+                .Where(participant => affectedPlayerIds.Contains(participant.PlayerId))
+                .Select(participant => participant.MatchId)
+                .Distinct()
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var affectedParticipants = await dbContext.MatchParticipants
+                .AsNoTracking()
+                .Where(participant => affectedMatchIds.Contains(participant.MatchId))
+                .Select(participant => new ParticipantRow(
+                    participant.MatchId,
+                    participant.PlayerId,
+                    participant.TeamId))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var affectedPairs = BuildAffectedPairs(affectedParticipants, affectedPlayerIds);
+            if (affectedPairs.Length == 0)
+            {
+                return new PlayerRelationshipUpdateScope(
+                    dbContext,
+                    transaction,
+                    new IncrementalRelationshipAnalysisInput(changedMatches.Count, [], []));
+            }
+
+            var timelinePlayerIds = affectedPairs
+                .SelectMany(pair => new[] { pair.PlayerAId, pair.PlayerBId })
+                .Distinct()
+                .ToArray();
+            var snapshots = await LoadTimelineMatchesAsync(timelinePlayerIds, batchSize, cancellationToken)
+                .ConfigureAwait(false);
+            return new PlayerRelationshipUpdateScope(
+                dbContext,
+                transaction,
+                new IncrementalRelationshipAnalysisInput(changedMatches.Count, affectedPairs, snapshots));
+        }
+        catch
+        {
+            await transaction.DisposeAsync().ConfigureAwait(false);
+            throw;
+        }
+    }
+
+    private async Task<IReadOnlyList<RelationshipMatchSnapshot>> LoadTimelineMatchesAsync(
+        IReadOnlyCollection<Guid> playerIds,
+        int batchSize,
+        CancellationToken cancellationToken)
+    {
+        var snapshots = new List<RelationshipMatchSnapshot>();
         for (var offset = 0; ; offset += batchSize)
         {
             var matches = await dbContext.Matches
                 .AsNoTracking()
+                .Where(match => match.Participants.Any(participant => playerIds.Contains(participant.PlayerId)))
                 .OrderBy(match => match.RiotMatchId)
                 .Skip(offset)
                 .Take(batchSize)
@@ -49,56 +140,19 @@ public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
             var participantsByMatch = participants.ToLookup(participant => participant.MatchId);
-
             snapshots.AddRange(matches.Select(match => new RelationshipMatchSnapshot(
                 match.RiotMatchId,
                 match.OccurredAt,
                 participantsByMatch[match.Id]
                     .Select(participant => new RelationshipParticipant(participant.PlayerId, participant.TeamId))
                     .ToArray())));
-
             if (matches.Count < batchSize)
             {
                 break;
             }
         }
 
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return snapshots;
-    }
-
-    public async Task ReplaceRelationshipsAsync(
-        IReadOnlyCollection<PlayerRelationshipAggregate> relationships,
-        int batchSize,
-        CancellationToken cancellationToken)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
-        await using var transaction = await dbContext.Database
-            .BeginTransactionAsync(cancellationToken)
-            .ConfigureAwait(false);
-        await dbContext.PlayerRelationships.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
-
-        foreach (var batch in relationships.Chunk(batchSize))
-        {
-            dbContext.PlayerRelationships.AddRange(batch.Select(relationship => new PlayerRelationship
-            {
-                PlayerAId = relationship.PlayerAId,
-                PlayerBId = relationship.PlayerBId,
-                MatchesTogether = relationship.MatchesTogether,
-                SameTeamMatches = relationship.SameTeamMatches,
-                OppositeTeamMatches = relationship.OppositeTeamMatches,
-                RecentMatchesTogether = relationship.RecentMatchesTogether,
-                ConsecutiveMatches = relationship.ConsecutiveMatches,
-                FirstSeenAt = relationship.FirstSeenAt,
-                LastSeenAt = relationship.LastSeenAt,
-                RelationshipScore = relationship.RelationshipScore,
-                RelationshipConfidence = relationship.RelationshipConfidence,
-            }));
-            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            dbContext.ChangeTracker.Clear();
-        }
-
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<PagedPlayerRelationshipQuery?> GetRelationshipsAsync(
@@ -247,6 +301,133 @@ public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext)
             row.LastSeenAt,
             row.RelationshipScore,
             confidence);
+    }
+
+    private static PlayerRelationshipPair[] BuildAffectedPairs(
+        IReadOnlyCollection<ParticipantRow> participants,
+        HashSet<Guid> affectedPlayerIds)
+    {
+        var pairs = new HashSet<PlayerRelationshipPair>();
+        foreach (var matchParticipants in participants.GroupBy(participant => participant.MatchId))
+        {
+            var playerIds = matchParticipants
+                .Select(participant => participant.PlayerId)
+                .Distinct()
+                .Order()
+                .ToArray();
+            for (var first = 0; first < playerIds.Length; first++)
+            {
+                for (var second = first + 1; second < playerIds.Length; second++)
+                {
+                    if (affectedPlayerIds.Contains(playerIds[first])
+                        || affectedPlayerIds.Contains(playerIds[second]))
+                    {
+                        pairs.Add(new PlayerRelationshipPair(playerIds[first], playerIds[second]));
+                    }
+                }
+            }
+        }
+
+        return pairs
+            .OrderBy(pair => pair.PlayerAId)
+            .ThenBy(pair => pair.PlayerBId)
+            .ToArray();
+    }
+
+    private sealed class PlayerRelationshipUpdateScope(
+        LolAnalyzerDbContext context,
+        IDbContextTransaction transaction,
+        IncrementalRelationshipAnalysisInput input) : IPlayerRelationshipUpdateScope
+    {
+        private bool committed;
+
+        public IncrementalRelationshipAnalysisInput Input { get; } = input;
+
+        public async Task UpsertRelationshipsAsync(
+            IReadOnlyCollection<PlayerRelationshipAggregate> relationships,
+            int batchSize,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(relationships);
+            ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
+            var affectedPairs = Input.AffectedPairs.ToHashSet();
+            var aggregatesByPair = relationships.ToDictionary(
+                relationship => new PlayerRelationshipPair(
+                    relationship.PlayerAId,
+                    relationship.PlayerBId));
+            if (aggregatesByPair.Count != affectedPairs.Count
+                || aggregatesByPair.Keys.Any(pair => !affectedPairs.Contains(pair)))
+            {
+                throw new InvalidOperationException(
+                    "Incremental relationship analysis must produce exactly the affected canonical pairs.");
+            }
+
+            var endpointIds = affectedPairs
+                .SelectMany(pair => new[] { pair.PlayerAId, pair.PlayerBId })
+                .Distinct()
+                .ToArray();
+            var existingRelationships = await context.PlayerRelationships
+                .Where(relationship => endpointIds.Contains(relationship.PlayerAId)
+                    || endpointIds.Contains(relationship.PlayerBId))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var existingByPair = existingRelationships
+                .Where(relationship => affectedPairs.Contains(new PlayerRelationshipPair(
+                    relationship.PlayerAId,
+                    relationship.PlayerBId)))
+                .ToDictionary(relationship => new PlayerRelationshipPair(
+                    relationship.PlayerAId,
+                    relationship.PlayerBId));
+
+            foreach (var batch in aggregatesByPair.Chunk(batchSize))
+            {
+                foreach (var (pair, aggregate) in batch)
+                {
+                    if (!existingByPair.TryGetValue(pair, out var entity))
+                    {
+                        entity = new PlayerRelationship
+                        {
+                            PlayerAId = pair.PlayerAId,
+                            PlayerBId = pair.PlayerBId,
+                        };
+                        context.PlayerRelationships.Add(entity);
+                    }
+
+                    Apply(aggregate, entity);
+                }
+
+                await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        public async Task CommitAsync(CancellationToken cancellationToken)
+        {
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            committed = true;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (!committed)
+            {
+                await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+
+            await transaction.DisposeAsync().ConfigureAwait(false);
+        }
+
+        private static void Apply(PlayerRelationshipAggregate aggregate, PlayerRelationship entity)
+        {
+            entity.MatchesTogether = aggregate.MatchesTogether;
+            entity.SameTeamMatches = aggregate.SameTeamMatches;
+            entity.OppositeTeamMatches = aggregate.OppositeTeamMatches;
+            entity.RecentMatchesTogether = aggregate.RecentMatchesTogether;
+            entity.ConsecutiveMatches = aggregate.ConsecutiveMatches;
+            entity.FirstSeenAt = aggregate.FirstSeenAt;
+            entity.LastSeenAt = aggregate.LastSeenAt;
+            entity.RelationshipScore = aggregate.RelationshipScore;
+            entity.RelationshipConfidence = aggregate.RelationshipConfidence;
+        }
     }
 
     private sealed record MatchRow(Guid Id, string RiotMatchId, DateTimeOffset OccurredAt);

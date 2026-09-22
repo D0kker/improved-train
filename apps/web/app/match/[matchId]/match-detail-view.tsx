@@ -7,6 +7,7 @@ import {
   apiPath,
   fetchJson,
   type MatchDetail,
+  type MatchKnownPlayer,
   type MatchPremadeGroup,
   type MatchParticipant,
 } from "@/src/api";
@@ -19,6 +20,7 @@ import {
 } from "@/src/premade-groups";
 import { ChampionIcon } from "@/src/champion-icon";
 import { PlayerProfileLink } from "@/src/player-profile-link";
+import { familiarityMessage } from "@/src/echo";
 
 export function MatchDetailView({
   matchId,
@@ -59,8 +61,8 @@ export function MatchDetailView({
     <main className="dashboard-shell">
       <header className="topbar">
         <Link className="wordmark" href="/">
-          <span className="wordmark-icon">LN</span>
-          <span>LoL Network Analyzer</span>
+          <span className="wordmark-icon">E</span>
+          <span>PROJECT ECHO</span>
         </Link>
         <Link className="text-link" href="/">
           Buscar jugador
@@ -109,6 +111,10 @@ export function MatchDetailView({
 
             <FamiliaritySummary familiarity={match.familiarity} />
 
+            {match.familiarity ? (
+              <KnownPlayers players={match.familiarity.knownPlayerDetails} />
+            ) : null}
+
             <PremadeSummary groups={match.premadeGroups} />
 
             <div className="teams-grid">
@@ -149,21 +155,14 @@ function FamiliaritySummary({
     );
   }
 
-  const messages = {
-    Available: `${familiarity.knownPlayers} de ${familiarity.evaluablePlayers} jugadores ya habían aparecido antes.`,
-    NoPriorHistory: "Esta es la primera partida evaluable del historial.",
-    NoEvaluableParticipants:
-      "No hay participantes visibles suficientes para calcular familiaridad.",
-    OwnerNotPresent: "El jugador de referencia no aparece en esta partida.",
-  };
   return (
     <section
       className="familiarity-summary"
       aria-labelledby="familiarity-title"
     >
       <div>
-        <p className="eyebrow">Familiaridad del lobby</p>
-        <h2 id="familiarity-title">{messages[familiarity.status]}</h2>
+        <p className="eyebrow">Familiaridad</p>
+        <h2 id="familiarity-title">{familiarityMessage(familiarity)}</h2>
         <p className="muted-copy">
           Solo usa partidas estrictamente anteriores.
         </p>
@@ -172,6 +171,45 @@ function FamiliaritySummary({
         <strong>{familiarity.familiarityPercentage}%</strong>
         <span>{familiarity.unknownPlayers} no conocidos</span>
       </div>
+    </section>
+  );
+}
+
+function KnownPlayers({ players }: { players: MatchKnownPlayer[] }) {
+  return (
+    <section aria-labelledby="known-players-title">
+      <div className="section-title-row">
+        <div>
+          <p className="eyebrow">Known players</p>
+          <h2 id="known-players-title">Ya habían aparecido antes</h2>
+        </div>
+        <p className="section-note">
+          Encuentros estrictamente anteriores a esta partida.
+        </p>
+      </div>
+
+      {players.length === 0 ? (
+        <div className="empty-state compact-empty-state">
+          <h3>Ningún jugador conocido</h3>
+          <p>Esta partida no tiene coincidencias históricas anteriores.</p>
+        </div>
+      ) : (
+        <ul className="known-player-grid">
+          {players.map((player) => (
+            <li key={player.puuid}>
+              <PlayerProfileLink
+                gameName={player.gameName}
+                tagLine={player.tagLine}
+              />
+              <strong>{player.playedBefore} encuentros anteriores</strong>
+              <span>
+                {player.allyMatches} aliado · {player.enemyMatches} rival
+              </span>
+              <span>Última vez: {formatDate(player.lastEncounterAt)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

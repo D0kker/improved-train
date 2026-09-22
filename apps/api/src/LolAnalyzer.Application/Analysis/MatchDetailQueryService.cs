@@ -37,7 +37,8 @@ public sealed class MatchDetailQueryService(
                     familiarity.UnknownPlayers,
                     familiarity.EvaluablePlayers,
                     familiarity.FamiliarityPercentage,
-                    familiarity.Status.ToString()),
+                    familiarity.Status.ToString(),
+                    familiarity.KnownPlayerDetails),
         };
     }
 }

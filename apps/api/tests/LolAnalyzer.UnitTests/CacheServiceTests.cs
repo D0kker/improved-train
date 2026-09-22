@@ -8,6 +8,31 @@ namespace LolAnalyzer.UnitTests;
 
 public sealed class CacheServiceTests
 {
+    [Theory]
+    [InlineData("memory", false)]
+    [InlineData("MEMORY", false)]
+    [InlineData("redis", true)]
+    [InlineData("REDIS", true)]
+    public void CacheProviderIsExplicitAndCaseInsensitive(string provider, bool usesRedis)
+    {
+        var options = new CacheOptions { Provider = provider };
+
+        options.Validate();
+
+        Assert.Equal(usesRedis, options.UsesRedis);
+    }
+
+    [Fact]
+    public void UnknownCacheProviderFailsFast()
+    {
+        var options = new CacheOptions { Provider = "distributed-magic" };
+
+        var exception = Assert.Throws<InvalidOperationException>(options.Validate);
+
+        Assert.Contains("memory", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("redis", exception.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task PlayerSummaryQueryUsesCacheUntilPlayerTagIsInvalidated()
     {
@@ -125,6 +150,11 @@ public sealed class CacheServiceTests
             throw new NotSupportedException();
 
         public Task<IReadOnlyList<PlayerEncounterView>?> GetRepeatedPlayersAsync(
+            string puuid,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<PlayerEncounterView>?> GetKnownPlayersAsync(
             string puuid,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();

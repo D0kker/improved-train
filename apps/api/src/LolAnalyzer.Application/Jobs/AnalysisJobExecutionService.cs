@@ -20,6 +20,7 @@ public sealed class AnalysisJobExecutionService(
         CancellationToken cancellationToken)
     {
         var processed = Math.Clamp(job.MatchesProcessed, 0, job.RequestedCount);
+        var persistedMatchIds = new HashSet<string>(StringComparer.Ordinal);
         while (processed < job.RequestedCount)
         {
             if (await jobRepository.IsCancelledAsync(job.Id, cancellationToken).ConfigureAwait(false))
@@ -32,6 +33,7 @@ public sealed class AnalysisJobExecutionService(
                 .SynchronizeAsync(job.Puuid, processed, requestedBatch, platformRegion, cancellationToken)
                 .ConfigureAwait(false);
             processed += result.MatchIdsReturned;
+            persistedMatchIds.UnionWith(result.PersistedMatchIds);
             await jobRepository
                 .UpdateProgressAsync(job.Id, processed, timeProvider.GetUtcNow(), cancellationToken)
                 .ConfigureAwait(false);
@@ -48,7 +50,9 @@ public sealed class AnalysisJobExecutionService(
         }
 
         await repeatedPlayerAnalysisService.RebuildAsync(job.Puuid, cancellationToken).ConfigureAwait(false);
-        await relationshipAnalysisService.RebuildAsync(cancellationToken).ConfigureAwait(false);
+        await relationshipAnalysisService
+            .UpdateIncrementallyAsync(persistedMatchIds, cancellationToken)
+            .ConfigureAwait(false);
         await cache.RemoveTagAsync(PlayerCacheKeys.Tag(job.Puuid), cancellationToken).ConfigureAwait(false);
         await jobRepository
             .CompleteAsync(job.Id, processed, timeProvider.GetUtcNow(), cancellationToken)

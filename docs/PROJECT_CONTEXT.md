@@ -1,6 +1,6 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-08-31
+Última actualización: 2026-09-22
 
 ## Propósito
 
@@ -8,6 +8,14 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 
 ## Estado real
 
+- ECHO-1 está implementado en `feature/echo-product-focus`: PROJECT ECHO prioriza conocidos, recurrentes y familiaridad histórica sin ampliar la frontera de partidas terminadas.
+- `GET /api/v1/players/{puuid}/known-players` incluye encounters con una aparición; `/encounters` conserva recurrentes con dos o más.
+- El detalle de partida expone quiénes eran conocidos y sus conteos aliado/rival, resultados y fechas usando exclusivamente partidas anteriores a la partida objetivo.
+- La ruta ordinaria de sincronización actualiza relaciones incrementalmente: identifica jugadores y parejas afectadas por los matches recién persistidos, recalcula su historial y hace upsert bajo advisory lock transaccional. No elimina el snapshot global.
+- `CACHE_PROVIDER=memory` es el modo mínimo y no registra conexión ni readiness de Redis. `CACHE_PROVIDER=redis` mantiene la caché compartida con fallback en memoria.
+- Las métricas agregadas `echo_matches_analyzed_total`, `echo_encounter_lookups_total`, `echo_encounter_hits_total` y `echo_known_players_found_total` permiten derivar Encounter Hit Rate sin labels de jugador.
+- Home, dashboard y detalle usan branding PROJECT ECHO; el grafo permanece funcional dentro de una sección experimental secundaria.
+- `matches.raw_data` se conserva para reprocesamiento/debugging. Su retención continúa pendiente de aprobación del PO en D-035.
 - El repositorio contiene web Next.js, API .NET, worker, PostgreSQL, Redis, pruebas, CI y la especificación original.
 - Foundation y Sprints 1–6 están implementados localmente; Sprint 7 inició con auditoría Riot e inventario de datos.
 - `docs/SPEC_ANALYSIS.md` registra fortalezas, tensiones y el orden recomendado para Sprint 1.
@@ -63,6 +71,9 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 
 ## Validación realizada
 
+- ECHO-1: restore/build Release, 62 pruebas unitarias, 21 pruebas de integración y `dotnet format --verify-no-changes` aprobados dentro de .NET 10; ninguna prueba llamó a Riot.
+- ECHO-1 frontend: `npm ci`, lint, pruebas, type-check, formato y build Next.js aprobados.
+- ECHO-1 contenedores: `docker compose config`; builds de API, worker y web; stack aislado con PostgreSQL/API/worker/web saludable en modo `CACHE_PROVIDER=memory`, sin contenedor Redis, y segundo stack aislado con los cinco servicios saludables en modo `redis`. `/api/health`, readiness y métricas ECHO respondieron correctamente; ambos stacks temporales y sus volúmenes sintéticos se eliminaron y el despliegue principal permaneció saludable.
 - Se leyó y clasificó la especificación completa.
 - Se comprobó que el archivo original no contiene valores reales de API keys, contraseñas, tokens o claves privadas.
 - Se comparó el patrón de continuidad de `vigilant-adventure` y se adaptó sin copiar datos runtime ni decisiones ajenas.
@@ -90,7 +101,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 
 ## Próximo paso
 
-Continuar S7-004 con escaneo de supply chain y límites de borde; después tomar S8-002/S8-003 o las historias que el PO priorice, sin abrir el servicio público hasta completar el go/no-go.
+Probar ECHO-1 con usuarios sobre el flujo búsqueda → dashboard → última partida → conocidos, medir Encounter Hit Rate y recoger fricción antes de añadir features. El selector de región permanece para S9-002 porque el lookup actual usa una región de plataforma configurada en servidor. Para una beta pública siguen pendientes S7 y el go/no-go Riot.
 
 ## Investigación delegable a Gemini
 

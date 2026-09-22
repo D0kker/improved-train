@@ -395,9 +395,54 @@ p {
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.8rem;
   margin: 0;
+}
+
+.latest-match-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border: 1px solid rgb(97 226 180 / 45%);
+  border-radius: 1.2rem;
+  background: linear-gradient(
+    135deg,
+    rgb(97 226 180 / 12%),
+    rgb(10 23 20 / 88%)
+  );
+  padding: clamp(1.2rem, 3vw, 2rem);
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.latest-match-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.latest-match-card > div {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.latest-match-card strong {
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+  letter-spacing: -0.025em;
+}
+
+.latest-match-id,
+.latest-match-card > div > span:last-child {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.latest-match-action {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-weight: 800;
 }
 
 .stat-card {
@@ -768,6 +813,73 @@ td > span,
   display: block;
 }
 
+.known-player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.known-player-grid li {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 1rem;
+  background: rgb(10 23 20 / 84%);
+  padding: 1rem;
+}
+
+.known-player-grid li > span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.compact-empty-state {
+  padding: 1.5rem 1rem;
+}
+
+.experimental-section {
+  margin-top: 4rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 1rem;
+  background: rgb(10 23 20 / 55%);
+}
+
+.experimental-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.experimental-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.experimental-section > summary span:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.experimental-section > summary strong {
+  color: var(--text);
+}
+
+.experimental-section > summary small {
+  font-size: 0.72rem;
+}
+
+.experimental-section > section {
+  border-top: 1px solid var(--border-soft);
+  padding: 1.2rem;
+}
+
 .familiarity-value strong {
   color: var(--accent);
   font-size: 1.8rem;
@@ -1043,6 +1155,11 @@ td > span,
 
   .match-card {
     grid-template-columns: 5.5rem minmax(8rem, 1fr) minmax(7rem, auto) auto;
+  }
+
+  .latest-match-card {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .match-meta {

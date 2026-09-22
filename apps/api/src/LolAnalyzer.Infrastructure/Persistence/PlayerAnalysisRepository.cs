@@ -77,7 +77,12 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
                     ?? participant.Match.GameStartTimestamp
                     ?? participant.Match.GameCreation
                     ?? participant.Match.CreatedAt,
-                participant.PlayerId))
+                participant.PlayerId,
+                participant.Player.Puuid,
+                participant.Player.GameName,
+                participant.Player.TagLine,
+                participant.TeamId,
+                participant.Win))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -86,7 +91,13 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
             .Select(group => new FamiliarityMatch(
                 group.Key.RiotMatchId,
                 group.Key.OccurredAt,
-                group.Select(row => new FamiliarityParticipant(row.PlayerId)).ToArray()))
+                group.Select(row => new FamiliarityParticipant(
+                    row.PlayerId,
+                    row.Puuid,
+                    row.GameName,
+                    row.TagLine,
+                    row.TeamId,
+                    row.Win)).ToArray()))
             .ToArray();
         if (!matches.Any(match => string.Equals(
                 match.RiotMatchId,
@@ -177,6 +188,17 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
 
     public async Task<IReadOnlyList<PlayerEncounterView>?> GetRepeatedPlayersAsync(
         string puuid,
+        CancellationToken cancellationToken) =>
+        await GetEncounterPlayersAsync(puuid, minimumMatches: 2, cancellationToken).ConfigureAwait(false);
+
+    public async Task<IReadOnlyList<PlayerEncounterView>?> GetKnownPlayersAsync(
+        string puuid,
+        CancellationToken cancellationToken) =>
+        await GetEncounterPlayersAsync(puuid, minimumMatches: 1, cancellationToken).ConfigureAwait(false);
+
+    private async Task<IReadOnlyList<PlayerEncounterView>?> GetEncounterPlayersAsync(
+        string puuid,
+        int minimumMatches,
         CancellationToken cancellationToken)
     {
         var ownerId = await dbContext.Players
@@ -192,7 +214,7 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
 
         return await dbContext.PlayerEncounters
             .AsNoTracking()
-            .Where(encounter => encounter.OwnerPlayerId == ownerId && encounter.TotalMatches >= 2)
+            .Where(encounter => encounter.OwnerPlayerId == ownerId && encounter.TotalMatches >= minimumMatches)
             .OrderByDescending(encounter => encounter.TotalMatches)
             .ThenByDescending(encounter => encounter.LastSeenAt)
             .Select(encounter => new PlayerEncounterView(
@@ -314,5 +336,10 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
     private sealed record FamiliarityRow(
         string RiotMatchId,
         DateTimeOffset OccurredAt,
-        Guid PlayerId);
+        Guid PlayerId,
+        string Puuid,
+        string GameName,
+        string TagLine,
+        int TeamId,
+        bool Win);
 }

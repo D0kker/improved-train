@@ -31,7 +31,13 @@ public sealed record PlayerAnalysisResult(
     int MatchesAnalyzed,
     int EncountersPersisted);
 
-public sealed record FamiliarityParticipant(Guid? PlayerId);
+public sealed record FamiliarityParticipant(
+    Guid? PlayerId,
+    string Puuid = "",
+    string GameName = "",
+    string TagLine = "",
+    int TeamId = 0,
+    bool Win = false);
 
 public sealed record FamiliarityMatch(
     string RiotMatchId,
@@ -58,7 +64,8 @@ public sealed record MatchFamiliarityResult(
     int EvaluablePlayers,
     decimal FamiliarityPercentage,
     MatchFamiliarityStatus Status,
-    IReadOnlyList<Guid> KnownPlayerIds);
+    IReadOnlyList<Guid> KnownPlayerIds,
+    IReadOnlyList<MatchKnownPlayerView> KnownPlayerDetails);
 
 public sealed record PlayerSummary(
     string Puuid,
@@ -70,7 +77,10 @@ public sealed record PlayerSummary(
     double WinRate,
     int UniquePlayersEncountered,
     int RepeatedPlayers,
-    DateTimeOffset DataUpdatedAt);
+    DateTimeOffset DataUpdatedAt)
+{
+    public int KnownPlayers => UniquePlayersEncountered;
+}
 
 public sealed record PlayerEncounterView(
     string OtherPlayerPuuid,
@@ -139,7 +149,22 @@ public sealed record MatchFamiliarityView(
     int UnknownPlayers,
     int EvaluablePlayers,
     decimal FamiliarityPercentage,
-    string Status);
+    string Status,
+    IReadOnlyList<MatchKnownPlayerView> KnownPlayerDetails);
+
+public sealed record MatchKnownPlayerView(
+    string Puuid,
+    string GameName,
+    string TagLine,
+    int PlayedBefore,
+    int AllyMatches,
+    int EnemyMatches,
+    int WinsTogether,
+    int LossesTogether,
+    int WinsAgainst,
+    int LossesAgainst,
+    DateTimeOffset FirstEncounterAt,
+    DateTimeOffset LastEncounterAt);
 
 public sealed record MatchDetail(
     string RiotMatchId,

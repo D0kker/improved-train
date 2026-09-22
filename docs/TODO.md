@@ -1,8 +1,20 @@
 # Roadmap
 
-Última actualización: 2026-08-31
+Última actualización: 2026-09-22
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
+
+## ECHO-1 — enfoque del producto
+
+- [x] Separar jugadores conocidos (`>= 1`) de recurrentes (`>= 2`) sin recrear `PlayerEncounter`.
+- [x] Exponer conocidos individuales de cada partida con conteos estrictamente anteriores.
+- [x] Priorizar encounters y familiaridad en Home, dashboard y detalle de partida.
+- [x] Mantener el grafo funcional como sección secundaria/experimental sin ampliarlo.
+- [x] Sustituir la reconstrucción global ordinaria por actualización incremental de parejas afectadas.
+- [x] Permitir `CACHE_PROVIDER=memory` sin Redis y conservar `CACHE_PROVIDER=redis` con fallback.
+- [x] Añadir métricas de producto ECHO agregadas y de baja cardinalidad.
+- [x] Conservar worker y refresh programado sin ampliar sus funcionalidades.
+- [x] Mantener `raw_data` y registrar la decisión de retención como pendiente.
 
 ## Foundation — completada
 

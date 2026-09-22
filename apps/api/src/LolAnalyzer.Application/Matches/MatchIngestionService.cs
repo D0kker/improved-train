@@ -62,6 +62,7 @@ public sealed class MatchIngestionService(
             }).ConfigureAwait(false);
 
         var persistedCount = 0;
+        var persistedMatchIds = new List<string>();
         var notFoundCount = 0;
         foreach (var downloadedMatch in downloadedMatches)
         {
@@ -76,6 +77,7 @@ public sealed class MatchIngestionService(
                     .ConfigureAwait(false))
             {
                 persistedCount++;
+                persistedMatchIds.Add(downloadedMatch.RiotMatchId);
             }
         }
 
@@ -86,6 +88,7 @@ public sealed class MatchIngestionService(
             AlreadyStored: existingMatchIds.Count,
             Downloaded: downloadedMatches.Count(match => match is not null),
             Persisted: persistedCount,
-            NotFound: notFoundCount);
+            NotFound: notFoundCount,
+            PersistedMatchIds: persistedMatchIds);
     }
 }

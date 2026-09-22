@@ -30,6 +30,11 @@ import {
   dataDragonVersion,
 } from "../src/data-dragon.ts";
 import { browserSecurityHeaders } from "../src/security-headers.ts";
+import {
+  familiarityMessage,
+  knownPlayerCount,
+  repeatedPlayerCount,
+} from "../src/echo.ts";
 
 test("API paths remain same-origin and encode user-controlled segments", () => {
   assert.equal(
@@ -136,6 +141,31 @@ test("presentation helpers normalize percentages and durations", () => {
   assert.equal(formatPercent(1), "1%");
   assert.equal(winRate(3, 4), "75%");
   assert.equal(winRate(0, 0), "—");
+});
+
+test("ECHO distinguishes known and repeated players", () => {
+  const encounters = [
+    { totalMatches: 1 },
+    { totalMatches: 2 },
+    { totalMatches: 7 },
+  ] as Parameters<typeof knownPlayerCount>[0];
+
+  assert.equal(knownPlayerCount(encounters), 3);
+  assert.equal(repeatedPlayerCount(encounters), 2);
+});
+
+test("ECHO familiarity copy answers the central match question", () => {
+  assert.equal(
+    familiarityMessage({
+      knownPlayers: 3,
+      unknownPlayers: 6,
+      evaluablePlayers: 9,
+      familiarityPercentage: 33.3,
+      status: "Available",
+      knownPlayerDetails: [],
+    }),
+    "3 de 9 jugadores ya habían aparecido antes.",
+  );
 });
 
 test("premade groups remain distinguishable without relying on color", () => {

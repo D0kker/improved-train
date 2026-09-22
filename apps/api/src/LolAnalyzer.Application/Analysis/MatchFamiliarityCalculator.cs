@@ -48,6 +48,11 @@ public static class MatchFamiliarityCalculator
             .ToArray();
         var knownPlayers = knownPlayerIds.Length;
         var evaluablePlayers = targetPlayerIds.Length;
+        var knownPlayerDetails = BuildKnownPlayerDetails(
+            input.OwnerPlayerId,
+            target,
+            priorMatches,
+            knownPlayerIds);
 
         return new MatchFamiliarityResult(
             input.TargetRiotMatchId,
@@ -56,7 +61,52 @@ public static class MatchFamiliarityCalculator
             evaluablePlayers,
             Math.Round(knownPlayers * 100m / evaluablePlayers, 1, MidpointRounding.AwayFromZero),
             priorMatches.Length == 0 ? MatchFamiliarityStatus.NoPriorHistory : MatchFamiliarityStatus.Available,
-            knownPlayerIds);
+            knownPlayerIds,
+            knownPlayerDetails);
+    }
+
+    private static MatchKnownPlayerView[] BuildKnownPlayerDetails(
+        Guid ownerPlayerId,
+        FamiliarityMatch target,
+        IReadOnlyCollection<FamiliarityMatch> priorMatches,
+        IReadOnlyCollection<Guid> knownPlayerIds)
+    {
+        return knownPlayerIds
+            .Select(playerId =>
+            {
+                var current = target.Participants.First(participant => participant.PlayerId == playerId);
+                var history = priorMatches
+                    .Select(match => new
+                    {
+                        Match = match,
+                        Owner = match.Participants.First(participant => participant.PlayerId == ownerPlayerId),
+                        Other = match.Participants.FirstOrDefault(participant => participant.PlayerId == playerId),
+                    })
+                    .Where(item => item.Other is not null)
+                    .OrderBy(item => item.Match.OccurredAt)
+                    .ThenBy(item => item.Match.RiotMatchId, StringComparer.Ordinal)
+                    .ToArray();
+                var sameTeamMatches = history.Count(item => item.Owner.TeamId == item.Other!.TeamId);
+
+                return new MatchKnownPlayerView(
+                    current.Puuid,
+                    current.GameName,
+                    current.TagLine,
+                    history.Length,
+                    sameTeamMatches,
+                    history.Length - sameTeamMatches,
+                    history.Count(item => item.Owner.TeamId == item.Other!.TeamId && item.Owner.Win),
+                    history.Count(item => item.Owner.TeamId == item.Other!.TeamId && !item.Owner.Win),
+                    history.Count(item => item.Owner.TeamId != item.Other!.TeamId && item.Owner.Win),
+                    history.Count(item => item.Owner.TeamId != item.Other!.TeamId && !item.Owner.Win),
+                    history[0].Match.OccurredAt,
+                    history[^1].Match.OccurredAt);
+            })
+            .OrderByDescending(detail => detail.PlayedBefore)
+            .ThenByDescending(detail => detail.LastEncounterAt)
+            .ThenBy(detail => detail.GameName, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(detail => detail.TagLine, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static bool IsBefore(FamiliarityMatch candidate, FamiliarityMatch target) =>
@@ -78,5 +128,5 @@ public static class MatchFamiliarityCalculator
     private static MatchFamiliarityResult EmptyResult(
         string targetRiotMatchId,
         MatchFamiliarityStatus status) =>
-        new(targetRiotMatchId, 0, 0, 0, 0, status, []);
+        new(targetRiotMatchId, 0, 0, 0, 0, status, [], []);
 }

@@ -6,6 +6,7 @@ import {
   ApiError,
   apiPath,
   fetchJson,
+  type MatchDetail,
   type MatchesResponse,
   type PlayerEncounter,
   type PlayerLookup,
@@ -23,6 +24,11 @@ import {
   queueLabel,
   winRate,
 } from "@/src/format";
+import {
+  familiarityMessage,
+  knownPlayerCount,
+  repeatedPlayerCount,
+} from "@/src/echo";
 import { PlayerProfileLink } from "@/src/player-profile-link";
 import { ChampionIcon } from "@/src/champion-icon";
 import { PlayerNetworkSection } from "./player-network-section";
@@ -38,6 +44,7 @@ interface DashboardData {
   encounters: PlayerEncounter[];
   matches: MatchesResponse;
   relationships: RelationshipsResponse;
+  latestMatch: MatchDetail | null;
 }
 
 type LoadingStep = "lookup" | "sync" | "results";
@@ -95,7 +102,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
               },
             ),
             fetchJson<PlayerEncounter[] | { items: PlayerEncounter[] }>(
-              apiPath("players", player.puuid, "encounters"),
+              apiPath("players", player.puuid, "known-players"),
               { signal },
             ),
             fetchJson<MatchesResponse>(
@@ -108,6 +115,22 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
             ),
           ]);
 
+        let latestMatch: MatchDetail | null = null;
+        if (matches.items[0]) {
+          try {
+            latestMatch = await fetchJson<MatchDetail>(
+              `${apiPath("matches", matches.items[0].riotMatchId)}?ownerPuuid=${encodeURIComponent(player.puuid)}`,
+              { signal },
+            );
+          } catch (latestMatchError) {
+            if (signal?.aborted) return;
+            syncWarning ??= messageFor(
+              latestMatchError,
+              "No se pudo cargar la familiaridad de la última partida.",
+            );
+          }
+        }
+
         setData({
           player,
           summary,
@@ -116,6 +139,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
             : encounterResponse.items,
           matches,
           relationships,
+          latestMatch,
         });
         setWarning(syncWarning);
       } catch (requestError) {
@@ -144,8 +168,8 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
     <main className="dashboard-shell">
       <header className="topbar">
         <Link className="wordmark" href="/">
-          <span className="wordmark-icon">LN</span>
-          <span>LoL Network Analyzer</span>
+          <span className="wordmark-icon">E</span>
+          <span>PROJECT ECHO</span>
         </Link>
         <Link className="text-link" href="/">
           Nueva búsqueda
@@ -155,7 +179,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
       <div className="dashboard-content">
         <section className="player-heading">
           <div>
-            <p className="eyebrow">Resumen del jugador</p>
+            <p className="eyebrow">Who have you played with before?</p>
             <h1>
               {data?.summary.gameName || gameName}
               <span>#{data?.summary.tagLine || tagLine}</span>
@@ -210,14 +234,28 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
                 {warning} Mostramos los datos locales disponibles.
               </p>
             ) : null}
-            <SummaryCards summary={data.summary} />
+            <SummaryCards encounters={data.encounters} summary={data.summary} />
+            <LatestMatch
+              match={data.matches.items[0] ?? null}
+              matchDetail={data.latestMatch}
+              ownerPuuid={data.player.puuid}
+            />
             <Encounters encounters={data.encounters} />
-            <Relationships relationships={data.relationships} />
-            <PlayerNetworkSection puuid={data.player.puuid} />
             <MatchHistory
               matches={data.matches}
               ownerPuuid={data.player.puuid}
             />
+            <Relationships relationships={data.relationships} />
+            <details className="experimental-section">
+              <summary>
+                <span>
+                  <strong>Mapa de conexiones</strong>
+                  <small>Experimental · funcional, sin desarrollo activo</small>
+                </span>
+                <span aria-hidden="true">+</span>
+              </summary>
+              <PlayerNetworkSection puuid={data.player.puuid} />
+            </details>
           </>
         ) : null}
       </div>
@@ -319,24 +357,31 @@ function LoadingPanel({ step }: { step: LoadingStep }) {
   );
 }
 
-function SummaryCards({ summary }: { summary: PlayerSummary }) {
+function SummaryCards({
+  encounters,
+  summary,
+}: {
+  encounters: PlayerEncounter[];
+  summary: PlayerSummary;
+}) {
   const cards = [
     ["Partidas analizadas", summary.matchesAnalyzed.toLocaleString("es-PA")],
-    ["Victorias / derrotas", `${summary.wins} / ${summary.losses}`],
-    ["Win rate", formatPercent(summary.winRate)],
     [
-      "Jugadores encontrados",
-      summary.uniquePlayersEncountered.toLocaleString("es-PA"),
+      "Jugadores conocidos",
+      knownPlayerCount(encounters).toLocaleString("es-PA"),
     ],
-    ["Jugadores repetidos", summary.repeatedPlayers.toLocaleString("es-PA")],
+    [
+      "Jugadores recurrentes",
+      repeatedPlayerCount(encounters).toLocaleString("es-PA"),
+    ],
   ];
 
   return (
     <section aria-labelledby="summary-title">
       <div className="section-title-row">
         <div>
-          <p className="eyebrow">Panorama</p>
-          <h2 id="summary-title">Tu historial en números</h2>
+          <p className="eyebrow">ECHO overview</p>
+          <h2 id="summary-title">Tu historial de encuentros</h2>
         </div>
       </div>
       <dl className="stat-grid">
@@ -351,23 +396,73 @@ function SummaryCards({ summary }: { summary: PlayerSummary }) {
   );
 }
 
+function LatestMatch({
+  match,
+  matchDetail,
+  ownerPuuid,
+}: {
+  match: MatchesResponse["items"][number] | null;
+  matchDetail: MatchDetail | null;
+  ownerPuuid: string;
+}) {
+  if (!match) {
+    return (
+      <section aria-labelledby="last-match-title">
+        <div className="section-title-row">
+          <div>
+            <p className="eyebrow">Última partida</p>
+            <h2 id="last-match-title">Todavía no hay partidas analizadas</h2>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section aria-labelledby="last-match-title">
+      <div className="section-title-row">
+        <div>
+          <p className="eyebrow">Última partida</p>
+          <h2 id="last-match-title">Familiaridad del lobby</h2>
+        </div>
+        <p className="section-note">Solo evidencia anterior a esta partida.</p>
+      </div>
+      <Link
+        className="latest-match-card"
+        href={matchDetailPath(match.riotMatchId, ownerPuuid)}
+      >
+        <div>
+          <span className="latest-match-id">{match.riotMatchId}</span>
+          <strong>
+            {matchDetail?.familiarity
+              ? familiarityMessage(matchDetail.familiarity)
+              : "Familiaridad no disponible."}
+          </strong>
+          <span>{formatDate(match.gameStartTimestamp)}</span>
+        </div>
+        <span className="latest-match-action">Ver partida →</span>
+      </Link>
+    </section>
+  );
+}
+
 function Encounters({ encounters }: { encounters: PlayerEncounter[] }) {
   return (
     <section aria-labelledby="encounters-title">
       <div className="section-title-row">
         <div>
-          <p className="eyebrow">Coincidencias históricas</p>
-          <h2 id="encounters-title">Jugadores recurrentes</h2>
+          <p className="eyebrow">Known players</p>
+          <h2 id="encounters-title">Jugadores que ya habías visto</h2>
         </div>
         <p className="section-note">
-          Ordenados por encuentros; no implica que sean un grupo premade.
+          Incluye desde el primer encuentro; recurrente significa 2 o más.
         </p>
       </div>
 
       {encounters.length === 0 ? (
         <EmptyState
-          title="Aún no hay jugadores repetidos"
-          copy="Cuando una persona aparezca en más de una partida analizada, la verás aquí."
+          title="Aún no hay jugadores conocidos"
+          copy="Cuando otro jugador aparezca en una partida analizada, lo verás aquí."
         />
       ) : (
         <div className="table-wrap">

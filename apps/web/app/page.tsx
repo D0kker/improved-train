@@ -5,14 +5,14 @@ export default function Home() {
     <main className="home-shell">
       <section className="hero" aria-labelledby="page-title">
         <div className="brand-mark" aria-hidden="true">
-          LN
+          E
         </div>
-        <p className="eyebrow">Análisis histórico post-partida</p>
-        <h1 id="page-title">Descubre a quién sigues encontrando.</h1>
+        <p className="eyebrow">PROJECT ECHO · historial post-partida</p>
+        <h1 id="page-title">Who have you played with before?</h1>
         <p className="lede">
-          Busca un Riot ID para revisar partidas guardadas, rivales y aliados
-          recurrentes. Las coincidencias muestran patrones históricos, no
-          relaciones verificadas entre jugadores.
+          Busca tu Riot ID para descubrir qué aliados y rivales ya habían
+          aparecido en tus partidas guardadas, cuántas veces y cuándo fue el
+          último encuentro.
         </p>
         <PlayerSearchForm />
         <ul className="trust-list" aria-label="Límites del análisis">

@@ -286,7 +286,35 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
         Assert.Equal(1, familiarity.GetProperty("knownPlayers").GetInt32());
         Assert.Equal(50m, familiarity.GetProperty("familiarityPercentage").GetDecimal());
         Assert.Equal("Available", familiarity.GetProperty("status").GetString());
+        var known = familiarity.GetProperty("knownPlayerDetails")[0];
+        Assert.Equal("known-player-puuid", known.GetProperty("puuid").GetString());
+        Assert.Equal(1, known.GetProperty("playedBefore").GetInt32());
+        Assert.Equal(1, known.GetProperty("allyMatches").GetInt32());
+        Assert.Equal(0, known.GetProperty("enemyMatches").GetInt32());
         Assert.Equal(JsonValueKind.Null, plainBody.RootElement.GetProperty("familiarity").ValueKind);
+    }
+
+    [Fact]
+    public async Task KnownPlayersIncludeSingleEncountersWhileRepeatedPlayersKeepTheirThreshold()
+    {
+        using var client = _factory.CreateClient();
+
+        var knownResponse = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/known-players",
+            TestContext.Current.CancellationToken);
+        var repeatedResponse = await client.GetAsync(
+            "/api/v1/players/test-owner-puuid/encounters",
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, knownResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, repeatedResponse.StatusCode);
+        using var knownBody = JsonDocument.Parse(
+            await knownResponse.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        using var repeatedBody = JsonDocument.Parse(
+            await repeatedResponse.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
+        Assert.Equal(1, knownBody.RootElement.GetArrayLength());
+        Assert.Equal(1, knownBody.RootElement[0].GetProperty("totalMatches").GetInt32());
+        Assert.Equal(0, repeatedBody.RootElement.GetArrayLength());
     }
 
     [Fact]
@@ -711,16 +739,34 @@ internal sealed class InMemoryPlayerAnalysisRepository : IPlayerAnalysisReposito
                             "TEST_0",
                             DateTimeOffset.UnixEpoch,
                             [
-                                new FamiliarityParticipant(OwnerId),
-                                new FamiliarityParticipant(Guid.Parse("00000000-0000-0000-0000-000000000002")),
+                                new FamiliarityParticipant(OwnerId, "test-owner-puuid", "Ana", "LAN", 100, true),
+                                new FamiliarityParticipant(
+                                    Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                                    "known-player-puuid",
+                                    "Known",
+                                    "LAN",
+                                    100,
+                                    true),
                             ]),
                         new FamiliarityMatch(
                             "TEST_1",
                             DateTimeOffset.UnixEpoch.AddMinutes(20),
                             [
-                                new FamiliarityParticipant(OwnerId),
-                                new FamiliarityParticipant(Guid.Parse("00000000-0000-0000-0000-000000000002")),
-                                new FamiliarityParticipant(Guid.Parse("00000000-0000-0000-0000-000000000003")),
+                                new FamiliarityParticipant(OwnerId, "test-owner-puuid", "Ana", "LAN", 100, false),
+                                new FamiliarityParticipant(
+                                    Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                                    "known-player-puuid",
+                                    "Known",
+                                    "LAN",
+                                    200,
+                                    true),
+                                new FamiliarityParticipant(
+                                    Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                                    "new-player-puuid",
+                                    "New",
+                                    "LAN",
+                                    200,
+                                    true),
                             ]),
                     ])
                 : null);
@@ -739,6 +785,28 @@ internal sealed class InMemoryPlayerAnalysisRepository : IPlayerAnalysisReposito
         string puuid,
         CancellationToken cancellationToken) =>
         Task.FromResult<IReadOnlyList<PlayerEncounterView>?>(puuid == "test-owner-puuid" ? [] : null);
+
+    public Task<IReadOnlyList<PlayerEncounterView>?> GetKnownPlayersAsync(
+        string puuid,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<PlayerEncounterView>?>(puuid == "test-owner-puuid"
+            ?
+            [
+                new PlayerEncounterView(
+                    "known-player-puuid",
+                    "Known",
+                    "LAN",
+                    1,
+                    1,
+                    0,
+                    1,
+                    0,
+                    0,
+                    0,
+                    DateTimeOffset.UnixEpoch,
+                    DateTimeOffset.UnixEpoch),
+            ]
+            : null);
 
     public Task<PagedPlayerMatches?> GetMatchesAsync(
         string puuid,
@@ -769,15 +837,11 @@ internal sealed class InMemoryPlayerRelationshipRepository : IPlayerRelationship
     private static readonly Guid E = Guid.Parse("00000000-0000-0000-0000-000000000005");
     private static readonly Guid F = Guid.Parse("00000000-0000-0000-0000-000000000006");
 
-    public Task<IReadOnlyList<RelationshipMatchSnapshot>> LoadMatchesAsync(
+    public Task<IPlayerRelationshipUpdateScope> BeginIncrementalUpdateAsync(
+        IReadOnlyCollection<string> changedRiotMatchIds,
         int batchSize,
         CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyList<RelationshipMatchSnapshot>>([]);
-
-    public Task ReplaceRelationshipsAsync(
-        IReadOnlyCollection<PlayerRelationshipAggregate> relationships,
-        int batchSize,
-        CancellationToken cancellationToken) => Task.CompletedTask;
+        Task.FromResult<IPlayerRelationshipUpdateScope>(new EmptyRelationshipUpdateScope());
 
     public Task<PagedPlayerRelationshipQuery?> GetRelationshipsAsync(
         string puuid,
@@ -842,4 +906,18 @@ internal sealed class InMemoryPlayerRelationshipRepository : IPlayerRelationship
             confidence == RelationshipConfidence.High ? 5 : 3,
             confidence == RelationshipConfidence.High ? 4 : 2,
             confidence);
+
+    private sealed class EmptyRelationshipUpdateScope : IPlayerRelationshipUpdateScope
+    {
+        public IncrementalRelationshipAnalysisInput Input { get; } = new(0, [], []);
+
+        public Task UpsertRelationshipsAsync(
+            IReadOnlyCollection<PlayerRelationshipAggregate> relationships,
+            int batchSize,
+            CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task CommitAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
 }

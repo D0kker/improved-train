@@ -154,6 +154,22 @@ export interface MatchFamiliarity {
     | "NoPriorHistory"
     | "NoEvaluableParticipants"
     | "OwnerNotPresent";
+  knownPlayerDetails: MatchKnownPlayer[];
+}
+
+export interface MatchKnownPlayer {
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+  playedBefore: number;
+  allyMatches: number;
+  enemyMatches: number;
+  winsTogether: number;
+  lossesTogether: number;
+  winsAgainst: number;
+  lossesAgainst: number;
+  firstEncounterAt: string;
+  lastEncounterAt: string;
 }
 
 export interface MatchDetail {

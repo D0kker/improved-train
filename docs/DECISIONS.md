@@ -247,3 +247,35 @@
 - Decisión: mantener funcionando el grafo de profundidad uno tal como está, pero no invertir más tiempo en ampliarlo durante Sprints 7–8 ni convertirlo en dependencia de nuevas funcionalidades.
 - Razón: el PO no encuentra útil o clara la visualización actual; tablas, historial A–B, recurrentes, posibles premades y rankings responden mejor las preguntas prioritarias del producto.
 - Consecuencias: no se elimina código, API o datos ahora. `UX-001/#82` lo reevaluará únicamente con feedback o petición posterior, comparando mejorar, simplificar, ocultar o retirar de forma reversible.
+
+## D-032 — PROJECT ECHO prioriza encounters y familiaridad
+
+- Fecha: 2026-09-21
+- Estado: aceptada por el PO para ECHO-1
+- Decisión: distinguir `known player` con uno o más encuentros de `repeated player` con dos o más; hacer de la familiaridad histórica y sus jugadores conocidos la experiencia principal. Relaciones y posibles premades permanecen como contexto secundario, y el grafo pasa a una sección experimental sin nueva inversión.
+- Razón: estas capacidades ya se derivan de partidas persistidas y responden directamente a “¿ya jugué antes con esta persona?” sin competir con productos de estadísticas generales.
+- Consecuencias: `/known-players` incluye encuentros únicos, `/encounters` conserva recurrentes, y la UI prioriza matches analizados, conocidos, recurrentes, última partida y familiaridad.
+
+## D-033 — Actualización incremental de relaciones afectadas
+
+- Fecha: 2026-09-21
+- Estado: aceptada para ECHO-1
+- Decisión: después de ingerir partidas nuevas, recalcular y hacer upsert únicamente de las parejas canónicas afectadas usando las partidas persistidas en PostgreSQL; no borrar ni reconstruir el snapshot global en cada sincronización.
+- Razón: el reemplazo global crece con todo el corpus aunque una sincronización agregue pocas partidas.
+- Consecuencias: el cálculo mantiene orden determinista, `player_a_id < player_b_id`, idempotencia y exclusión transaccional. Una reconstrucción global queda como operación explícita de reparación, no como ruta ordinaria.
+
+## D-034 — Redis opcional mediante proveedor explícito
+
+- Fecha: 2026-09-21
+- Estado: aceptada para ECHO-1
+- Decisión: `CACHE_PROVIDER=memory` ejecuta API y worker sin Redis; `CACHE_PROVIDER=redis` conserva caché compartida y fallback local. PostgreSQL permanece como fuente de verdad.
+- Razón: Redis no aporta valor imprescindible para validar el MVP en una sola instancia y no debe bloquear readiness.
+- Consecuencias: Redis usa un perfil opcional de Compose y solo participa en el health check cuando está seleccionado.
+
+## D-035 — Retención de raw JSON pendiente de decisión
+
+- Fecha: 2026-09-21
+- Estado: pendiente del PO
+- Decisión: conservar `matches.raw_data` durante ECHO-1 como mecanismo de reprocesamiento, debugging controlado y compatibilidad futura. No fijar todavía una eliminación automática ni un periodo de retención.
+- Razón: borrar ahora impediría recalcular campos sin volver a consumir Riot; conservar indefinidamente también requiere una decisión informada de privacidad y coste.
+- Consecuencias: S7-002 deberá proponer y obtener aprobación para periodo, alcance de borrado/exportación y procedimiento operativo antes de la beta pública.

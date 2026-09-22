@@ -114,6 +114,10 @@ public sealed class RepeatedPlayerAnalyzerTests
             string puuid,
             CancellationToken cancellationToken) => throw new NotSupportedException();
 
+        public Task<IReadOnlyList<PlayerEncounterView>?> GetKnownPlayersAsync(
+            string puuid,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
         public Task<PagedPlayerMatches?> GetMatchesAsync(
             string puuid,
             int page,

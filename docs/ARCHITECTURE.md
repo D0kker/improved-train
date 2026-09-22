@@ -1,8 +1,8 @@
 # Arquitectura
 
-Última actualización: 2026-08-31
+Última actualización: 2026-09-22
 
-> Estado: Sprints 1–5 implementados. Sprint 6 inicia con jobs persistentes y operación avanzada.
+> Estado: Sprints 1–6 implementados. ECHO-1 enfoca el producto en encounters y familiaridad histórica.
 
 ## Contexto
 
@@ -18,8 +18,8 @@ flowchart LR
   Jobs --> Worker[Ingestion worker]
   API --> Postgres[(PostgreSQL)]
   Worker --> Postgres
-  API --> Redis[(Redis cache)]
-  Worker --> Redis
+  API -. opcional .-> Redis[(Redis cache)]
+  Worker -. opcional .-> Redis
   API --> Riot[Riot API]
   Worker --> Riot
 ```
@@ -28,7 +28,9 @@ Solo Next.js se publica al host. API, worker, PostgreSQL y Redis permanecen en l
 
 Cada proceso que llama a Riot usa un único `IRiotRateLimiter` para el routing regional configurado: limita concurrencia, comparte el cooldown indicado por `Retry-After` y permite cancelación. La ingesta masiva vive en el worker; esta primera versión no afirma coordinación distribuida entre réplicas y deberá evolucionar antes de escalar horizontalmente.
 
-`ICacheService` mantiene PostgreSQL como fuente de verdad. La implementación principal escribe en Redis con TTL e índice de tags, y conserva memoria local como fallback temporal cuando Redis falla. El resumen del jugador es el primer contrato cacheado; completar un job o terminar la sincronización síncrona invalida el tag hash del owner. Un miss o payload inválido vuelve a PostgreSQL y nunca modifica datos persistidos.
+`ICacheService` mantiene PostgreSQL como fuente de verdad. `CACHE_PROVIDER=memory` ejecuta el MVP sin Redis; `CACHE_PROVIDER=redis` usa Redis con TTL e índice de tags y conserva memoria local como fallback. El resumen del jugador es el primer contrato cacheado; completar un job o terminar la sincronización síncrona invalida el tag hash del owner. Un miss o payload inválido vuelve a PostgreSQL y nunca modifica datos persistidos.
+
+Las relaciones dejan de reconstruir y reemplazar el universo completo. Cada sincronización identifica las partidas nuevas y sus jugadores afectados; el analizador vuelve a calcular determinísticamente solo las parejas canónicas involucradas y el repositorio realiza upsert dentro de PostgreSQL. Reprocesar la misma partida no duplica relaciones.
 
 ## Monorepo implementado
 
@@ -66,10 +68,12 @@ docker-compose.yml
 8. Sprint 4 reconstruye `player_relationships` globalmente, clasifica evidencia como `possible premade`/`likely premade` y la expone mediante `/api/v1/players/{puuid}/relationships`; la UI muestra factores y lenguaje prudente.
 9. Sprint 5 expone una red ego acotada y la representa con SVG nativo más tabla equivalente; el detalle combina grupos visibles y familiaridad estrictamente anterior usando el owner transportado desde el historial.
 10. Abrir un perfil conocido es lectura local; sincronizar hasta 20 partidas exige una acción explícita.
+11. `/known-players` devuelve encounters con una o más apariciones; `/encounters` conserva el significado de recurrentes con dos o más.
+12. El detalle de partida calcula familiaridad y estadísticas de cada conocido usando solo partidas estrictamente anteriores.
 
 ## Dependencias e invariantes
 
-- PostgreSQL es fuente de verdad; Redis acelera pero no reemplaza persistencia.
+- PostgreSQL es fuente de verdad; Redis es opcional y solo acelera lecturas.
 - `players.puuid` y `matches.riot_match_id` son únicos.
 - `player_encounters` usa pareja dirigida `(owner_player_id, other_player_id)` y prohíbe autorrelaciones.
 - `player_relationships` usa pareja canónica `player_a_id < player_b_id`, conserva la suma same/opposite y limita el score a 0–100.
@@ -81,4 +85,4 @@ docker-compose.yml
 
 ## Despliegue previsto
 
-El runtime privado actual es Docker Compose, con volúmenes persistentes y health checks de web, API, worker, PostgreSQL y Redis. PostgreSQL 18 monta su volumen en `/var/lib/postgresql`; las aplicaciones corren no-root. Cloudflare Tunnel/Nginx, publicación web y AWS se incorporarán solo cuando el alcance correspondiente sea aprobado y validado.
+El runtime privado actual es Docker Compose, con volúmenes persistentes y health checks de web, API, worker y PostgreSQL. Redis añade su health check únicamente en modo `redis`. PostgreSQL 18 monta su volumen en `/var/lib/postgresql`; las aplicaciones corren no-root. Cloudflare Tunnel/Nginx, publicación web y cloud se incorporarán solo cuando el alcance correspondiente sea aprobado y validado.
