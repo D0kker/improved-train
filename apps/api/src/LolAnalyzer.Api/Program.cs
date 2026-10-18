@@ -29,6 +29,10 @@ if (apiConcurrencyLimit is < 1 or > 512 || apiQueueLimit is < 0 or > 1024)
 
 var riotOptions = builder.Configuration.GetSection(RiotOptions.SectionName).Get<RiotOptions>() ?? new RiotOptions();
 riotOptions.ApiKey = builder.Configuration["RIOT_API_KEY"] ?? riotOptions.ApiKey;
+if (string.IsNullOrWhiteSpace(riotOptions.ApiKey))
+{
+    riotOptions.ApiKey = builder.Configuration["Riot:ApiKey"] ?? string.Empty;
+}
 riotOptions.PlatformRegion = builder.Configuration["RIOT_PLATFORM_REGION"] ?? riotOptions.PlatformRegion;
 riotOptions.RegionalRouting = builder.Configuration["RIOT_REGIONAL_ROUTING"] ?? riotOptions.RegionalRouting;
 if (int.TryParse(builder.Configuration["RIOT_REQUEST_TIMEOUT_SECONDS"], out var configuredTimeout))
