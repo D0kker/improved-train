@@ -1,6 +1,6 @@
 # Roadmap
 
-Última actualización: 2026-09-22
+Última actualización: 2026-10-18
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
@@ -92,6 +92,10 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Eliminar operaciones de actualización masiva incompatibles con el proveedor InMemory y serializar transiciones de estado.
 - [x] Documentar la limitación de instancia única y pérdida de jobs al reiniciar.
 - [ ] Evolucionar a coordinación compartida únicamente junto con una decisión explícita de persistencia durable.
+
+## T03 — estadísticas y familiaridad
+
+- [x] Validar resumen, encuentros y familiaridad con fixtures InMemory completos, repetidos y parciales; 75 pruebas unitarias, 21 de integración y 14 frontend aprobadas. Evidencia en `docs/T03_STATISTICS_AUDIT.md`.
 
 ## Sprint 7 — planificado
 

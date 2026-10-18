@@ -24,35 +24,44 @@ public sealed class PlayerRepository(LolAnalyzerDbContext dbContext) : IPlayerRe
         string platformRegion,
         CancellationToken cancellationToken)
     {
-        var now = DateTimeOffset.UtcNow;
-        var player = await dbContext.Players.SingleOrDefaultAsync(
-            candidate => candidate.Puuid == puuid,
-            cancellationToken).ConfigureAwait(false);
-
-        if (player is null)
+        var gate = dbContext.Database.IsInMemory() ? MemoryIdentityGate.Instance : null;
+        if (gate is not null) await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            player = new Player
+            var now = DateTimeOffset.UtcNow;
+            var player = await dbContext.Players.SingleOrDefaultAsync(
+                candidate => candidate.Puuid == puuid,
+                cancellationToken).ConfigureAwait(false);
+
+            if (player is null)
             {
-                Puuid = puuid,
-                GameName = gameName,
-                TagLine = tagLine,
-                PlatformRegion = platformRegion,
-                CreatedAt = now,
-                UpdatedAt = now,
-                LastSeenAt = now,
-            };
-            dbContext.Players.Add(player);
-        }
-        else
-        {
-            player.GameName = gameName;
-            player.TagLine = tagLine;
-            player.PlatformRegion = platformRegion;
-            player.UpdatedAt = now;
-            player.LastSeenAt = now;
-        }
+                player = new Player
+                {
+                    Puuid = puuid,
+                    GameName = gameName,
+                    TagLine = tagLine,
+                    PlatformRegion = platformRegion,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    LastSeenAt = now,
+                };
+                dbContext.Players.Add(player);
+            }
+            else
+            {
+                player.GameName = gameName;
+                player.TagLine = tagLine;
+                player.PlatformRegion = platformRegion;
+                player.UpdatedAt = now;
+                player.LastSeenAt = now;
+            }
 
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return player;
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return player;
+        }
+        finally
+        {
+            gate?.Release();
+        }
     }
 }

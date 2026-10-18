@@ -71,7 +71,8 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
 
         var rows = await dbContext.MatchParticipants
             .AsNoTracking()
-            .Where(participant => participant.Match.Participants.Any(candidate => candidate.PlayerId == ownerId))
+            .Where(participant => participant.Match.RiotMatchId == targetRiotMatchId
+                || participant.Match.Participants.Any(candidate => candidate.PlayerId == ownerId))
             .Select(participant => new FamiliarityRow(
                 participant.Match.RiotMatchId,
                 participant.Match.GameEndTimestamp
@@ -83,7 +84,8 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
                 participant.Player.GameName,
                 participant.Player.TagLine,
                 participant.TeamId,
-                participant.Win))
+                participant.Win,
+                participant.Match.QueueId))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -93,7 +95,7 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
                 group.Key.RiotMatchId,
                 group.Key.OccurredAt,
                 group.Select(row => new FamiliarityParticipant(
-                    row.PlayerId,
+                    string.IsNullOrWhiteSpace(row.Puuid) ? null : row.PlayerId,
                     row.Puuid,
                     row.GameName,
                     row.TagLine,
@@ -108,7 +110,10 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
             return null;
         }
 
-        return new MatchFamiliarityInput(ownerId.Value, targetRiotMatchId, matches);
+        var queueId = rows.First(row => row.RiotMatchId == targetRiotMatchId).QueueId;
+        // Standard five-versus-five queues already supported by the UI.
+        int? expectedParticipantCount = queueId is 400 or 420 or 430 or 440 or 450 ? 10 : null;
+        return new MatchFamiliarityInput(ownerId.Value, targetRiotMatchId, matches, expectedParticipantCount);
     }
 
     public async Task ReplaceEncountersAsync(
@@ -130,22 +135,28 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
                 .Where(encounter => encounter.OwnerPlayerId == ownerPlayerId)
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
-            dbContext.PlayerEncounters.RemoveRange(existingEncounters);
+            var retainedIds = encounters.Select(encounter => encounter.OtherPlayerId).ToHashSet();
+            dbContext.PlayerEncounters.RemoveRange(existingEncounters.Where(encounter => !retainedIds.Contains(encounter.OtherPlayerId)));
 
-        dbContext.PlayerEncounters.AddRange(encounters.Select(encounter => new PlayerEncounter
-        {
-            OwnerPlayerId = ownerPlayerId,
-            OtherPlayerId = encounter.OtherPlayerId,
-            TotalMatches = encounter.TotalMatches,
-            SameTeamMatches = encounter.SameTeamMatches,
-            EnemyTeamMatches = encounter.EnemyTeamMatches,
-            WinsTogether = encounter.WinsTogether,
-            LossesTogether = encounter.LossesTogether,
-            WinsAgainst = encounter.WinsAgainst,
-            LossesAgainst = encounter.LossesAgainst,
-            FirstSeenAt = encounter.FirstSeenAt,
-            LastSeenAt = encounter.LastSeenAt,
-        }));
+            var byId = existingEncounters.ToDictionary(encounter => encounter.OtherPlayerId);
+            foreach (var encounter in encounters)
+            {
+                if (!byId.TryGetValue(encounter.OtherPlayerId, out var entity))
+                {
+                    entity = new PlayerEncounter { OwnerPlayerId = ownerPlayerId, OtherPlayerId = encounter.OtherPlayerId };
+                    dbContext.PlayerEncounters.Add(entity);
+                }
+
+                entity.TotalMatches = encounter.TotalMatches;
+                entity.SameTeamMatches = encounter.SameTeamMatches;
+                entity.EnemyTeamMatches = encounter.EnemyTeamMatches;
+                entity.WinsTogether = encounter.WinsTogether;
+                entity.LossesTogether = encounter.LossesTogether;
+                entity.WinsAgainst = encounter.WinsAgainst;
+                entity.LossesAgainst = encounter.LossesAgainst;
+                entity.FirstSeenAt = encounter.FirstSeenAt;
+                entity.LastSeenAt = encounter.LastSeenAt;
+            }
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             if (transaction is not null)
             {
@@ -175,35 +186,44 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
         var results = await dbContext.MatchParticipants
             .AsNoTracking()
             .Where(participant => participant.PlayerId == player.Id)
-            .Select(participant => new { participant.Win, participant.Match.CreatedAt })
+            .Select(participant => new { participant.MatchId, participant.Win, participant.Match.CreatedAt })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        var uniquePlayers = await dbContext.PlayerEncounters
+        var ownerResults = results.DistinctBy(result => result.MatchId).ToArray();
+        var ownerMatchIds = ownerResults.Select(result => result.MatchId).ToArray();
+        var otherRows = await dbContext.MatchParticipants
             .AsNoTracking()
-            .CountAsync(encounter => encounter.OwnerPlayerId == player.Id, cancellationToken)
+            .Where(participant => ownerMatchIds.Contains(participant.MatchId)
+                && participant.Player.Puuid != puuid && participant.Player.Puuid != "")
+            .Select(participant => new { participant.MatchId, participant.Player.Puuid })
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
-        var repeatedPlayers = await dbContext.PlayerEncounters
-            .AsNoTracking()
-            .CountAsync(
-                encounter => encounter.OwnerPlayerId == player.Id && encounter.TotalMatches >= 2,
-                cancellationToken)
-            .ConfigureAwait(false);
-        var wins = results.Count(result => result.Win);
-        var dataUpdatedAt = results.Count == 0
+        var participations = otherRows
+            .Where(row => !string.IsNullOrWhiteSpace(row.Puuid))
+            .DistinctBy(row => (row.MatchId, row.Puuid))
+            .ToArray();
+        var playersByPuuid = participations.GroupBy(row => row.Puuid, StringComparer.Ordinal).ToArray();
+        var uniquePlayers = playersByPuuid.Length;
+        var repeatedPlayers = playersByPuuid.Count(group => group.Count() >= 2);
+        var wins = ownerResults.Count(result => result.Win);
+        var dataUpdatedAt = ownerResults.Length == 0
             ? player.UpdatedAt
-            : results.Max(result => result.CreatedAt);
+            : ownerResults.Max(result => result.CreatedAt);
 
         return new PlayerSummary(
             player.Puuid,
             player.GameName,
             player.TagLine,
-            results.Count,
+            ownerResults.Length,
             wins,
-            results.Count - wins,
-            results.Count == 0 ? 0 : Math.Round(wins * 100d / results.Count, 1),
+            ownerResults.Length - wins,
+            ownerResults.Length == 0 ? 0 : Math.Round(wins * 100d / ownerResults.Length, 1),
             uniquePlayers,
             repeatedPlayers,
-            dataUpdatedAt);
+            dataUpdatedAt)
+        {
+            OtherPlayerParticipations = participations.Length,
+        };
     }
 
     public async Task<IReadOnlyList<PlayerEncounterView>?> GetRepeatedPlayersAsync(
@@ -361,5 +381,6 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
         string GameName,
         string TagLine,
         int TeamId,
-        bool Win);
+        bool Win,
+        int? QueueId);
 }

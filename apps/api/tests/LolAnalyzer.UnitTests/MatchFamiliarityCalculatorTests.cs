@@ -171,6 +171,23 @@ public sealed class MatchFamiliarityCalculatorTests
     }
 
     [Fact]
+    public void CompleteLobbyHasAtMostNineOthersAndMissingRosterIsPartial()
+    {
+        var players = Enumerable.Range(1, 10).Select(Id).ToArray();
+        var prior = Match("MATCH-1", BaseTime, players);
+        var target = Match("MATCH-2", BaseTime.AddHours(1), players);
+        var full = MatchFamiliarityCalculator.Calculate(new MatchFamiliarityInput(OwnerId, "MATCH-2", [prior, target], 10));
+        Assert.Equal(9, full.KnownPlayers);
+        Assert.Equal(9, full.EvaluablePlayers);
+        Assert.Equal(100, full.FamiliarityPercentage);
+        Assert.Equal(MatchFamiliarityStatus.Available, full.Status);
+        var missing = target with { Participants = target.Participants.Take(9).ToArray() };
+        var partial = MatchFamiliarityCalculator.Calculate(new MatchFamiliarityInput(OwnerId, "MATCH-2", [prior, missing], 10));
+        Assert.Equal(MatchFamiliarityStatus.PartialParticipants, partial.Status);
+        Assert.Equal(8, partial.EvaluablePlayers);
+    }
+
+    [Fact]
     public void RejectsDuplicateMatchIds()
     {
         var input = new MatchFamiliarityInput(

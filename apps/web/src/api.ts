@@ -15,6 +15,7 @@ export interface PlayerSummary {
   winRate: number;
   uniquePlayersEncountered: number;
   repeatedPlayers: number;
+  otherPlayerParticipations?: number;
   dataUpdatedAt: string;
 }
 
@@ -170,7 +171,8 @@ export interface MatchFamiliarity {
     | "Available"
     | "NoPriorHistory"
     | "NoEvaluableParticipants"
-    | "OwnerNotPresent";
+    | "OwnerNotPresent"
+    | "PartialParticipants";
   knownPlayerDetails: MatchKnownPlayer[];
 }
 
@@ -197,6 +199,14 @@ export interface MatchDetail {
   teams: MatchTeam[];
   premadeGroups: MatchPremadeGroup[];
   familiarity: MatchFamiliarity | null;
+}
+
+export interface MatchSyncResult {
+  matchIdsReturned: number;
+  alreadyStored: number;
+  downloaded: number;
+  notFound: number;
+  failed: number;
 }
 
 export class ApiError extends Error {

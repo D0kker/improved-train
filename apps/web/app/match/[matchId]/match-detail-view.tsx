@@ -11,6 +11,7 @@ import {
   type MatchKnownPlayer,
   type MatchPremadeGroup,
   type MatchParticipant,
+  type MatchSyncResult,
 } from "@/src/api";
 import { formatDate, formatDuration, queueLabel } from "@/src/format";
 import {
@@ -21,7 +22,12 @@ import {
 } from "@/src/premade-groups";
 import { ChampionIcon } from "@/src/champion-icon";
 import { PlayerProfileLink } from "@/src/player-profile-link";
-import { familiarityMessage, latestMatchSyncPlan } from "@/src/echo";
+import {
+  familiarityMessage,
+  historyAnalysisStatus,
+  latestMatchSyncPlan,
+  type HistoryAnalysisStatus,
+} from "@/src/echo";
 
 export function MatchDetailView({
   matchId,
@@ -35,11 +41,14 @@ export function MatchDetailView({
   const [warning, setWarning] = useState<string | null>(null);
   const [isRefreshingHistory, setIsRefreshingHistory] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [historyStatus, setHistoryStatus] =
+    useState<HistoryAnalysisStatus>("insufficient");
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     setWarning(null);
+    setHistoryStatus("insufficient");
     try {
       const path = ownerPuuid
         ? `${apiPath("matches", matchId)}?ownerPuuid=${encodeURIComponent(ownerPuuid)}`
@@ -50,7 +59,7 @@ export function MatchDetailView({
         setIsRefreshingHistory(syncPlan.length > 0);
         const syncResults = await Promise.allSettled(
           syncPlan.map((target) =>
-            fetchJson<unknown>(
+            fetchJson<MatchSyncResult>(
               playerSyncPath(
                 target.puuid,
                 target.count,
@@ -62,17 +71,26 @@ export function MatchDetailView({
             ),
           ),
         );
+        const analysisStatus = historyAnalysisStatus(syncResults);
+        setHistoryStatus(analysisStatus);
         const failedTargets = syncResults.filter(
           (result) => result.status === "rejected",
         ).length;
         setIsRefreshingHistory(false);
-        if (failedTargets > 0) {
+        if (analysisStatus === "partial" || analysisStatus === "error") {
           setWarning(
             "No se pudo actualizar todo el historial; mostramos la evidencia local disponible.",
           );
         }
         if (failedTargets < syncPlan.length) {
-          loadedMatch = await fetchJson<MatchDetail>(path);
+          try {
+            loadedMatch = await fetchJson<MatchDetail>(path);
+          } catch {
+            setHistoryStatus("partial");
+            setWarning(
+              "No se pudo actualizar el resultado del análisis; mostramos la evidencia cargada inicialmente.",
+            );
+          }
         }
       }
       setMatch(loadedMatch);
@@ -152,7 +170,10 @@ export function MatchDetailView({
               </div>
             </section>
 
-            <FamiliaritySummary familiarity={match.familiarity} />
+            <FamiliaritySummary
+              familiarity={match.familiarity}
+              historyStatus={historyStatus}
+            />
 
             <PremadeSummary
               groups={match.premadeGroups}
@@ -183,8 +204,10 @@ export function MatchDetailView({
 
 function FamiliaritySummary({
   familiarity,
+  historyStatus,
 }: {
   familiarity: MatchDetail["familiarity"];
+  historyStatus: HistoryAnalysisStatus;
 }) {
   if (!familiarity) {
     return (
@@ -206,14 +229,21 @@ function FamiliaritySummary({
     >
       <div>
         <p className="eyebrow">Familiaridad</p>
-        <h2 id="familiarity-title">{familiarityMessage(familiarity)}</h2>
+        <h2 id="familiarity-title">
+          {familiarityMessage(familiarity, historyStatus)}
+        </h2>
         <p className="muted-copy">
           Solo usa partidas estrictamente anteriores.
         </p>
       </div>
       <div className="familiarity-value">
-        <strong>{familiarity.familiarityPercentage}%</strong>
-        <span>{familiarity.unknownPlayers} no conocidos</span>
+        <strong>
+          {historyStatus === "complete" && familiarity.status === "Available"
+            ? `${familiarity.familiarityPercentage}%`
+            : "—"}
+        </strong>
+        <span>{familiarity.evaluablePlayers} jugadores evaluables</span>
+        <span>{familiarity.knownPlayers} con antecedentes detectados</span>
       </div>
     </section>
   );

@@ -1,4 +1,5 @@
 using LolAnalyzer.Application.Jobs;
+using Xunit;
 
 namespace LolAnalyzer.UnitTests;
 

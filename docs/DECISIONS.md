@@ -318,3 +318,11 @@
 - Decisión: los jobs creados por la API se procesan en el mismo proceso mediante `BackgroundService` y un `Channel<Guid>` acotado. El repositorio InMemory usa mutaciones EF rastreadas y un candado de proceso en vez de operaciones SQL relacionales.
 - Razón: el ingestion-worker no está declarado en Compose y usa otro almacén InMemory; no puede compartir los jobs de la API.
 - Consecuencias: los jobs y resultados se pierden al reiniciar y la capacidad queda limitada a una instancia. La coordinación compartida queda para una decisión futura de persistencia durable.
+
+## D-041 — Métricas de corpus y cobertura histórica explícita
+
+- Fecha: 2026-10-18
+- Estado: aplicada para T03
+- Decisión: el resumen describe todas las partidas disponibles del owner en InMemory; cinco es el tamaño inicial de consulta. Únicos se deduplica por PUUID y participaciones por (Match ID, PUUID). Familiaridad y grupos de un lobby usan solo evidencia anterior al objetivo. Las vistas distinguen cobertura parcial, insuficiente y error del cero evaluable.
+- Razón: los historiales de participantes se solapan y pueden ampliar el corpus del owner; contar filas, reutilizar agregados globales como evidencia previa o ignorar errores parciales produciría cifras engañosas.
+- Consecuencias: se conserva el contrato previo con un contador adicional de participaciones y un estado de roster parcial; el porcentaje definitivo solo se presenta con cobertura evaluable. El GET local no certifica cobertura de Riot. Una ventana aislada por consulta necesitaría un contrato posterior explícito.

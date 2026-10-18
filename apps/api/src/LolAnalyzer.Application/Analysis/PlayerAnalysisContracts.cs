@@ -47,7 +47,8 @@ public sealed record FamiliarityMatch(
 public sealed record MatchFamiliarityInput(
     Guid OwnerPlayerId,
     string TargetRiotMatchId,
-    IReadOnlyList<FamiliarityMatch> Matches);
+    IReadOnlyList<FamiliarityMatch> Matches,
+    int? ExpectedParticipantCount = null);
 
 public enum MatchFamiliarityStatus
 {
@@ -55,6 +56,7 @@ public enum MatchFamiliarityStatus
     NoPriorHistory,
     NoEvaluableParticipants,
     OwnerNotPresent,
+    PartialParticipants,
 }
 
 public sealed record MatchFamiliarityResult(
@@ -80,6 +82,8 @@ public sealed record PlayerSummary(
     DateTimeOffset DataUpdatedAt)
 {
     public int KnownPlayers => UniquePlayersEncountered;
+
+    public int OtherPlayerParticipations { get; init; }
 }
 
 public sealed record PlayerEncounterView(

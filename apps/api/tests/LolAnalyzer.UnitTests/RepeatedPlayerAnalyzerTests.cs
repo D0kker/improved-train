@@ -56,6 +56,14 @@ public sealed class RepeatedPlayerAnalyzerTests
     }
 
     [Fact]
+    public void SharedMatchesAndUnidentifiablePlayersDoNotInflateEncounters()
+    {
+        var match = Match(DateTimeOffset.UnixEpoch, true, (AllyId, 100), (Guid.Empty, 200));
+        var result = RepeatedPlayerAnalyzer.Analyze(new PlayerAnalysisInput(OwnerId, [match, match]));
+        Assert.Equal(1, Assert.Single(result).TotalMatches);
+    }
+
+    [Fact]
     public async Task RebuildAsyncReplacesTheOwnersSnapshotOnEveryRun()
     {
         var repository = new RecordingAnalysisRepository(new PlayerAnalysisInput(

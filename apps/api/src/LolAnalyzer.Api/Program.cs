@@ -385,6 +385,7 @@ app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
             result.Downloaded,
             result.Persisted,
             result.NotFound,
+            result.Failed,
             Analysis = analysis,
             RelationshipAnalysis = relationshipAnalysis,
         });

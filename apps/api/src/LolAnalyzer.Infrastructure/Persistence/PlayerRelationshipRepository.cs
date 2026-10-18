@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LolAnalyzer.Infrastructure.Persistence;
 
-public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext) : IPlayerRelationshipRepository
+public sealed class PlayerRelationshipRepository(
+    LolAnalyzerDbContext dbContext,
+    PlayerRelationshipAnalyzer analyzer) : IPlayerRelationshipRepository
 {
     private const string RelationshipUpdateLockSql =
         "SELECT pg_advisory_xact_lock(hashtextextended('lol-analyzer:player-relationships', 0));";
@@ -257,23 +259,17 @@ public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext)
         }
 
         var playerIds = participants.Select(participant => participant.PlayerId).ToArray();
-        var relationships = await dbContext.PlayerRelationships
-            .AsNoTracking()
-            .Where(relationship =>
-                playerIds.Contains(relationship.PlayerAId)
-                && playerIds.Contains(relationship.PlayerBId))
-            .OrderBy(relationship => relationship.PlayerAId)
-            .ThenBy(relationship => relationship.PlayerBId)
-            .Select(relationship => new
-            {
-                relationship.PlayerAId,
-                relationship.PlayerBId,
-                relationship.MatchesTogether,
-                relationship.SameTeamMatches,
-                relationship.RelationshipConfidence,
-            })
-            .ToArrayAsync(cancellationToken)
+        var target = await dbContext.Matches.AsNoTracking()
+            .SingleAsync(match => match.RiotMatchId == riotMatchId, cancellationToken)
             .ConfigureAwait(false);
+        var targetTime = target.GameEndTimestamp ?? target.GameStartTimestamp ?? target.GameCreation ?? target.CreatedAt;
+        var timeline = await LoadTimelineMatchesAsync(playerIds, 200, cancellationToken).ConfigureAwait(false);
+        // Global aggregates include the target and possibly newer matches. They
+        // cannot serve as historical evidence for this lobby.
+        var relationships = analyzer.Analyze(timeline.Where(match => match.MatchId != riotMatchId &&
+            (match.OccurredAt < targetTime || (match.OccurredAt == targetTime &&
+                string.CompareOrdinal(match.MatchId, riotMatchId) < 0))).ToArray())
+            .Where(relationship => playerIds.Contains(relationship.PlayerAId) && playerIds.Contains(relationship.PlayerBId));
 
         return new MatchPremadeGroupInput(
             participants,

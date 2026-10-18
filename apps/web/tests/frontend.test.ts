@@ -34,6 +34,7 @@ import {
 import { browserSecurityHeaders } from "../src/security-headers.ts";
 import {
   familiarityMessage,
+  historyAnalysisStatus,
   knownPlayerCount,
   latestMatchSyncPlan,
   repeatedPlayerCount,
@@ -165,13 +166,68 @@ test("presentation helpers normalize percentages and durations", () => {
 
 test("ECHO distinguishes known and repeated players", () => {
   const encounters = [
-    { totalMatches: 1 },
-    { totalMatches: 2 },
-    { totalMatches: 7 },
+    { totalMatches: 1, otherPlayerPuuid: "one" },
+    { totalMatches: 2, otherPlayerPuuid: "two" },
+    { totalMatches: 7, otherPlayerPuuid: "three" },
+    { totalMatches: 7, otherPlayerPuuid: "three" },
+    { totalMatches: 2, otherPlayerPuuid: "" },
+    { totalMatches: 2, otherPlayerPuuid: "owner" },
   ] as Parameters<typeof knownPlayerCount>[0];
 
-  assert.equal(knownPlayerCount(encounters), 3);
-  assert.equal(repeatedPlayerCount(encounters), 2);
+  assert.equal(knownPlayerCount(encounters, "owner"), 3);
+  assert.equal(repeatedPlayerCount(encounters, "owner"), 2);
+});
+
+test("partial HTTP successes and failed syncs never become definitive zero familiarity", () => {
+  const complete = {
+    matchIdsReturned: 3,
+    alreadyStored: 1,
+    downloaded: 2,
+    notFound: 0,
+    failed: 0,
+  };
+  const fulfilled = { status: "fulfilled" as const, value: complete };
+  assert.equal(historyAnalysisStatus([fulfilled]), "complete");
+  assert.equal(
+    historyAnalysisStatus([
+      fulfilled,
+      { status: "rejected", reason: new Error("mock") },
+    ]),
+    "partial",
+  );
+  assert.equal(
+    historyAnalysisStatus([
+      { ...fulfilled, value: { ...complete, downloaded: 1, failed: 1 } },
+    ]),
+    "partial",
+  );
+  assert.equal(
+    historyAnalysisStatus([{ status: "rejected", reason: new Error("mock") }]),
+    "error",
+  );
+  assert.equal(historyAnalysisStatus([]), "insufficient");
+  const familiarity = {
+    knownPlayers: 0,
+    unknownPlayers: 9,
+    evaluablePlayers: 9,
+    familiarityPercentage: 0,
+    status: "Available" as const,
+    knownPlayerDetails: [],
+  };
+  assert.match(familiarityMessage(familiarity, "partial"), /Análisis parcial/);
+  assert.match(familiarityMessage(familiarity, "error"), /Error de análisis/);
+  assert.match(
+    familiarityMessage(familiarity),
+    /No se detectaron coincidencias/,
+  );
+  assert.match(
+    familiarityMessage({ ...familiarity, status: "NoPriorHistory" }),
+    /Información insuficiente/,
+  );
+  assert.match(
+    familiarityMessage({ ...familiarity, status: "PartialParticipants" }),
+    /Análisis parcial/,
+  );
 });
 
 test("ECHO familiarity copy answers the central match question", () => {

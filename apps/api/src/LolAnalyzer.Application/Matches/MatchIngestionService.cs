@@ -1,6 +1,8 @@
 using LolAnalyzer.Application.Riot;
 using LolAnalyzer.Application.Observability;
+using LolAnalyzer.Application.Caching;
 using System.Diagnostics;
+using System.Text.Json;
 
 namespace LolAnalyzer.Application.Matches;
 
@@ -8,7 +10,8 @@ public sealed class MatchIngestionService(
     IRiotApiClient riotApiClient,
     IMatchRepository matchRepository,
     MatchIngestionOptions options,
-    OperationalMetrics metrics)
+    OperationalMetrics metrics,
+    ICacheService? cache = null)
 {
     public async Task<MatchSyncResult> SynchronizeAsync(
         string puuid,
@@ -85,11 +88,16 @@ public sealed class MatchIngestionService(
                 {
                     Interlocked.Increment(ref failedDownloads);
                 }
+                catch (JsonException)
+                {
+                    Interlocked.Increment(ref failedDownloads);
+                }
             }).ConfigureAwait(false);
 
         var persistedCount = 0;
         var persistedMatchIds = new List<string>();
         var notFoundCount = 0;
+        var affectedPlayers = new HashSet<string>(StringComparer.Ordinal);
         foreach (var downloadedMatch in downloadedMatches)
         {
             if (downloadedMatch is null)
@@ -104,6 +112,15 @@ public sealed class MatchIngestionService(
             {
                 persistedCount++;
                 persistedMatchIds.Add(downloadedMatch.RiotMatchId);
+                affectedPlayers.UnionWith(downloadedMatch.Participants.Select(participant => participant.Puuid));
+            }
+        }
+
+        if (cache is not null)
+        {
+            foreach (var affectedPuuid in affectedPlayers.Where(value => !string.IsNullOrWhiteSpace(value)))
+            {
+                await cache.RemoveTagAsync(PlayerCacheKeys.Tag(affectedPuuid), cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -115,7 +132,7 @@ public sealed class MatchIngestionService(
             AlreadyStored: existingMatchIds.Count,
             Downloaded: downloadedMatches.Count(match => match is not null),
             Persisted: persistedCount,
-            NotFound: notFoundCount,
+            NotFound: notFoundCount - failedDownloads,
             Failed: failedDownloads,
             PersistedMatchIds: persistedMatchIds);
     }

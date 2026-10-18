@@ -93,6 +93,7 @@ public sealed class MatchPremadeGroupService(
         CancellationToken cancellationToken)
     {
         var participantsByPuuid = input.Participants.ToDictionary(participant => participant.Puuid);
+        var target = await analysisRepository.GetMatchDetailAsync(targetRiotMatchId, cancellationToken).ConfigureAwait(false);
         var matches = await analysisRepository
             .GetMatchesAsync(ownerPuuid, 1, options.RecentOwnerMatchCount, null, cancellationToken)
             .ConfigureAwait(false);
@@ -105,6 +106,12 @@ public sealed class MatchPremadeGroupService(
         foreach (var item in matches.Items)
         {
             if (string.Equals(item.RiotMatchId, targetRiotMatchId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (target?.GameStartTimestamp is not { } targetTime || item.GameStartTimestamp is not { } itemTime
+                || itemTime > targetTime || (itemTime == targetTime && string.CompareOrdinal(item.RiotMatchId, targetRiotMatchId) >= 0))
             {
                 continue;
             }

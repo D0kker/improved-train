@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 using LolAnalyzer.Application.Matches;
 using LolAnalyzer.Application.Riot;
@@ -10,8 +9,6 @@ namespace LolAnalyzer.Infrastructure.Persistence;
 
 public sealed class MatchRepository(LolAnalyzerDbContext dbContext) : IMatchRepository
 {
-    private static readonly ConcurrentDictionary<string, SemaphoreSlim> InMemoryLocks = new(StringComparer.Ordinal);
-
     public async Task<IReadOnlySet<string>> FindExistingRiotMatchIdsAsync(
         IReadOnlyCollection<string> riotMatchIds,
         CancellationToken cancellationToken)
@@ -58,112 +55,112 @@ public sealed class MatchRepository(LolAnalyzerDbContext dbContext) : IMatchRepo
         }
         else
         {
-            inMemoryLock = InMemoryLocks.GetOrAdd(match.RiotMatchId, _ => new SemaphoreSlim(1, 1));
+            inMemoryLock = MemoryIdentityGate.Instance;
             await inMemoryLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
         try
         {
-        if (await dbContext.Matches.AnyAsync(
-                existing => existing.RiotMatchId == match.RiotMatchId,
-                cancellationToken).ConfigureAwait(false))
-        {
+            if (await dbContext.Matches.AnyAsync(
+                    existing => existing.RiotMatchId == match.RiotMatchId,
+                    cancellationToken).ConfigureAwait(false))
+            {
+                if (transaction is not null)
+                {
+                    await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+                }
+                return false;
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            var participantsByPuuid = match.Participants
+                .GroupBy(participant => participant.Puuid, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+            var participantPuuids = participantsByPuuid.Keys.ToArray();
+            var knownPlayers = await dbContext.Players
+                .Where(player => participantPuuids.Contains(player.Puuid))
+                .ToDictionaryAsync(player => player.Puuid, StringComparer.Ordinal, cancellationToken)
+                .ConfigureAwait(false);
+
+            foreach (var participant in participantsByPuuid.Values)
+            {
+                if (knownPlayers.TryGetValue(participant.Puuid, out var player))
+                {
+                    if (!string.IsNullOrWhiteSpace(participant.GameName))
+                    {
+                        player.GameName = participant.GameName;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(participant.TagLine))
+                    {
+                        player.TagLine = participant.TagLine;
+                    }
+
+                    player.PlatformRegion = platformRegion;
+                    player.UpdatedAt = now;
+                    player.LastSeenAt = now;
+                    continue;
+                }
+
+                player = new Player
+                {
+                    Puuid = participant.Puuid,
+                    GameName = participant.GameName ?? "Unknown",
+                    TagLine = participant.TagLine ?? "Unknown",
+                    PlatformRegion = platformRegion,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    LastSeenAt = now,
+                };
+                knownPlayers.Add(player.Puuid, player);
+                dbContext.Players.Add(player);
+            }
+
+            var persistedMatch = new Match
+            {
+                RiotMatchId = match.RiotMatchId,
+                QueueId = match.QueueId,
+                GameCreation = match.GameCreation,
+                GameStartTimestamp = match.GameStartTimestamp,
+                GameEndTimestamp = match.GameEndTimestamp,
+                GameDurationSeconds = match.GameDurationSeconds,
+                GameVersion = match.GameVersion,
+                RawData = JsonDocument.Parse(match.RawJson),
+                CreatedAt = now,
+            };
+            dbContext.Matches.Add(persistedMatch);
+
+            foreach (var participant in participantsByPuuid.Values)
+            {
+                dbContext.MatchParticipants.Add(new MatchParticipant
+                {
+                    Match = persistedMatch,
+                    Player = knownPlayers[participant.Puuid],
+                    TeamId = participant.TeamId,
+                    ParticipantId = participant.ParticipantId,
+                    ChampionId = participant.ChampionId,
+                    ChampionName = participant.ChampionName,
+                    TeamPosition = participant.TeamPosition,
+                    IndividualPosition = participant.IndividualPosition,
+                    Kills = participant.Kills,
+                    Deaths = participant.Deaths,
+                    Assists = participant.Assists,
+                    Win = participant.Win,
+                    GoldEarned = participant.GoldEarned,
+                    TotalDamageDealtToChampions = participant.TotalDamageDealtToChampions,
+                    VisionScore = participant.VisionScore,
+                    Cs = participant.Cs,
+                    CreatedAt = now,
+                });
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             if (transaction is not null)
             {
                 await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             }
-            return false;
-        }
 
-        var now = DateTimeOffset.UtcNow;
-        var participantsByPuuid = match.Participants
-            .GroupBy(participant => participant.Puuid, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-        var participantPuuids = participantsByPuuid.Keys.ToArray();
-        var knownPlayers = await dbContext.Players
-            .Where(player => participantPuuids.Contains(player.Puuid))
-            .ToDictionaryAsync(player => player.Puuid, StringComparer.Ordinal, cancellationToken)
-            .ConfigureAwait(false);
-
-        foreach (var participant in participantsByPuuid.Values)
-        {
-            if (knownPlayers.TryGetValue(participant.Puuid, out var player))
-            {
-                if (!string.IsNullOrWhiteSpace(participant.GameName))
-                {
-                    player.GameName = participant.GameName;
-                }
-
-                if (!string.IsNullOrWhiteSpace(participant.TagLine))
-                {
-                    player.TagLine = participant.TagLine;
-                }
-
-                player.PlatformRegion = platformRegion;
-                player.UpdatedAt = now;
-                player.LastSeenAt = now;
-                continue;
-            }
-
-            player = new Player
-            {
-                Puuid = participant.Puuid,
-                GameName = participant.GameName ?? "Unknown",
-                TagLine = participant.TagLine ?? "Unknown",
-                PlatformRegion = platformRegion,
-                CreatedAt = now,
-                UpdatedAt = now,
-                LastSeenAt = now,
-            };
-            knownPlayers.Add(player.Puuid, player);
-            dbContext.Players.Add(player);
-        }
-
-        var persistedMatch = new Match
-        {
-            RiotMatchId = match.RiotMatchId,
-            QueueId = match.QueueId,
-            GameCreation = match.GameCreation,
-            GameStartTimestamp = match.GameStartTimestamp,
-            GameEndTimestamp = match.GameEndTimestamp,
-            GameDurationSeconds = match.GameDurationSeconds,
-            GameVersion = match.GameVersion,
-            RawData = JsonDocument.Parse(match.RawJson),
-            CreatedAt = now,
-        };
-        dbContext.Matches.Add(persistedMatch);
-
-        foreach (var participant in participantsByPuuid.Values)
-        {
-            dbContext.MatchParticipants.Add(new MatchParticipant
-            {
-                Match = persistedMatch,
-                Player = knownPlayers[participant.Puuid],
-                TeamId = participant.TeamId,
-                ParticipantId = participant.ParticipantId,
-                ChampionId = participant.ChampionId,
-                ChampionName = participant.ChampionName,
-                TeamPosition = participant.TeamPosition,
-                IndividualPosition = participant.IndividualPosition,
-                Kills = participant.Kills,
-                Deaths = participant.Deaths,
-                Assists = participant.Assists,
-                Win = participant.Win,
-                GoldEarned = participant.GoldEarned,
-                TotalDamageDealtToChampions = participant.TotalDamageDealtToChampions,
-                VisionScore = participant.VisionScore,
-                Cs = participant.Cs,
-                CreatedAt = now,
-            });
-        }
-
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        if (transaction is not null)
-        {
-            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        return true;
+            return true;
         }
         finally
         {
@@ -175,7 +172,6 @@ public sealed class MatchRepository(LolAnalyzerDbContext dbContext) : IMatchRepo
             if (inMemoryLock is not null)
             {
                 inMemoryLock.Release();
-                InMemoryLocks.TryRemove(new KeyValuePair<string, SemaphoreSlim>(match.RiotMatchId, inMemoryLock));
             }
         }
     }

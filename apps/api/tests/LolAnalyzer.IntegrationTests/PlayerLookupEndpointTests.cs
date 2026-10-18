@@ -81,6 +81,7 @@ public sealed class PlayerLookupEndpointTests : IClassFixture<LolAnalyzerApiFact
         using var body = JsonDocument.Parse(await response.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken));
         Assert.Equal(1, body.RootElement.GetProperty("downloaded").GetInt32());
         Assert.Equal(1, body.RootElement.GetProperty("persisted").GetInt32());
+        Assert.Equal(0, body.RootElement.GetProperty("failed").GetInt32());
         Assert.Equal(
             0,
             body.RootElement.GetProperty("relationshipAnalysis").GetProperty("relationshipsRebuilt").GetInt32());

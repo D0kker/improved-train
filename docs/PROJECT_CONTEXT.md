@@ -8,6 +8,9 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 
 ## Estado real
 
+- T03 revisa estadísticas y familiaridad sobre `648a74a` en `feature/echo-product-focus`: resumen por Match ID/PUUID, participaciones separadas de únicos/recurrentes, cobertura parcial explícita y premades con evidencia estrictamente anterior. Diagnóstico, alcance del corpus y pruebas: `docs/T03_STATISTICS_AUDIT.md`. Se conserva InMemory y el dispatcher de T02; no se ha desplegado T03.
+- T03: 75 pruebas unitarias .NET, 21 de integración y 14 frontend aprobadas; lint, type-check, formato, build Next.js, build Release API, Compose e imágenes API/web validados sin consultas reales a Riot.
+
 - ECHO-1 está implementado en `feature/echo-product-focus`: PROJECT ECHO prioriza conocidos, recurrentes y familiaridad histórica sin ampliar la frontera de partidas terminadas.
 - `GET /api/v1/players/{puuid}/known-players` incluye encounters con una aparición; `/encounters` conserva recurrentes con dos o más.
 - El detalle de partida expone dentro de la tarjeta de inferencia histórica quiénes eran conocidos y sus conteos aliado/rival, resultados y fechas usando exclusivamente partidas anteriores a la partida objetivo; no mantiene una tarjeta principal separada de “Known players”.

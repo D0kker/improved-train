@@ -10,9 +10,9 @@ import {
   type ActiveGame,
   type MatchDetail,
   type MatchesResponse,
-  type PlayerEncounter,
   type PlayerLookup,
   type PlayerSummary,
+  type MatchSyncResult,
   playerLookupPath,
   matchDetailPath,
   playerSyncPath,
@@ -20,10 +20,10 @@ import {
 import { formatDate, formatDuration, queueLabel } from "@/src/format";
 import {
   familiarityMessage,
-  knownPlayerCount,
+  historyAnalysisStatus,
+  type HistoryAnalysisStatus,
   latestMatchSyncPlan,
   latestMatchSyncConfig,
-  repeatedPlayerCount,
 } from "@/src/echo";
 import { ChampionIcon } from "@/src/champion-icon";
 
@@ -35,10 +35,10 @@ interface PlayerDashboardProps {
 interface DashboardData {
   player: PlayerLookup;
   summary: PlayerSummary;
-  encounters: PlayerEncounter[];
   matches: MatchesResponse;
   latestMatch: MatchDetail | null;
   activeGame: ActiveGame | null;
+  historyStatus: HistoryAnalysisStatus;
 }
 
 type LoadingStep = "lookup" | "sync" | "results";
@@ -71,10 +71,11 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
         );
 
         let syncWarning: string | null = null;
+        let initialSyncIncomplete = false;
         if (synchronize) {
           setStep("sync");
           try {
-            await fetchJson<unknown>(
+            const syncResult = await fetchJson<MatchSyncResult>(
               playerSyncPath(
                 player.puuid,
                 latestMatchSyncConfig.ownerMatchCount,
@@ -84,27 +85,30 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
                 signal,
               },
             );
+            initialSyncIncomplete =
+              historyAnalysisStatus([
+                { status: "fulfilled", value: syncResult },
+              ]) !== "complete";
+            if (initialSyncIncomplete)
+              syncWarning = "El historial del jugador está incompleto.";
           } catch (syncError) {
             if (signal?.aborted) return;
             syncWarning = messageFor(
               syncError,
               "No se pudo actualizar el historial.",
             );
+            initialSyncIncomplete = true;
           }
         }
 
         setStep("results");
         const readResults = async () => {
-          const [summary, encounterResponse, matches] = await Promise.all([
+          const [summary, matches] = await Promise.all([
             fetchJson<PlayerSummary>(
               apiPath("players", player.puuid, "summary"),
               {
                 signal,
               },
-            ),
-            fetchJson<PlayerEncounter[] | { items: PlayerEncounter[] }>(
-              apiPath("players", player.puuid, "known-players"),
-              { signal },
             ),
             fetchJson<MatchesResponse>(
               `${apiPath("players", player.puuid, "matches")}?page=1&pageSize=10`,
@@ -144,9 +148,6 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
 
           return {
             summary,
-            encounters: Array.isArray(encounterResponse)
-              ? encounterResponse
-              : encounterResponse.items,
             matches,
             latestMatch,
             activeGame,
@@ -154,6 +155,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
         };
 
         let results = await readResults();
+        let historyStatus: HistoryAnalysisStatus = "insufficient";
         if (results.latestMatch) {
           const syncPlan = latestMatchSyncPlan(
             results.latestMatch,
@@ -161,7 +163,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
           );
           const syncResults = await Promise.allSettled(
             syncPlan.map((target) =>
-              fetchJson<unknown>(
+              fetchJson<MatchSyncResult>(
                 playerSyncPath(
                   target.puuid,
                   target.count,
@@ -175,6 +177,9 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
             ),
           );
           if (signal?.aborted) return;
+          historyStatus = historyAnalysisStatus(syncResults);
+          if (initialSyncIncomplete && historyStatus === "complete")
+            historyStatus = "partial";
           const failedTargets = syncResults.filter(
             (result) => result.status === "rejected",
           );
@@ -184,14 +189,27 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
               "No se pudo actualizar automáticamente el contexto de la última partida.",
             );
           }
+          if (historyStatus === "partial")
+            syncWarning ??=
+              "Análisis parcial: algunas partidas no se pudieron recuperar.";
           if (failedTargets.length < syncPlan.length) {
-            results = await readResults();
+            try {
+              results = await readResults();
+            } catch (refreshError) {
+              if (signal?.aborted) return;
+              historyStatus = "partial";
+              syncWarning ??= messageFor(
+                refreshError,
+                "No se pudo actualizar el resultado del análisis.",
+              );
+            }
           }
         }
 
         setData({
           player,
           ...results,
+          historyStatus,
         });
         setWarning(syncWarning);
       } catch (requestError) {
@@ -207,7 +225,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
   useEffect(() => {
     const controller = new AbortController();
     const request = window.setTimeout(
-      () => void load(false, controller.signal),
+      () => void load(true, controller.signal),
       0,
     );
     return () => {
@@ -323,7 +341,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
                 {warning} Mostramos los datos locales disponibles.
               </p>
             ) : null}
-            <SummaryCards encounters={data.encounters} summary={data.summary} />
+            <SummaryCards summary={data.summary} />
             {data.activeGame ? (
               <ActiveGameBanner
                 game={data.activeGame}
@@ -334,6 +352,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
               match={data.matches.items[0] ?? null}
               matchDetail={data.latestMatch}
               ownerPuuid={data.player.puuid}
+              historyStatus={data.historyStatus}
             />
             <MatchHistory
               matches={data.matches}
@@ -397,23 +416,14 @@ function LoadingPanel({ step }: { step: LoadingStep }) {
   );
 }
 
-function SummaryCards({
-  encounters,
-  summary,
-}: {
-  encounters: PlayerEncounter[];
-  summary: PlayerSummary;
-}) {
+function SummaryCards({ summary }: { summary: PlayerSummary }) {
   const cards = [
     ["Partidas analizadas", summary.matchesAnalyzed.toLocaleString("es-PA")],
     [
-      "Jugadores encontrados",
-      knownPlayerCount(encounters).toLocaleString("es-PA"),
+      "Jugadores únicos encontrados",
+      summary.uniquePlayersEncountered.toLocaleString("es-PA"),
     ],
-    [
-      "Jugadores recurrentes",
-      repeatedPlayerCount(encounters).toLocaleString("es-PA"),
-    ],
+    ["Jugadores recurrentes", summary.repeatedPlayers.toLocaleString("es-PA")],
     ["Victorias", summary.wins.toLocaleString("es-PA")],
     ["Derrotas", summary.losses.toLocaleString("es-PA")],
   ];
@@ -426,6 +436,13 @@ function SummaryCards({
           <h2 id="summary-title">Tu historial de encuentros</h2>
         </div>
       </div>
+      <p className="section-note">
+        Todas tus partidas analizadas disponibles. Cada jugador se cuenta una
+        sola vez, sin incluirte; recurrentes: aparecen en al menos dos partidas.
+        {summary.otherPlayerParticipations !== undefined
+          ? ` ${summary.otherPlayerParticipations} participaciones de otros jugadores (incluye repeticiones).`
+          : ""}
+      </p>
       <dl className="stat-grid">
         {cards.map(([label, value]) => (
           <div className="stat-card" key={label}>
@@ -442,10 +459,12 @@ function LatestMatch({
   match,
   matchDetail,
   ownerPuuid,
+  historyStatus,
 }: {
   match: MatchesResponse["items"][number] | null;
   matchDetail: MatchDetail | null;
   ownerPuuid: string;
+  historyStatus: HistoryAnalysisStatus;
 }) {
   if (!match) {
     return (
@@ -477,13 +496,16 @@ function LatestMatch({
           <span className="latest-match-id">{match.riotMatchId}</span>
           <strong>
             {matchDetail?.familiarity
-              ? familiarityMessage(matchDetail.familiarity)
+              ? familiarityMessage(matchDetail.familiarity, historyStatus)
               : "Familiaridad no disponible."}
           </strong>
-          {matchDetail?.familiarity?.knownPlayerDetails.length ? (
+          {matchDetail?.familiarity?.knownPlayerDetails.some(
+            (player) => player.enemyMatches > 0,
+          ) ? (
             <span>
               Contra conocidos:{" "}
               {matchDetail.familiarity.knownPlayerDetails
+                .filter((player) => player.enemyMatches > 0)
                 .slice(0, 3)
                 .map(
                   (player) =>

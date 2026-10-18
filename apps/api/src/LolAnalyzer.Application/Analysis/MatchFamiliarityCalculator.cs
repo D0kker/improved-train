@@ -60,7 +60,10 @@ public static class MatchFamiliarityCalculator
             evaluablePlayers - knownPlayers,
             evaluablePlayers,
             Math.Round(knownPlayers * 100m / evaluablePlayers, 1, MidpointRounding.AwayFromZero),
-            priorMatches.Length == 0 ? MatchFamiliarityStatus.NoPriorHistory : MatchFamiliarityStatus.Available,
+            target.Participants.Any(participant => participant.PlayerId is null || participant.PlayerId == Guid.Empty)
+                || (input.ExpectedParticipantCount is { } expected && evaluablePlayers + 1 != expected)
+                ? MatchFamiliarityStatus.PartialParticipants
+                : priorMatches.Length == 0 ? MatchFamiliarityStatus.NoPriorHistory : MatchFamiliarityStatus.Available,
             knownPlayerIds,
             knownPlayerDetails);
     }
