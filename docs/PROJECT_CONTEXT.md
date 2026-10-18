@@ -10,7 +10,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 
 - ECHO-1 está implementado en `feature/echo-product-focus`: PROJECT ECHO prioriza conocidos, recurrentes y familiaridad histórica sin ampliar la frontera de partidas terminadas.
 - `GET /api/v1/players/{puuid}/known-players` incluye encounters con una aparición; `/encounters` conserva recurrentes con dos o más.
-- El detalle de partida expone quiénes eran conocidos y sus conteos aliado/rival, resultados y fechas usando exclusivamente partidas anteriores a la partida objetivo.
+- El detalle de partida expone dentro de la tarjeta de inferencia histórica quiénes eran conocidos y sus conteos aliado/rival, resultados y fechas usando exclusivamente partidas anteriores a la partida objetivo; no mantiene una tarjeta principal separada de “Known players”.
 - La ruta ordinaria de sincronización actualiza relaciones incrementalmente: identifica jugadores y parejas afectadas por los matches recién persistidos, recalcula su historial y hace upsert bajo advisory lock transaccional. No elimina el snapshot global.
 - `CACHE_PROVIDER=memory` es el modo mínimo y no registra conexión ni readiness de Redis. `CACHE_PROVIDER=redis` mantiene la caché compartida con fallback en memoria.
 - Las métricas agregadas `echo_matches_analyzed_total`, `echo_encounter_lookups_total`, `echo_encounter_hits_total` y `echo_known_players_found_total` permiten derivar Encounter Hit Rate sin labels de jugador.

@@ -105,7 +105,11 @@ public sealed class RiotApiClient(
         ArgumentException.ThrowIfNullOrWhiteSpace(puuid);
 
         var summonerPath = $"lol/summoner/v4/summoners/by-puuid/{Uri.EscapeDataString(puuid)}";
-        using var summonerResponse = await SendGetAsync(summonerPath, "summoner", cancellationToken)
+        using var summonerResponse = await SendGetAsync(
+            summonerPath,
+            "summoner",
+            cancellationToken,
+            options.GetPlatformBaseUri())
             .ConfigureAwait(false);
         if (summonerResponse.StatusCode == HttpStatusCode.NotFound)
         {
@@ -125,7 +129,11 @@ public sealed class RiotApiClient(
         }
 
         var activePath = $"lol/spectator/v5/active-games/by-summoner/{Uri.EscapeDataString(summoner.Id)}";
-        using var activeResponse = await SendGetAsync(activePath, "active_game", cancellationToken)
+        using var activeResponse = await SendGetAsync(
+            activePath,
+            "active_game",
+            cancellationToken,
+            options.GetPlatformBaseUri())
             .ConfigureAwait(false);
         if (activeResponse.StatusCode == HttpStatusCode.NotFound)
         {
@@ -154,7 +162,8 @@ public sealed class RiotApiClient(
     private async Task<HttpResponseMessage> SendGetAsync(
         string path,
         string endpoint,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Uri? baseUri = null)
     {
         if (string.IsNullOrWhiteSpace(options.ApiKey))
         {
@@ -165,8 +174,11 @@ public sealed class RiotApiClient(
         {
             HttpResponseMessage response;
             using (await rateLimiter.AcquireAsync(cancellationToken).ConfigureAwait(false))
-            using (var request = new HttpRequestMessage(HttpMethod.Get, path))
             {
+                var requestUri = baseUri is null
+                    ? path
+                    : new Uri(baseUri, path).AbsoluteUri;
+                using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
                 request.Headers.TryAddWithoutValidation("X-Riot-Token", options.ApiKey);
                 response = await httpClient.SendAsync(
                     request,

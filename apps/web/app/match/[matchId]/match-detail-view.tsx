@@ -150,10 +150,6 @@ export function MatchDetailView({
 
             <FamiliaritySummary familiarity={match.familiarity} />
 
-            {match.familiarity ? (
-              <KnownPlayers players={match.familiarity.knownPlayerDetails} />
-            ) : null}
-
             <PremadeSummary
               groups={match.premadeGroups}
               knownPlayers={match.familiarity?.knownPlayerDetails ?? []}
@@ -214,48 +210,6 @@ function FamiliaritySummary({
         <strong>{familiarity.familiarityPercentage}%</strong>
         <span>{familiarity.unknownPlayers} no conocidos</span>
       </div>
-    </section>
-  );
-}
-
-function KnownPlayers({ players }: { players: MatchKnownPlayer[] }) {
-  return (
-    <section aria-labelledby="known-players-title">
-      <div className="section-title-row">
-        <div>
-          <p className="eyebrow">Known players</p>
-          <h2 id="known-players-title">Ya habían aparecido antes</h2>
-        </div>
-        <p className="section-note">
-          Encuentros estrictamente anteriores a esta partida.
-        </p>
-      </div>
-
-      {players.length === 0 ? (
-        <div className="empty-state compact-empty-state">
-          <h3>Ningún jugador conocido</h3>
-          <p>Esta partida no tiene coincidencias históricas anteriores.</p>
-        </div>
-      ) : (
-        <ul className="known-player-grid">
-          {players.map((player) => (
-            <li key={player.puuid}>
-              <PlayerProfileLink
-                gameName={player.gameName}
-                tagLine={player.tagLine}
-              />
-              <strong>{player.playedBefore} encuentros anteriores</strong>
-              <span>
-                {player.allyMatches} aliado · {player.enemyMatches} rival
-              </span>
-              <span>
-                Contra el owner: {player.winsAgainst}V · {player.lossesAgainst}D
-              </span>
-              <span>Última vez: {formatDate(player.lastEncounterAt)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
     </section>
   );
 }
@@ -425,17 +379,21 @@ function PremadeSummary({
       )}
       {knownPlayers.length > 0 ? (
         <div className="history-evidence">
-          <strong>Historial del jugador buscado</strong>
-          <div className="history-evidence-list">
+          <strong>Jugadores conocidos</strong>
+          <div className="history-evidence-grid">
             {knownPlayers.map((player) => (
-              <span key={player.puuid}>
+              <article className="history-evidence-card" key={player.puuid}>
                 <PlayerProfileLink
                   compact
                   gameName={player.gameName}
                   tagLine={player.tagLine}
-                />{" "}
+                />
                 <HistoryBadge player={player} />
-              </span>
+                <span>
+                  {player.allyMatches} como equipo · {player.enemyMatches} como
+                  rival
+                </span>
+              </article>
             ))}
           </div>
         </div>

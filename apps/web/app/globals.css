@@ -580,13 +580,31 @@ p {
   padding-top: 1rem;
 }
 
-.history-evidence-list {
-  display: flex;
-  flex-wrap: wrap;
+.history-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   gap: 0.5rem 0.75rem;
 }
 
-.history-evidence-list > span {
+.history-evidence-card {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 0.75rem;
+  background: var(--surface-raised);
+  padding: 0.7rem;
+}
+
+.history-evidence-card > span:last-child {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.history-evidence-card > .history-badge {
+  width: fit-content;
+}
+
+.history-evidence-card > a {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
