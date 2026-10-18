@@ -1,6 +1,6 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-10-17
+Última actualización: 2026-10-18
 
 ## Propósito
 
@@ -16,10 +16,10 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - Las métricas agregadas `echo_matches_analyzed_total`, `echo_encounter_lookups_total`, `echo_encounter_hits_total` y `echo_known_players_found_total` permiten derivar Encounter Hit Rate sin labels de jugador.
 - Home, dashboard y detalle usan branding PROJECT ECHO; el grafo permanece funcional dentro de una sección experimental secundaria.
 - `matches.raw_data` se conserva para reprocesamiento/debugging. Su retención continúa pendiente de aprobación del PO en D-035.
-- El repositorio contiene web Next.js, API .NET, worker, PostgreSQL, Redis, pruebas, CI y la especificación original.
+- El repositorio contiene web Next.js, API .NET, Redis opcional, pruebas, CI y la especificación original; el runtime desplegado ya no usa PostgreSQL ni worker.
 - Foundation y Sprints 1–6 están implementados localmente; Sprint 7 inició con auditoría Riot e inventario de datos.
 - `docs/SPEC_ANALYSIS.md` registra fortalezas, tensiones y el orden recomendado para Sprint 1.
-- El stack Docker está activo con cuatro servicios saludables en modo `CACHE_PROVIDER=memory`; solo la web está publicada en `0.0.0.0:8081`. Redis permanece detenido porque es un perfil opcional.
+- El stack Docker está activo con API y web saludables en modo `CACHE_PROVIDER=memory`; solo la web está publicada en `0.0.0.0:8081`.
 - ACCOUNT-V1 resuelve Riot ID a PUUID; MATCH-V5 ingesta hasta 20 partidas, consulta primero PostgreSQL, conserva raw JSONB y normaliza participantes.
 - Sprint 3 reconstruye encounters dirigidos owner/other y expone summary, repetidos, historial paginado y detalle de partida.
 - La web permite buscar Riot ID, sincronizar el lote acotado y revisar summary, recurrentes, historial y equipos mediante `/api/v1` same-origin.
@@ -47,14 +47,15 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - Sprints 9 y 10 están creados en el tablero: beta privada multi-región (#68–#74) y lanzamiento público sostenible (#75–#81). Planificarlos no autoriza despliegue, publicidad, pagos ni GO público.
 - S7-011 registra la protección futura de historial de custom matches: antes de cualquier exposición pública se clasificará la cola y se bloqueará por defecto hasta definir el opt-in aplicable. No habilita RSO ni autenticación por sí misma.
 - Los Riot IDs visibles del detalle y de la leyenda de premades enlazan al perfil mediante el componente compartido; datos incompletos permanecen como texto y no provocan sincronización automática.
-- La vista de última partida sincroniza automáticamente, mediante la ruta backend existente, el historial parametrizable del owner y hasta los nueve participantes visibles para recalcular familiaridad y grupos. Los defaults son 5 partidas del owner y 3 por participante; `NEXT_PUBLIC_ECHO_OWNER_MATCH_COUNT`, `NEXT_PUBLIC_ECHO_OTHER_MATCH_COUNT` y `NEXT_PUBLIC_ECHO_OTHER_PLAYER_COUNT` permiten ajustarlos sin exponer secretos.
+- La vista de última partida sincroniza automáticamente, mediante la ruta backend existente, el historial parametrizable del owner y hasta los nueve participantes visibles para recalcular familiaridad y grupos. El default actual es 10 partidas del owner y 3 por participante; `NEXT_PUBLIC_ECHO_OWNER_MATCH_COUNT`, `NEXT_PUBLIC_ECHO_OTHER_MATCH_COUNT` y `NEXT_PUBLIC_ECHO_OTHER_PLAYER_COUNT` permiten ajustarlos sin exponer secretos.
 - El dashboard de jugador ya no muestra la tabla separada de “Jugadores que ya habías visto”; el historial de partidas muestra 10 registros inicialmente y pagina en bloques de 10 mediante “Cargar 10 partidas más”.
+- El resumen del dashboard presenta cinco tarjetas compactas: partidas analizadas, jugadores encontrados (distintos en los encuentros cargados), jugadores recurrentes, victorias y derrotas.
 - El dashboard consulta server-side el estado de partida activa mediante spectator-v5 y muestra un banner cuando existe. En el detalle, la inferencia histórica lista participantes con evidencia previa y cada fila de jugador recibe una marca “Ya jugó junto”, “Ya jugó en contra” o “Aliado y rival”, con balance contra el owner.
 - La compatibilidad de partida activa tolera respuestas actuales de Summoner-V4 sin `summonerId`: usa el PUUID como respaldo para Spectator-V5 y trata `404` como ausencia de partida, evitando presentar un falso “Riot API is unavailable”.
 - Las respuestas JSON vacías de endpoints opcionales se interpretan como `null` en la web; el detalle de partida identifica el jugador observado, muestra su etiqueta junto al Riot ID y diferencia visualmente los equipos azul y rojo sin exponer el ID técnico de la partida.
-- La tarjeta de partida activa enlaza a `/match/live`, una vista separada que consulta Spectator-V5 y muestra los participantes actuales agrupados por equipo; si la partida termina, la vista informa que ya no está disponible.
+- La tarjeta de partida activa enlaza a `/match/live`, una vista separada que consulta Spectator-V5 y muestra los participantes actuales agrupados por equipo; usa Riot ID cuando está disponible y `summonerId` como respaldo visible cuando Spectator-V5 no expone el Riot ID; si la partida termina, la vista informa que ya no está disponible.
 - Con owner disponible, la detección de posibles premades cruza esa ventana reciente: evidencia como rival descarta la señal para la pareja y coincidencias como aliado en fechas distintas elevan la clasificación prudente. `PremadeDetection:RecentOwnerMatchCount` y `DistinctSameTeamDatesForLikely` son configurables; sin owner se mantiene el cálculo histórico.
-- El worker base está separado y saludable; los jobs persistentes pertenecen a Sprint 6.
+- El worker y los jobs persistentes quedaron fuera del despliegue operativo al retirar PostgreSQL.
 - No se ha seleccionado una licencia.
 - Validación de cierre de Sprint 5 (2026-08-31): 43 pruebas unitarias y 15 de integración .NET; pruebas, lint, type-check, formato y build de Next.js; `dotnet format --verify-no-changes`; `docker compose config`; builds Docker de API/web; y cinco servicios saludables con API y web comprobadas en runtime.
 

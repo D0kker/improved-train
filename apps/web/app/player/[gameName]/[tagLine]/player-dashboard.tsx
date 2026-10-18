@@ -12,17 +12,14 @@ import {
   type MatchesResponse,
   type PlayerEncounter,
   type PlayerLookup,
-  type RelationshipsResponse,
   type PlayerSummary,
   playerLookupPath,
   matchDetailPath,
-  playerRelationshipsPath,
   playerSyncPath,
 } from "@/src/api";
 import {
   formatDate,
   formatDuration,
-  formatPercent,
   queueLabel,
 } from "@/src/format";
 import {
@@ -32,9 +29,7 @@ import {
   latestMatchSyncConfig,
   repeatedPlayerCount,
 } from "@/src/echo";
-import { PlayerProfileLink } from "@/src/player-profile-link";
 import { ChampionIcon } from "@/src/champion-icon";
-import { PlayerNetworkSection } from "./player-network-section";
 
 interface PlayerDashboardProps {
   gameName: string;
@@ -46,7 +41,6 @@ interface DashboardData {
   summary: PlayerSummary;
   encounters: PlayerEncounter[];
   matches: MatchesResponse;
-  relationships: RelationshipsResponse;
   latestMatch: MatchDetail | null;
   activeGame: ActiveGame | null;
 }
@@ -84,10 +78,16 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
         if (synchronize) {
           setStep("sync");
           try {
-            await fetchJson<unknown>(playerSyncPath(player.puuid, 20), {
-              method: "POST",
-              signal,
-            });
+            await fetchJson<unknown>(
+              playerSyncPath(
+                player.puuid,
+                latestMatchSyncConfig.ownerMatchCount,
+              ),
+              {
+                method: "POST",
+                signal,
+              },
+            );
           } catch (syncError) {
             if (signal?.aborted) return;
             syncWarning = messageFor(
@@ -99,7 +99,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
 
         setStep("results");
         const readResults = async () => {
-          const [summary, encounterResponse, matches, relationships] =
+          const [summary, encounterResponse, matches] =
             await Promise.all([
               fetchJson<PlayerSummary>(
                 apiPath("players", player.puuid, "summary"),
@@ -113,10 +113,6 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
               ),
               fetchJson<MatchesResponse>(
                 `${apiPath("players", player.puuid, "matches")}?page=1&pageSize=10`,
-                { signal },
-              ),
-              fetchJson<RelationshipsResponse>(
-                playerRelationshipsPath(player.puuid),
                 { signal },
               ),
             ]);
@@ -157,7 +153,6 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
               ? encounterResponse
               : encounterResponse.items,
             matches,
-            relationships,
             latestMatch,
             activeGame,
           };
@@ -287,7 +282,9 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
               onClick={() => void load(true)}
               type="button"
             >
-              {isLoading ? "Actualizando…" : "Actualizar 20 partidas"}
+              {isLoading
+                ? "Actualizando…"
+                : `Actualizar ${latestMatchSyncConfig.ownerMatchCount} partidas`}
             </button>
             {data ? (
               <p className="profile-freshness">
@@ -343,17 +340,6 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
               isLoadingMore={isLoadingMoreMatches}
               onLoadMore={loadMoreMatches}
             />
-            <Relationships relationships={data.relationships} />
-            <details className="experimental-section">
-              <summary>
-                <span>
-                  <strong>Mapa de conexiones</strong>
-                  <small>Experimental · funcional, sin desarrollo activo</small>
-                </span>
-                <span aria-hidden="true">+</span>
-              </summary>
-              <PlayerNetworkSection puuid={data.player.puuid} />
-            </details>
           </>
         ) : null}
       </div>
@@ -372,7 +358,6 @@ function ActiveGameBanner({
     <section className="active-game-banner" aria-live="polite">
       <div>
         <p className="eyebrow">Partida en curso</p>
-        <h2>El jugador está jugando ahora</h2>
         <p className="muted-copy">
           {queueLabel(game.queueId)} · iniciada {formatDate(game.gameStartTime)}
         </p>
@@ -383,90 +368,9 @@ function ActiveGameBanner({
           className="primary-button"
           href={`/match/live?ownerPuuid=${encodeURIComponent(ownerPuuid)}`}
         >
-          Ver jugadores en curso →
+          Ver partida en curso →
         </Link>
       </div>
-    </section>
-  );
-}
-
-function Relationships({
-  relationships,
-}: {
-  relationships: RelationshipsResponse;
-}) {
-  return (
-    <section aria-labelledby="relationships-title">
-      <div className="section-title-row">
-        <div>
-          <p className="eyebrow">Relaciones históricas</p>
-          <h2 id="relationships-title">Posibles conexiones recurrentes</h2>
-        </div>
-        <p className="section-note">
-          Confidence es una heurística, no una probabilidad ni confirmación
-          oficial.
-        </p>
-      </div>
-
-      {relationships.items.length === 0 ? (
-        <EmptyState
-          title="Aún no hay relaciones suficientes"
-          copy="Las relaciones aparecerán al coincidir jugadores en las partidas terminadas almacenadas."
-        />
-      ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Jugador</th>
-                <th>Score</th>
-                <th>Evidencia</th>
-                <th>Mismo equipo</th>
-                <th>Recientes</th>
-                <th>Consecutivas</th>
-                <th>Inferencia</th>
-              </tr>
-            </thead>
-            <tbody>
-              {relationships.items.map((relationship) => (
-                <tr key={relationship.otherPlayerPuuid}>
-                  <td>
-                    <PlayerProfileLink
-                      gameName={relationship.gameName}
-                      tagLine={relationship.tagLine}
-                    />
-                  </td>
-                  <td>
-                    <strong>{relationship.relationshipScore}/100</strong>
-                    <span>{relationship.relationshipConfidence}</span>
-                  </td>
-                  <td>
-                    {relationship.matchesTogether} partidas
-                    <span>{relationship.oppositeTeamMatches} como rivales</span>
-                  </td>
-                  <td>
-                    {formatPercent(relationship.sameTeamRatio * 100)}
-                    <span>{relationship.sameTeamMatches} partidas</span>
-                  </td>
-                  <td>{relationship.recentMatchesTogether}</td>
-                  <td>{relationship.consecutiveMatches}</td>
-                  <td>
-                    {relationship.premadeLabel ? (
-                      <span
-                        className={`inference-badge ${relationship.premadeLabel === "likely premade" ? "likely" : "possible"}`}
-                      >
-                        {relationship.premadeLabel}
-                      </span>
-                    ) : (
-                      <span>Evidencia insuficiente</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
     </section>
   );
 }
@@ -478,7 +382,10 @@ function LoadingPanel({ step }: { step: LoadingStep }) {
       <div>
         <p className="eyebrow">Preparando el análisis</p>
         <h2>{loadingCopy[step]}</h2>
-        <p>La sincronización está limitada a 20 partidas por solicitud.</p>
+        <p>
+          La actualización del jugador buscado revisa{" "}
+          {latestMatchSyncConfig.ownerMatchCount} partidas.
+        </p>
         <p>
           Última partida: {latestMatchSyncConfig.ownerMatchCount} del jugador y{" "}
           {latestMatchSyncConfig.otherMatchCount} de hasta{" "}
@@ -499,13 +406,15 @@ function SummaryCards({
   const cards = [
     ["Partidas analizadas", summary.matchesAnalyzed.toLocaleString("es-PA")],
     [
-      "Jugadores conocidos",
+      "Jugadores encontrados",
       knownPlayerCount(encounters).toLocaleString("es-PA"),
     ],
     [
       "Jugadores recurrentes",
       repeatedPlayerCount(encounters).toLocaleString("es-PA"),
     ],
+    ["Victorias", summary.wins.toLocaleString("es-PA")],
+    ["Derrotas", summary.losses.toLocaleString("es-PA")],
   ];
 
   return (

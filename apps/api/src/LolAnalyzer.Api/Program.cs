@@ -89,8 +89,6 @@ if (int.TryParse(builder.Configuration["CACHE_PLAYER_SUMMARY_TTL_SECONDS"], out 
 
 cacheOptions.Validate();
 
-var postgresConnectionString = BuildPostgresConnectionString(builder.Configuration)
-    ?? throw new InvalidOperationException("ConnectionStrings:Postgres or POSTGRES_HOST must be configured.");
 var redisHost = builder.Configuration["REDIS_HOST"] ?? builder.Configuration["Redis:Host"] ?? "localhost";
 var redisPort = int.TryParse(builder.Configuration["REDIS_PORT"], out var configuredRedisPort)
     ? configuredRedisPort
@@ -146,7 +144,8 @@ else
 {
     builder.Services.AddSingleton<ICacheService>(services => services.GetRequiredService<MemoryCacheService>());
 }
-builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
+builder.Services.AddDbContext<LolAnalyzerDbContext>(options =>
+    options.UseInMemoryDatabase("lol-analyzer-runtime"));
 builder.Services.AddScoped<IAnalysisJobRepository, AnalysisJobRepository>();
 builder.Services.AddScoped<AnalysisJobService>();
 builder.Services.AddScoped<IPlayerRefreshScheduleRepository, PlayerRefreshScheduleRepository>();
@@ -171,7 +170,7 @@ builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
         client.Timeout = TimeSpan.FromSeconds(riotOptions.RequestTimeoutSeconds);
     });
 var healthChecks = builder.Services.AddHealthChecks()
-    .AddCheck<PostgresHealthCheck>("postgresql", tags: ["ready"]);
+    .AddCheck("runtime-memory", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), tags: ["ready"]);
 if (cacheOptions.UsesRedis)
 {
     healthChecks.AddCheck("redis", new RedisHealthCheck(redisHost, redisPort), tags: ["ready"]);
@@ -192,13 +191,6 @@ app.Use(async (context, next) =>
     await next(context).ConfigureAwait(false);
 });
 app.UseRateLimiter();
-
-if (builder.Configuration.GetValue("Database:ApplyMigrations", true))
-{
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<LolAnalyzerDbContext>();
-    await dbContext.Database.MigrateAsync();
-}
 
 if (app.Environment.IsDevelopment())
 {
@@ -612,20 +604,4 @@ internal sealed record ConfigureRefreshScheduleRequest(bool Enabled, int Interva
 
 public partial class Program
 {
-    private static string? BuildPostgresConnectionString(ConfigurationManager configuration)
-    {
-        var host = configuration["POSTGRES_HOST"];
-        if (string.IsNullOrWhiteSpace(host))
-        {
-            return configuration.GetConnectionString("Postgres");
-        }
-
-        var port = int.TryParse(configuration["POSTGRES_PORT"], out var configuredPort) ? configuredPort : 5432;
-        var database = configuration["POSTGRES_DB"] ?? "lol_analyzer";
-        var username = configuration["POSTGRES_USER"] ?? "lol";
-        var password = configuration["POSTGRES_PASSWORD"];
-        var connection = $"Host={host};Port={port};Database={database};Username={username}";
-
-        return string.IsNullOrWhiteSpace(password) ? connection : $"{connection};Password={password}";
-    }
 }

@@ -15,8 +15,6 @@ using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres")
-    ?? throw new InvalidOperationException("ConnectionStrings:Postgres must be configured.");
 var redisHost = builder.Configuration["REDIS_HOST"] ?? builder.Configuration["Redis:Host"] ?? "localhost";
 var redisPort = int.TryParse(builder.Configuration["REDIS_PORT"], out var configuredRedisPort)
     ? configuredRedisPort
@@ -106,7 +104,8 @@ builder.Services.AddSingleton(relationshipScoreOptions);
 builder.Services.AddSingleton<RelationshipScoreCalculator>();
 builder.Services.AddSingleton(relationshipAnalysisOptions);
 builder.Services.AddSingleton<PlayerRelationshipAnalyzer>();
-builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
+builder.Services.AddDbContext<LolAnalyzerDbContext>(options =>
+    options.UseInMemoryDatabase("lol-analyzer-worker-runtime"));
 builder.Services.AddScoped<IAnalysisJobRepository, AnalysisJobRepository>();
 builder.Services.AddScoped<IPlayerRefreshScheduleRepository, PlayerRefreshScheduleRepository>();
 builder.Services.AddScoped<PlayerRefreshScheduleService>();

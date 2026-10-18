@@ -24,7 +24,7 @@ function configuredCount(
 export const latestMatchSyncConfig: LatestMatchSyncConfig = {
   ownerMatchCount: configuredCount(
     process.env.NEXT_PUBLIC_ECHO_OWNER_MATCH_COUNT,
-    5,
+    10,
     20,
   ),
   otherMatchCount: configuredCount(

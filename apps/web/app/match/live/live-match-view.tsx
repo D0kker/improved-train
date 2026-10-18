@@ -164,11 +164,27 @@ function LiveParticipant({
     <li className={isObserved ? "live-observed-player" : undefined}>
       <div className="live-champion-icon">{participant.championId || "?"}</div>
       <div>
-        <PlayerProfileLink
-          gameName={participant.gameName}
-          tagLine={participant.tagLine}
-        />
-        <span>Campeón #{participant.championId || "?"}</span>
+        {participant.gameName && participant.tagLine ? (
+          <PlayerProfileLink
+            gameName={participant.gameName}
+            tagLine={participant.tagLine}
+          />
+        ) : (
+          <strong>
+            {participant.gameName ||
+              (participant.summonerId
+                ? `Invocador ${participant.summonerId.slice(0, 8)}…`
+                : "Jugador en partida")}
+          </strong>
+        )}
+        <span>
+          {participant.tagLine
+            ? `#${participant.tagLine} · `
+            : participant.gameName
+              ? "Riot ID no disponible · "
+              : "Identidad no expuesta por Spectator-V5 · "}
+          Campeón ID {participant.championId || "?"}
+        </span>
       </div>
     </li>
   );

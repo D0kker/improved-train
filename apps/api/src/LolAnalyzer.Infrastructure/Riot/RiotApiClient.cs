@@ -160,19 +160,74 @@ public sealed class RiotApiClient(
             throw new RiotApiException(HttpStatusCode.BadGateway);
         }
 
+        var participants = await EnrichActiveGameParticipantsAsync(
+                payload.Participants ?? [],
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return new RiotActiveGame(
             payload.GameId,
             payload.GameQueueConfigId,
             DateTimeOffset.FromUnixTimeMilliseconds(payload.GameStartTime),
             Math.Max(0, payload.GameLength),
-            (payload.Participants ?? [])
-                .Select(participant => new RiotActiveGameParticipant(
-                    participant.Puuid,
-                    participant.SummonerName,
-                    null,
-                    participant.ChampionId,
-                    participant.TeamId))
-                .ToArray());
+            participants);
+    }
+
+    private async Task<IReadOnlyList<RiotActiveGameParticipant>> EnrichActiveGameParticipantsAsync(
+        IReadOnlyList<ActiveGameParticipantResponse> participants,
+        CancellationToken cancellationToken)
+    {
+        var enriched = new List<RiotActiveGameParticipant>(participants.Count);
+        foreach (var participant in participants)
+        {
+            var puuid = participant.Puuid;
+            var gameName = participant.SummonerName;
+            string? tagLine = null;
+            var summonerId = participant.SummonerId;
+
+            if (!string.IsNullOrWhiteSpace(summonerId))
+            {
+                var summonerPath = $"lol/summoner/v4/summoners/by-summoner/{Uri.EscapeDataString(summonerId)}";
+                using var summonerResponse = await SendGetAsync(
+                    summonerPath,
+                    "active_game_participant",
+                    cancellationToken,
+                    options.GetPlatformBaseUri()).ConfigureAwait(false);
+                if (summonerResponse.IsSuccessStatusCode)
+                {
+                    var summoner = await summonerResponse.Content.ReadFromJsonAsync<SummonerResponse>(
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                    puuid ??= summoner?.Puuid;
+                    gameName ??= summoner?.Name;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(puuid))
+            {
+                var accountPath = $"riot/account/v1/accounts/by-puuid/{Uri.EscapeDataString(puuid)}";
+                using var accountResponse = await SendGetAsync(
+                    accountPath,
+                    "active_game_participant_account",
+                    cancellationToken).ConfigureAwait(false);
+                if (accountResponse.IsSuccessStatusCode)
+                {
+                    var account = await accountResponse.Content.ReadFromJsonAsync<AccountResponse>(
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                    gameName = account?.GameName ?? gameName;
+                    tagLine = account?.TagLine;
+                }
+            }
+
+            enriched.Add(new RiotActiveGameParticipant(
+                puuid,
+                gameName,
+                tagLine,
+                summonerId,
+                participant.ChampionId,
+                participant.TeamId));
+        }
+
+        return enriched;
     }
 
     private async Task<HttpResponseMessage> SendGetAsync(
@@ -363,7 +418,8 @@ public sealed class RiotApiClient(
 
     private sealed record SummonerResponse(
         [property: JsonPropertyName("id")] string? Id,
-        [property: JsonPropertyName("puuid")] string? Puuid);
+        [property: JsonPropertyName("puuid")] string? Puuid,
+        [property: JsonPropertyName("name")] string? Name);
 
     private sealed record ActiveGameResponse(
         [property: JsonPropertyName("gameId")] long GameId,
@@ -375,6 +431,7 @@ public sealed class RiotApiClient(
     private sealed record ActiveGameParticipantResponse(
         [property: JsonPropertyName("puuid")] string? Puuid,
         [property: JsonPropertyName("summonerName")] string? SummonerName,
+        [property: JsonPropertyName("summonerId")] string? SummonerId,
         [property: JsonPropertyName("championId")] int ChampionId,
         [property: JsonPropertyName("teamId")] int TeamId);
 }

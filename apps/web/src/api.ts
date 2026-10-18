@@ -30,6 +30,7 @@ export interface ActiveGameParticipant {
   puuid?: string;
   gameName?: string;
   tagLine?: string;
+  summonerId?: string;
   championId: number;
   teamId: number;
 }

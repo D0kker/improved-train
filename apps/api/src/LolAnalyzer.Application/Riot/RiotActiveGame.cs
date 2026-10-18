@@ -11,5 +11,6 @@ public sealed record RiotActiveGameParticipant(
     string? Puuid,
     string? GameName,
     string? TagLine,
+    string? SummonerId,
     int ChampionId,
     int TeamId);

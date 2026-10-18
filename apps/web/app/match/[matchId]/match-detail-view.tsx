@@ -265,7 +265,6 @@ function TeamCard({
             <ParticipantRow
               key={participant.puuid || `${participant.championName}-${index}`}
               groups={groupsForParticipant(premadeGroups, participant.puuid)}
-              index={index}
               participant={participant}
               isObserved={participant.puuid === ownerPuuid}
               history={knownPlayers.find(
@@ -282,21 +281,16 @@ function TeamCard({
 function ParticipantRow({
   groups,
   history,
-  index,
   isObserved,
   participant,
 }: {
   groups: MatchPremadeGroup[];
   history?: MatchKnownPlayer;
-  index: number;
   isObserved: boolean;
   participant: MatchParticipant;
 }) {
   return (
     <li className={isObserved ? "observed-player" : undefined}>
-      <span className="position-label">
-        {positionName(participant.teamPosition, index)}
-      </span>
       <div className="participant-identity">
         <ChampionIcon
           championId={participant.championId}
@@ -431,21 +425,6 @@ function HistoryBadge({ player }: { player: MatchKnownPlayer }) {
       {label}
     </span>
   );
-}
-
-function positionName(position: string | undefined, index: number): string {
-  const labels: Record<string, string> = {
-    TOP: "TOP",
-    JUNGLE: "JGL",
-    MIDDLE: "MID",
-    MID: "MID",
-    BOTTOM: "ADC",
-    UTILITY: "SUP",
-    SUPPORT: "SUP",
-  };
-  return position
-    ? (labels[position.toUpperCase()] ?? position)
-    : `${index + 1}`;
 }
 
 function teamName(teamId: number, index: number): string {

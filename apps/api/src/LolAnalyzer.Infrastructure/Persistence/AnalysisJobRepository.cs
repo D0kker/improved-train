@@ -1,15 +1,11 @@
 using LolAnalyzer.Application.Jobs;
 using LolAnalyzer.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
-using System.Data;
 
 namespace LolAnalyzer.Infrastructure.Persistence;
 
 public sealed class AnalysisJobRepository(LolAnalyzerDbContext dbContext) : IAnalysisJobRepository
 {
-    private const string ActiveRequestIndex = "ux_analysis_jobs_active_request";
-
     public async Task<AnalysisJob> AddOrGetActiveAsync(AnalysisJob job, CancellationToken cancellationToken)
     {
         var activeJob = await FindActiveEquivalentAsync(job, cancellationToken).ConfigureAwait(false);
@@ -24,11 +20,7 @@ public sealed class AnalysisJobRepository(LolAnalyzerDbContext dbContext) : IAna
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return job;
         }
-        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
-        {
-            SqlState: PostgresErrorCodes.UniqueViolation,
-            ConstraintName: ActiveRequestIndex,
-        })
+        catch (DbUpdateException)
         {
             dbContext.Entry(job).State = EntityState.Detached;
             var existingJob = await FindActiveEquivalentAsync(job, cancellationToken).ConfigureAwait(false);
@@ -51,27 +43,17 @@ public sealed class AnalysisJobRepository(LolAnalyzerDbContext dbContext) : IAna
         DateTimeOffset staleBefore,
         CancellationToken cancellationToken)
     {
-        await using var transaction = await dbContext.Database
-            .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
-            .ConfigureAwait(false);
-        var queued = AnalysisJobStatus.Queued.ToString();
-        var running = AnalysisJobStatus.Running.ToString();
         var job = await dbContext.AnalysisJobs
-            .FromSqlInterpolated($"""
-                SELECT *
-                FROM analysis_jobs
-                WHERE status = {queued}
-                   OR (status = {running} AND updated_at < {staleBefore})
-                ORDER BY CASE WHEN status = {running} THEN 0 ELSE 1 END, created_at, id
-                FOR UPDATE SKIP LOCKED
-                LIMIT 1
-                """)
+            .Where(candidate => candidate.Status == AnalysisJobStatus.Queued
+                || (candidate.Status == AnalysisJobStatus.Running && candidate.UpdatedAt < staleBefore))
+            .OrderBy(candidate => candidate.Status == AnalysisJobStatus.Running ? 0 : 1)
+            .ThenBy(candidate => candidate.CreatedAt)
+            .ThenBy(candidate => candidate.Id)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
         if (job is null)
         {
-            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
             return null;
         }
 
@@ -80,7 +62,6 @@ public sealed class AnalysisJobRepository(LolAnalyzerDbContext dbContext) : IAna
         job.UpdatedAt = now;
         job.ErrorCode = null;
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
         return job;
     }
 

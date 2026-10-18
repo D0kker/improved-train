@@ -30,7 +30,7 @@ export function PlayerProfileLink({
       aria-label={`Ver resumen de ${riotId}`}
     >
       {compact ? (
-        riotId
+        `${gameName} #${tagLine}`
       ) : (
         <>
           <strong>{gameName}</strong>
