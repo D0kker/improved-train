@@ -295,3 +295,11 @@
 - Decisión: cuando existe owner, la detección de grupos cruza las relaciones del lobby con hasta `PremadeDetection:RecentOwnerMatchCount` partidas recientes del owner. Una coincidencia como rival dentro de esa ventana descarta la señal de premade para la pareja; coincidencias como aliado en fechas distintas elevan la clasificación prudente, sin convertirla en verificación.
 - Razón: repetir equipo en fechas distintas es evidencia más útil que una coincidencia aislada, mientras que alternar entre aliado y rival es compatible con emparejamiento casual.
 - Consecuencias: la ventana y el mínimo de fechas distintas son configurables; si no se transporta owner se conserva la detección histórica existente. Los resultados siguen usando `possible premade`/`likely premade` y nunca afirman una relación confirmada.
+
+## D-038 — Estado de partida activa exclusivamente server-side
+
+- Fecha: 2026-10-17
+- Estado: aceptada para el dashboard de jugador
+- Decisión: consultar desde la API (nunca desde el navegador) el summoner-v4 por PUUID y luego spectator-v5 active-games; devolver solo un resumen mínimo de partida activa: cola, inicio, duración y game ID.
+- Razón: Riot expone el estado activo mediante endpoints protegidos y la API key debe permanecer en API/worker. La señal es útil en la pantalla principal, pero no amplía el historial de partidas terminadas.
+- Consecuencias: 404 de Riot se representa como `null` y no como error; errores de cuota/autorización se degradan a warning en la UI. El endpoint se vuelve a consultar al buscar/refrescar el dashboard.

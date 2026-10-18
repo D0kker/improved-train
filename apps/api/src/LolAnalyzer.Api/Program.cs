@@ -412,6 +412,41 @@ app.MapGet("/api/v1/players/{puuid}/summary", async Task<IResult> (
     return summary is null ? Results.NotFound() : Results.Ok(summary);
 });
 
+app.MapGet("/api/v1/players/{puuid}/active-game", async Task<IResult> (
+    string puuid,
+    IRiotApiClient riotApiClient,
+    CancellationToken cancellationToken) =>
+{
+    if (string.IsNullOrWhiteSpace(puuid))
+    {
+        return Results.BadRequest();
+    }
+
+    try
+    {
+        var activeGame = await riotApiClient
+            .GetActiveGameAsync(puuid, cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(activeGame);
+    }
+    catch (RiotApiException exception) when (exception.StatusCode == HttpStatusCode.TooManyRequests)
+    {
+        return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Riot API rate limit reached.");
+    }
+    catch (RiotApiException exception) when (exception.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+    {
+        return Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "Riot API authorization failed.");
+    }
+    catch (RiotApiException)
+    {
+        return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Riot API is unavailable.");
+    }
+    catch (InvalidOperationException)
+    {
+        return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Riot API is not configured.");
+    }
+});
+
 app.MapGet("/api/v1/players/{puuid}/encounters", async Task<IResult> (
     string puuid,
     IPlayerAnalysisRepository repository,

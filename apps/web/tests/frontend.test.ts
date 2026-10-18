@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   apiPath,
   matchDetailPath,
+  playerActiveGamePath,
   playerNetworkPath,
   playerLookupPath,
   playerProfilePath,
@@ -53,6 +54,10 @@ test("API paths remain same-origin and encode user-controlled segments", () => {
   assert.equal(
     apiPath("matches", "LA1_123/456"),
     "/api/v1/matches/LA1_123%2F456",
+  );
+  assert.equal(
+    playerActiveGamePath("owner/puuid"),
+    "/api/v1/players/owner%2Fpuuid/active-game",
   );
 });
 

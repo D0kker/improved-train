@@ -98,6 +98,59 @@ public sealed class RiotApiClient(
         }
     }
 
+    public async Task<RiotActiveGame?> GetActiveGameAsync(
+        string puuid,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(puuid);
+
+        var summonerPath = $"lol/summoner/v4/summoners/by-puuid/{Uri.EscapeDataString(puuid)}";
+        using var summonerResponse = await SendGetAsync(summonerPath, "summoner", cancellationToken)
+            .ConfigureAwait(false);
+        if (summonerResponse.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        if (!summonerResponse.IsSuccessStatusCode)
+        {
+            throw new RiotApiException(summonerResponse.StatusCode);
+        }
+
+        var summoner = await summonerResponse.Content.ReadFromJsonAsync<SummonerResponse>(
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (summoner is null || string.IsNullOrWhiteSpace(summoner.Id))
+        {
+            throw new RiotApiException(HttpStatusCode.BadGateway);
+        }
+
+        var activePath = $"lol/spectator/v5/active-games/by-summoner/{Uri.EscapeDataString(summoner.Id)}";
+        using var activeResponse = await SendGetAsync(activePath, "active_game", cancellationToken)
+            .ConfigureAwait(false);
+        if (activeResponse.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        if (!activeResponse.IsSuccessStatusCode)
+        {
+            throw new RiotApiException(activeResponse.StatusCode);
+        }
+
+        var payload = await activeResponse.Content.ReadFromJsonAsync<ActiveGameResponse>(
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (payload is null || payload.GameId <= 0 || payload.GameStartTime <= 0)
+        {
+            throw new RiotApiException(HttpStatusCode.BadGateway);
+        }
+
+        return new RiotActiveGame(
+            payload.GameId,
+            payload.GameQueueConfigId,
+            DateTimeOffset.FromUnixTimeMilliseconds(payload.GameStartTime),
+            Math.Max(0, payload.GameLength));
+    }
+
     private async Task<HttpResponseMessage> SendGetAsync(
         string path,
         string endpoint,
@@ -279,4 +332,13 @@ public sealed class RiotApiClient(
         [property: JsonPropertyName("puuid")] string? Puuid,
         [property: JsonPropertyName("gameName")] string? GameName,
         [property: JsonPropertyName("tagLine")] string? TagLine);
+
+    private sealed record SummonerResponse(
+        [property: JsonPropertyName("id")] string? Id);
+
+    private sealed record ActiveGameResponse(
+        [property: JsonPropertyName("gameId")] long GameId,
+        [property: JsonPropertyName("gameStartTime")] long GameStartTime,
+        [property: JsonPropertyName("gameLength")] int GameLength,
+        [property: JsonPropertyName("gameQueueConfigId")] int GameQueueConfigId);
 }

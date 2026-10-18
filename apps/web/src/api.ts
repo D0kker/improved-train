@@ -18,6 +18,13 @@ export interface PlayerSummary {
   dataUpdatedAt: string;
 }
 
+export interface ActiveGame {
+  gameId: number;
+  queueId: number;
+  gameStartTime: string;
+  gameLengthSeconds: number;
+}
+
 export interface PlayerEncounter {
   otherPlayerPuuid: string;
   gameName: string;
@@ -204,6 +211,10 @@ export function playerLookupPath(gameName: string, tagLine: string): string {
 
 export function playerProfilePath(gameName: string, tagLine: string): string {
   return `/player/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
+}
+
+export function playerActiveGamePath(puuid: string): string {
+  return apiPath("players", puuid, "active-game");
 }
 
 export function matchDetailPath(matchId: string, ownerPuuid?: string): string {

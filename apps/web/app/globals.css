@@ -525,6 +525,73 @@ p {
   line-height: 1.5;
 }
 
+.active-game-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgb(97 226 180 / 35%);
+  border-radius: 1rem;
+  background: linear-gradient(120deg, rgb(97 226 180 / 12%), var(--surface));
+  padding: 1rem 1.2rem;
+}
+
+.active-game-banner h2 {
+  margin: 0.2rem 0 0;
+}
+
+.active-game-banner strong {
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.history-badge {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.history-badge.ally {
+  border-color: rgb(97 226 180 / 45%);
+  color: var(--accent);
+}
+
+.history-badge.opponent {
+  border-color: rgb(251 113 133 / 45%);
+  color: #fda4af;
+}
+
+.history-badge.mixed {
+  border-color: rgb(251 191 36 / 45%);
+  color: #fde68a;
+}
+
+.history-evidence {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 1rem;
+}
+
+.history-evidence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}
+
+.history-evidence-list > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border-soft);

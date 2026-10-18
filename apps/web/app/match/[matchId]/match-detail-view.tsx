@@ -154,7 +154,10 @@ export function MatchDetailView({
               <KnownPlayers players={match.familiarity.knownPlayerDetails} />
             ) : null}
 
-            <PremadeSummary groups={match.premadeGroups} />
+            <PremadeSummary
+              groups={match.premadeGroups}
+              knownPlayers={match.familiarity?.knownPlayerDetails ?? []}
+            />
 
             <div className="teams-grid">
               {match.teams.map((team, index) => (
@@ -164,6 +167,7 @@ export function MatchDetailView({
                   premadeGroups={match.premadeGroups.filter(
                     (group) => group.teamId === team.teamId,
                   )}
+                  knownPlayers={match.familiarity?.knownPlayerDetails ?? []}
                   teamId={team.teamId}
                   title={teamName(team.teamId, index)}
                 />
@@ -275,11 +279,13 @@ function MatchLoading({ refreshingHistory }: { refreshingHistory: boolean }) {
 function TeamCard({
   participants,
   premadeGroups,
+  knownPlayers,
   teamId,
   title,
 }: {
   participants: MatchParticipant[];
   premadeGroups: MatchPremadeGroup[];
+  knownPlayers: MatchKnownPlayer[];
   teamId: number;
   title: string;
 }) {
@@ -305,6 +311,9 @@ function TeamCard({
               groups={groupsForParticipant(premadeGroups, participant.puuid)}
               index={index}
               participant={participant}
+              history={knownPlayers.find(
+                (player) => player.puuid === participant.puuid,
+              )}
             />
           ))}
         </ol>
@@ -315,10 +324,12 @@ function TeamCard({
 
 function ParticipantRow({
   groups,
+  history,
   index,
   participant,
 }: {
   groups: MatchPremadeGroup[];
+  history?: MatchKnownPlayer;
   index: number;
   participant: MatchParticipant;
 }) {
@@ -338,6 +349,7 @@ function ParticipantRow({
             gameName={participant.gameName}
             tagLine={participant.tagLine}
           />
+          {history ? <HistoryBadge player={history} /> : null}
           {groups.length > 0 ? (
             <span className="premade-memberships">
               {groups.map((group) => (
@@ -364,7 +376,13 @@ function ParticipantRow({
   );
 }
 
-function PremadeSummary({ groups }: { groups: MatchPremadeGroup[] }) {
+function PremadeSummary({
+  groups,
+  knownPlayers,
+}: {
+  groups: MatchPremadeGroup[];
+  knownPlayers: MatchKnownPlayer[];
+}) {
   return (
     <section className="premade-summary" aria-labelledby="premade-title">
       <div className="section-title-row">
@@ -405,7 +423,50 @@ function PremadeSummary({ groups }: { groups: MatchPremadeGroup[] }) {
           ))}
         </ul>
       )}
+      {knownPlayers.length > 0 ? (
+        <div className="history-evidence">
+          <strong>Historial del jugador buscado</strong>
+          <div className="history-evidence-list">
+            {knownPlayers.map((player) => (
+              <span key={player.puuid}>
+                <PlayerProfileLink
+                  compact
+                  gameName={player.gameName}
+                  tagLine={player.tagLine}
+                />{" "}
+                <HistoryBadge player={player} />
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
+  );
+}
+
+function HistoryBadge({ player }: { player: MatchKnownPlayer }) {
+  const playedTogether = player.allyMatches > 0;
+  const playedAgainst = player.enemyMatches > 0;
+  const label =
+    playedTogether && playedAgainst
+      ? "Aliado y rival"
+      : playedTogether
+        ? "Ya jugó junto"
+        : "Ya jugó en contra";
+  const tone =
+    playedTogether && playedAgainst
+      ? "mixed"
+      : playedTogether
+        ? "ally"
+        : "opponent";
+
+  return (
+    <span
+      className={`history-badge ${tone}`}
+      title={`${label}: ${player.winsAgainst}V / ${player.lossesAgainst}D contra el owner`}
+    >
+      {label}
+    </span>
   );
 }
 

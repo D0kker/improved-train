@@ -6,6 +6,8 @@ import {
   ApiError,
   apiPath,
   fetchJson,
+  playerActiveGamePath,
+  type ActiveGame,
   type MatchDetail,
   type MatchesResponse,
   type PlayerEncounter,
@@ -46,6 +48,7 @@ interface DashboardData {
   matches: MatchesResponse;
   relationships: RelationshipsResponse;
   latestMatch: MatchDetail | null;
+  activeGame: ActiveGame | null;
 }
 
 type LoadingStep = "lookup" | "sync" | "results";
@@ -134,6 +137,20 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
             }
           }
 
+          let activeGame: ActiveGame | null = null;
+          try {
+            activeGame = await fetchJson<ActiveGame | null>(
+              playerActiveGamePath(player.puuid),
+              { signal },
+            );
+          } catch (activeGameError) {
+            if (signal?.aborted) throw activeGameError;
+            syncWarning ??= messageFor(
+              activeGameError,
+              "No se pudo comprobar si hay una partida en curso.",
+            );
+          }
+
           return {
             summary,
             encounters: Array.isArray(encounterResponse)
@@ -142,6 +159,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
             matches,
             relationships,
             latestMatch,
+            activeGame,
           };
         };
 
@@ -308,6 +326,9 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
               </p>
             ) : null}
             <SummaryCards encounters={data.encounters} summary={data.summary} />
+            {data.activeGame ? (
+              <ActiveGameBanner game={data.activeGame} />
+            ) : null}
             <LatestMatch
               match={data.matches.items[0] ?? null}
               matchDetail={data.latestMatch}
@@ -334,6 +355,21 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
         ) : null}
       </div>
     </main>
+  );
+}
+
+function ActiveGameBanner({ game }: { game: ActiveGame }) {
+  return (
+    <section className="active-game-banner" aria-live="polite">
+      <div>
+        <p className="eyebrow">Partida en curso</p>
+        <h2>El jugador está jugando ahora</h2>
+        <p className="muted-copy">
+          {queueLabel(game.queueId)} · iniciada {formatDate(game.gameStartTime)}
+        </p>
+      </div>
+      <strong>{formatDuration(game.gameLengthSeconds)} transcurridos</strong>
+    </section>
   );
 }
 

@@ -16,4 +16,9 @@ public interface IRiotApiClient
     Task<RiotMatchData?> GetMatchAsync(
         string riotMatchId,
         CancellationToken cancellationToken);
+
+    Task<RiotActiveGame?> GetActiveGameAsync(
+        string puuid,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<RiotActiveGame?>(null);
 }
