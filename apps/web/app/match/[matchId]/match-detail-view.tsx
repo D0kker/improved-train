@@ -148,14 +148,6 @@ export function MatchDetailView({
               </div>
             </section>
 
-            {ownerPuuid ? (
-              <ObservedPlayerBanner
-                participant={match.teams
-                  .flatMap((team) => team.participants)
-                  .find((participant) => participant.puuid === ownerPuuid)}
-              />
-            ) : null}
-
             <FamiliaritySummary familiarity={match.familiarity} />
 
             <PremadeSummary
@@ -259,7 +251,6 @@ function TeamCard({
     <section className={`team-card team-${teamId}`}>
       <header>
         <div>
-          <p className="eyebrow">Equipo {teamId}</p>
           <h2>{title}</h2>
         </div>
         <span className={won ? "team-result win" : "team-result loss"}>
@@ -317,9 +308,6 @@ function ParticipantRow({
             gameName={participant.gameName}
             tagLine={participant.tagLine}
           />
-          {isObserved ? (
-            <span className="observed-player-badge">Jugador observado</span>
-          ) : null}
           {history ? <HistoryBadge player={history} /> : null}
           {groups.length > 0 ? (
             <span className="premade-memberships">
@@ -344,29 +332,6 @@ function ParticipantRow({
         <span>K / D / A</span>
       </p>
     </li>
-  );
-}
-
-function ObservedPlayerBanner({
-  participant,
-}: {
-  participant?: MatchParticipant;
-}) {
-  return (
-    <section className="observed-player-banner" aria-label="Jugador observado">
-      <span className="observed-player-marker" aria-hidden="true">
-        ◎
-      </span>
-      <div>
-        <p className="eyebrow">Jugador observado</p>
-        <strong>
-          {participant?.gameName && participant.tagLine
-            ? `${participant.gameName}#${participant.tagLine}`
-            : "El jugador desde cuyo historial abriste esta partida"}
-        </strong>
-        <span>Su fila está resaltada dentro del equipo correspondiente.</span>
-      </div>
-    </section>
   );
 }
 

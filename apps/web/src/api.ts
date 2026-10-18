@@ -23,6 +23,15 @@ export interface ActiveGame {
   queueId: number;
   gameStartTime: string;
   gameLengthSeconds: number;
+  participants: ActiveGameParticipant[];
+}
+
+export interface ActiveGameParticipant {
+  puuid?: string;
+  gameName?: string;
+  tagLine?: string;
+  championId: number;
+  teamId: number;
 }
 
 export interface PlayerEncounter {

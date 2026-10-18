@@ -327,7 +327,10 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
             ) : null}
             <SummaryCards encounters={data.encounters} summary={data.summary} />
             {data.activeGame ? (
-              <ActiveGameBanner game={data.activeGame} />
+              <ActiveGameBanner
+                game={data.activeGame}
+                ownerPuuid={data.player.puuid}
+              />
             ) : null}
             <LatestMatch
               match={data.matches.items[0] ?? null}
@@ -358,7 +361,13 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
   );
 }
 
-function ActiveGameBanner({ game }: { game: ActiveGame }) {
+function ActiveGameBanner({
+  game,
+  ownerPuuid,
+}: {
+  game: ActiveGame;
+  ownerPuuid: string;
+}) {
   return (
     <section className="active-game-banner" aria-live="polite">
       <div>
@@ -368,7 +377,15 @@ function ActiveGameBanner({ game }: { game: ActiveGame }) {
           {queueLabel(game.queueId)} · iniciada {formatDate(game.gameStartTime)}
         </p>
       </div>
-      <strong>{formatDuration(game.gameLengthSeconds)} transcurridos</strong>
+      <div className="active-game-actions">
+        <strong>{formatDuration(game.gameLengthSeconds)} transcurridos</strong>
+        <Link
+          className="primary-button"
+          href={`/match/live?ownerPuuid=${encodeURIComponent(ownerPuuid)}`}
+        >
+          Ver jugadores en curso →
+        </Link>
+      </div>
     </section>
   );
 }

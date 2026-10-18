@@ -164,7 +164,15 @@ public sealed class RiotApiClient(
             payload.GameId,
             payload.GameQueueConfigId,
             DateTimeOffset.FromUnixTimeMilliseconds(payload.GameStartTime),
-            Math.Max(0, payload.GameLength));
+            Math.Max(0, payload.GameLength),
+            (payload.Participants ?? [])
+                .Select(participant => new RiotActiveGameParticipant(
+                    participant.Puuid,
+                    participant.SummonerName,
+                    null,
+                    participant.ChampionId,
+                    participant.TeamId))
+                .ToArray());
     }
 
     private async Task<HttpResponseMessage> SendGetAsync(
@@ -361,5 +369,12 @@ public sealed class RiotApiClient(
         [property: JsonPropertyName("gameId")] long GameId,
         [property: JsonPropertyName("gameStartTime")] long GameStartTime,
         [property: JsonPropertyName("gameLength")] int GameLength,
-        [property: JsonPropertyName("gameQueueConfigId")] int GameQueueConfigId);
+        [property: JsonPropertyName("gameQueueConfigId")] int GameQueueConfigId,
+        [property: JsonPropertyName("participants")] IReadOnlyList<ActiveGameParticipantResponse>? Participants);
+
+    private sealed record ActiveGameParticipantResponse(
+        [property: JsonPropertyName("puuid")] string? Puuid,
+        [property: JsonPropertyName("summonerName")] string? SummonerName,
+        [property: JsonPropertyName("championId")] int ChampionId,
+        [property: JsonPropertyName("teamId")] int TeamId);
 }

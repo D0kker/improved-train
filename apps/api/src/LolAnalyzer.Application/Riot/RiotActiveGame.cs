@@ -4,4 +4,12 @@ public sealed record RiotActiveGame(
     long GameId,
     int QueueId,
     DateTimeOffset GameStartTime,
-    int GameLengthSeconds);
+    int GameLengthSeconds,
+    IReadOnlyList<RiotActiveGameParticipant> Participants);
+
+public sealed record RiotActiveGameParticipant(
+    string? Puuid,
+    string? GameName,
+    string? TagLine,
+    int ChampionId,
+    int TeamId);

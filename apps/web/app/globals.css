@@ -545,42 +545,119 @@ p {
   white-space: nowrap;
 }
 
-.observed-player-banner {
+.active-game-actions {
+  display: grid;
+  justify-items: end;
+  gap: 0.55rem;
+}
+
+.active-game-actions .primary-button {
+  white-space: nowrap;
+}
+
+.live-teams-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.live-team {
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 1.2rem;
+  background: rgb(10 23 20 / 88%);
+}
+
+.live-team-100 {
+  border-color: rgb(96 165 250 / 55%);
+  background: linear-gradient(
+    145deg,
+    rgb(30 91 153 / 42%),
+    rgb(10 23 20 / 92%)
+  );
+}
+
+.live-team-200 {
+  border-color: rgb(248 113 113 / 55%);
+  background: linear-gradient(
+    145deg,
+    rgb(153 45 61 / 42%),
+    rgb(10 23 20 / 92%)
+  );
+}
+
+.live-team > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-soft);
+  padding: 1.1rem 1.2rem;
+}
+
+.live-team > header strong {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.live-participant-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.live-participant-list li {
   display: flex;
   align-items: center;
   gap: 0.8rem;
-  margin: 1rem 0;
-  border: 1px solid rgb(97 226 180 / 40%);
-  border-radius: 1rem;
-  background: rgb(97 226 180 / 9%);
-  padding: 0.9rem 1rem;
+  min-height: 4.3rem;
+  border-bottom: 1px solid var(--border-soft);
+  padding: 0.75rem 1.2rem;
 }
 
-.observed-player-banner > div {
-  display: grid;
-  gap: 0.2rem;
+.live-participant-list li:last-child {
+  border-bottom: 0;
 }
 
-.observed-player-banner strong {
-  color: var(--text);
+.live-participant-list li > div:last-child {
+  min-width: 0;
 }
 
-.observed-player-banner span:last-child {
+.live-participant-list li > div:last-child > span {
+  display: block;
+  margin-top: 0.25rem;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
 }
 
-.observed-player-marker {
-  display: grid !important;
-  width: 2rem;
-  height: 2rem;
-  margin: 0 !important;
+.live-participant-list .player-link {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.live-participant-list .player-link span {
+  display: inline !important;
+  margin-top: 0 !important;
+}
+
+.live-champion-icon {
+  display: grid;
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
   place-items: center;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--ink) !important;
-  font-size: 1.1rem !important;
-  font-weight: 900;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: rgb(10 23 20 / 55%);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.live-observed-player {
+  background: rgb(97 226 180 / 10%);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .history-badge {
@@ -743,6 +820,7 @@ td > span,
 
 .participant-identity .player-link {
   display: inline-flex;
+  flex-direction: row;
   align-items: baseline;
   gap: 0.3rem;
 }
@@ -900,6 +978,7 @@ td > span,
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+  margin-top: 1rem;
 }
 
 .team-card {
@@ -1290,18 +1369,6 @@ td > span,
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
-.observed-player-badge {
-  display: inline-block !important;
-  width: fit-content;
-  margin-top: 0.35rem !important;
-  border: 1px solid rgb(97 226 180 / 45%);
-  border-radius: 999px;
-  padding: 0.2rem 0.45rem;
-  color: var(--accent) !important;
-  font-size: 0.68rem !important;
-  font-weight: 800;
-}
-
 .position-label {
   display: grid !important;
   width: 2.2rem;
@@ -1343,6 +1410,19 @@ td > span,
 
   .teams-grid {
     grid-template-columns: 1fr;
+  }
+
+  .live-teams-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .active-game-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .active-game-actions {
+    justify-items: start;
   }
 
   .network-layout {
