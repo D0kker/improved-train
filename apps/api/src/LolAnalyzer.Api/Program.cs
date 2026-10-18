@@ -92,6 +92,10 @@ if (int.TryParse(builder.Configuration["CACHE_PLAYER_SUMMARY_TTL_SECONDS"], out 
 }
 
 cacheOptions.Validate();
+var analysisJobOptions = builder.Configuration
+    .GetSection(AnalysisJobExecutionOptions.SectionName)
+    .Get<AnalysisJobExecutionOptions>() ?? new AnalysisJobExecutionOptions();
+analysisJobOptions.Validate();
 
 var redisHost = builder.Configuration["REDIS_HOST"] ?? builder.Configuration["Redis:Host"] ?? "localhost";
 var redisPort = int.TryParse(builder.Configuration["REDIS_PORT"], out var configuredRedisPort)
@@ -127,9 +131,12 @@ builder.Services.AddSingleton<PossiblePremadeGroupDetector>();
 builder.Services.AddSingleton(playerNetworkOptions);
 builder.Services.AddSingleton(cacheOptions);
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddSingleton(analysisJobOptions);
+builder.Services.AddSingleton<IAnalysisJobDispatcher, InMemoryAnalysisJobDispatcher>();
 builder.Services.AddSingleton<OperationalMetrics>();
 builder.Services.AddSingleton<IRiotRateLimiter, RiotRateLimiter>();
 builder.Services.AddSingleton<MemoryCacheService>();
+builder.Services.AddSingleton<IRiotResponseCache, RiotResponseCache>();
 if (cacheOptions.UsesRedis)
 {
     builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(new ConfigurationOptions
@@ -152,6 +159,7 @@ builder.Services.AddDbContext<LolAnalyzerDbContext>(options =>
     options.UseInMemoryDatabase("lol-analyzer-runtime"));
 builder.Services.AddScoped<IAnalysisJobRepository, AnalysisJobRepository>();
 builder.Services.AddScoped<AnalysisJobService>();
+builder.Services.AddScoped<AnalysisJobExecutionService>();
 builder.Services.AddScoped<IPlayerRefreshScheduleRepository, PlayerRefreshScheduleRepository>();
 builder.Services.AddScoped<PlayerRefreshScheduleService>();
 builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
@@ -173,6 +181,7 @@ builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
         client.BaseAddress = riotOptions.GetRegionalBaseUri();
         client.Timeout = TimeSpan.FromSeconds(riotOptions.RequestTimeoutSeconds);
     });
+builder.Services.AddHostedService<AnalysisJobBackgroundService>();
 var healthChecks = builder.Services.AddHealthChecks()
     .AddCheck("runtime-memory", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), tags: ["ready"]);
 if (cacheOptions.UsesRedis)
@@ -334,6 +343,7 @@ app.MapPut("/api/v1/players/{puuid}/refresh-schedule", async Task<IResult> (
 app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
     string puuid,
     int? count,
+    string? excludeRiotMatchId,
     MatchIngestionService ingestionService,
     RepeatedPlayerAnalysisService analysisService,
     PlayerRelationshipAnalysisService relationshipAnalysisService,
@@ -355,7 +365,12 @@ app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
     try
     {
         var result = await ingestionService
-            .SynchronizeAsync(puuid, requestedCount, options.PlatformRegion, cancellationToken)
+            .SynchronizeAsync(
+                puuid,
+                requestedCount,
+                options.PlatformRegion,
+                cancellationToken,
+                excludeRiotMatchId)
             .ConfigureAwait(false);
         var analysis = await analysisService.RebuildAsync(puuid, cancellationToken).ConfigureAwait(false);
         var relationshipAnalysis = await relationshipAnalysisService

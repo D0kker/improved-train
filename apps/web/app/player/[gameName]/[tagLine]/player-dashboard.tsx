@@ -17,11 +17,7 @@ import {
   matchDetailPath,
   playerSyncPath,
 } from "@/src/api";
-import {
-  formatDate,
-  formatDuration,
-  queueLabel,
-} from "@/src/format";
+import { formatDate, formatDuration, queueLabel } from "@/src/format";
 import {
   familiarityMessage,
   knownPlayerCount,
@@ -99,23 +95,22 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
 
         setStep("results");
         const readResults = async () => {
-          const [summary, encounterResponse, matches] =
-            await Promise.all([
-              fetchJson<PlayerSummary>(
-                apiPath("players", player.puuid, "summary"),
-                {
-                  signal,
-                },
-              ),
-              fetchJson<PlayerEncounter[] | { items: PlayerEncounter[] }>(
-                apiPath("players", player.puuid, "known-players"),
-                { signal },
-              ),
-              fetchJson<MatchesResponse>(
-                `${apiPath("players", player.puuid, "matches")}?page=1&pageSize=10`,
-                { signal },
-              ),
-            ]);
+          const [summary, encounterResponse, matches] = await Promise.all([
+            fetchJson<PlayerSummary>(
+              apiPath("players", player.puuid, "summary"),
+              {
+                signal,
+              },
+            ),
+            fetchJson<PlayerEncounter[] | { items: PlayerEncounter[] }>(
+              apiPath("players", player.puuid, "known-players"),
+              { signal },
+            ),
+            fetchJson<MatchesResponse>(
+              `${apiPath("players", player.puuid, "matches")}?page=1&pageSize=10`,
+              { signal },
+            ),
+          ]);
 
           let latestMatch: MatchDetail | null = null;
           if (matches.items[0]) {
@@ -164,26 +159,32 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
             results.latestMatch,
             player.puuid,
           );
-          let failedTargets = 0;
-          for (const target of syncPlan) {
-            try {
-              await fetchJson<unknown>(
-                playerSyncPath(target.puuid, target.count),
+          const syncResults = await Promise.allSettled(
+            syncPlan.map((target) =>
+              fetchJson<unknown>(
+                playerSyncPath(
+                  target.puuid,
+                  target.count,
+                  results.latestMatch?.riotMatchId,
+                ),
                 {
                   method: "POST",
                   signal,
                 },
-              );
-            } catch (autoSyncError) {
-              if (signal?.aborted) return;
-              failedTargets += 1;
-              syncWarning ??= messageFor(
-                autoSyncError,
-                "No se pudo actualizar automáticamente el contexto de la última partida.",
-              );
-            }
+              ),
+            ),
+          );
+          if (signal?.aborted) return;
+          const failedTargets = syncResults.filter(
+            (result) => result.status === "rejected",
+          );
+          if (failedTargets.length > 0) {
+            syncWarning ??= messageFor(
+              failedTargets[0].reason,
+              "No se pudo actualizar automáticamente el contexto de la última partida.",
+            );
           }
-          if (failedTargets < syncPlan.length) {
+          if (failedTargets.length < syncPlan.length) {
             results = await readResults();
           }
         }

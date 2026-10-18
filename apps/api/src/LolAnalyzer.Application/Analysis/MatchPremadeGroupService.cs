@@ -23,7 +23,7 @@ public sealed class MatchPremadeGroupService(
 
         var recentEvidence = string.IsNullOrWhiteSpace(ownerPuuid)
             ? new Dictionary<(Guid, Guid), RecentPairEvidence>()
-            : await LoadRecentEvidenceAsync(ownerPuuid, input, cancellationToken)
+            : await LoadRecentEvidenceAsync(ownerPuuid, riotMatchId, input, cancellationToken)
                 .ConfigureAwait(false);
 
         var participants = input.Participants
@@ -88,6 +88,7 @@ public sealed class MatchPremadeGroupService(
 
     private async Task<Dictionary<(Guid PlayerAId, Guid PlayerBId), RecentPairEvidence>> LoadRecentEvidenceAsync(
         string ownerPuuid,
+        string targetRiotMatchId,
         MatchPremadeGroupInput input,
         CancellationToken cancellationToken)
     {
@@ -103,6 +104,11 @@ public sealed class MatchPremadeGroupService(
 
         foreach (var item in matches.Items)
         {
+            if (string.Equals(item.RiotMatchId, targetRiotMatchId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             var detail = await analysisRepository
                 .GetMatchDetailAsync(item.RiotMatchId, cancellationToken)
                 .ConfigureAwait(false);

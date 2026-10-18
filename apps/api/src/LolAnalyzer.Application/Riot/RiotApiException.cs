@@ -1,6 +1,6 @@
 using System.Net;
 
-namespace LolAnalyzer.Infrastructure.Riot;
+namespace LolAnalyzer.Application.Riot;
 
 public sealed class RiotApiException(HttpStatusCode statusCode)
     : Exception("The Riot API request did not complete successfully.")

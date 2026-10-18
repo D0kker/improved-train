@@ -1,13 +1,17 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using LolAnalyzer.Application.Matches;
 using LolAnalyzer.Application.Riot;
 using LolAnalyzer.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LolAnalyzer.Infrastructure.Persistence;
 
 public sealed class MatchRepository(LolAnalyzerDbContext dbContext) : IMatchRepository
 {
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> InMemoryLocks = new(StringComparer.Ordinal);
+
     public async Task<IReadOnlySet<string>> FindExistingRiotMatchIdsAsync(
         IReadOnlyCollection<string> riotMatchIds,
         CancellationToken cancellationToken)
@@ -32,19 +36,42 @@ public sealed class MatchRepository(LolAnalyzerDbContext dbContext) : IMatchRepo
         string platformRegion,
         CancellationToken cancellationToken)
     {
-        await using var transaction = await dbContext.Database
-            .BeginTransactionAsync(cancellationToken)
-            .ConfigureAwait(false);
-        await dbContext.Database
-            .ExecuteSqlInterpolatedAsync(
-                $"SELECT pg_advisory_xact_lock(hashtextextended({match.RiotMatchId}, 0));",
-                cancellationToken)
-            .ConfigureAwait(false);
+        // The local runtime uses EF Core InMemory. Transactions and PostgreSQL
+        // advisory locks are only available when a relational provider is active.
+        // Keeping this provider-aware prevents a Riot sync from being reported as
+        // a missing API key after the external calls have already succeeded.
+        IDbContextTransaction? transaction = null;
+        SemaphoreSlim? inMemoryLock = null;
+        if (dbContext.Database.IsRelational())
+        {
+            transaction = await dbContext.Database
+                .BeginTransactionAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                await dbContext.Database
+                    .ExecuteSqlInterpolatedAsync(
+                        $"SELECT pg_advisory_xact_lock(hashtextextended({match.RiotMatchId}, 0));",
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
+        else
+        {
+            inMemoryLock = InMemoryLocks.GetOrAdd(match.RiotMatchId, _ => new SemaphoreSlim(1, 1));
+            await inMemoryLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        try
+        {
         if (await dbContext.Matches.AnyAsync(
                 existing => existing.RiotMatchId == match.RiotMatchId,
                 cancellationToken).ConfigureAwait(false))
         {
-            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            }
             return false;
         }
 
@@ -131,7 +158,25 @@ public sealed class MatchRepository(LolAnalyzerDbContext dbContext) : IMatchRepo
         }
 
         await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+
         return true;
+        }
+        finally
+        {
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync().ConfigureAwait(false);
+            }
+
+            if (inMemoryLock is not null)
+            {
+                inMemoryLock.Release();
+                InMemoryLocks.TryRemove(new KeyValuePair<string, SemaphoreSlim>(match.RiotMatchId, inMemoryLock));
+            }
+        }
     }
 }

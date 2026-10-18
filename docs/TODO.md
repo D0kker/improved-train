@@ -86,6 +86,13 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] S6-007: instrumentar logs seguros y métricas agregadas de requests, Riot/429, ingesta, caché y jobs sin identificadores ni payloads.
 - [x] S6-008: verificar reinicio, deduplicación, 429, Redis caído y consultas reales; documentar planes y runbook reproducible.
 
+## T02 — estabilización InMemory y AnalysisJobs
+
+- [x] Procesar jobs de la API con cola acotada y `BackgroundService` en el mismo proceso.
+- [x] Eliminar operaciones de actualización masiva incompatibles con el proveedor InMemory y serializar transiciones de estado.
+- [x] Documentar la limitación de instancia única y pérdida de jobs al reiniciar.
+- [ ] Evolucionar a coordinación compartida únicamente junto con una decisión explícita de persistencia durable.
+
 ## Sprint 7 — planificado
 
 - [ ] S7-001: cumplimiento Riot y revisión actual de registro, acceso Production, monetización transformativa y canales de solicitudes de eliminación.

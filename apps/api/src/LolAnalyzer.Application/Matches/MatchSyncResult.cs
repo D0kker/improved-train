@@ -7,4 +7,5 @@ public sealed record MatchSyncResult(
     int Downloaded,
     int Persisted,
     int NotFound,
+    int Failed,
     IReadOnlyList<string> PersistedMatchIds);

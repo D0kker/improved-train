@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace LolAnalyzer.IntegrationTests;
@@ -451,6 +452,9 @@ public sealed class LolAnalyzerApiFactory : WebApplicationFactory<Program>
             }));
         builder.ConfigureTestServices(services =>
         {
+            // These endpoint tests exercise persistence contracts in isolation; the
+            // production in-process dispatcher is covered by its own unit tests.
+            services.RemoveAll<IHostedService>();
             services.RemoveAll<IRiotApiClient>();
             services.RemoveAll<IPlayerRepository>();
             services.RemoveAll<IMatchRepository>();

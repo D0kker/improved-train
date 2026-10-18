@@ -1,6 +1,9 @@
 using System.Net;
 using System.Text;
+using LolAnalyzer.Application.Caching;
 using LolAnalyzer.Application.Observability;
+using LolAnalyzer.Application.Riot;
+using LolAnalyzer.Infrastructure.Caching;
 using LolAnalyzer.Infrastructure.Riot;
 using Xunit;
 
@@ -192,12 +195,16 @@ public sealed class RiotApiClientTests
     {
         options.Validate();
         var timeProvider = TimeProvider.System;
+        var cacheOptions = new CacheOptions();
+        cacheOptions.Validate();
         return new RiotApiClient(
             client,
             options,
             new RiotRateLimiter(options, timeProvider),
             timeProvider,
-            new OperationalMetrics());
+            new OperationalMetrics(),
+            new RiotResponseCache(new MemoryCacheService(timeProvider, cacheOptions)),
+            cacheOptions);
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler

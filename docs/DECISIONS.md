@@ -303,3 +303,18 @@
 - Decisión: consultar desde la API (nunca desde el navegador) el summoner-v4 por PUUID y luego spectator-v5 active-games; devolver solo un resumen mínimo de partida activa: cola, inicio, duración y game ID.
 - Razón: Riot expone el estado activo mediante endpoints protegidos y la API key debe permanecer en API/worker. La señal es útil en la pantalla principal, pero no amplía el historial de partidas terminadas.
 - Consecuencias: 404 de Riot se representa como `null` y no como error; errores de cuota/autorización se degradan a warning en la UI. El endpoint se vuelve a consultar al buscar/refrescar el dashboard.
+## D-039 — Excluir la partida objetivo de la evidencia histórica reciente
+
+- Fecha: 2026-10-18
+- Estado: aceptada para la optimización del análisis de partidas
+- Decisión: cuando se analiza una partida seleccionada, las ventanas de historial solicitadas para el owner y sus participantes deben devolver hasta `count` partidas adicionales, excluyendo el `riot_match_id` objetivo. La partida objetivo sigue disponible para mostrar sus equipos, pero no cuenta como encuentro histórico previo.
+- Razón: incluir la partida seleccionada como evidencia inflaría encuentros aliados/rivales y podría producir una inferencia de premade basada en el mismo evento que se está evaluando.
+- Consecuencias: la petición de Match-V5 puede solicitar una partida adicional para compensar la exclusión; la deduplicación y caché se realizan por Match ID, y la familiaridad/premade deben mantener la exclusión incluso si el objetivo ya estaba almacenado localmente.
+
+## D-040 — AnalysisJobs en cola acotada dentro de la API
+
+- Fecha: 2026-10-18
+- Estado: aceptada para el runtime InMemory actual
+- Decisión: los jobs creados por la API se procesan en el mismo proceso mediante `BackgroundService` y un `Channel<Guid>` acotado. El repositorio InMemory usa mutaciones EF rastreadas y un candado de proceso en vez de operaciones SQL relacionales.
+- Razón: el ingestion-worker no está declarado en Compose y usa otro almacén InMemory; no puede compartir los jobs de la API.
+- Consecuencias: los jobs y resultados se pierden al reiniciar y la capacidad queda limitada a una instancia. La coordinación compartida queda para una decisión futura de persistencia durable.

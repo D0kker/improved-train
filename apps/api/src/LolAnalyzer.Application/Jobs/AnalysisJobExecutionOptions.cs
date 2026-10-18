@@ -10,6 +10,8 @@ public sealed class AnalysisJobExecutionOptions
 
     public TimeSpan LeaseTimeout { get; init; } = TimeSpan.FromMinutes(15);
 
+    public int QueueCapacity { get; init; } = 64;
+
     public void Validate()
     {
         if (BatchSize is < 1 or > 100)
@@ -25,6 +27,11 @@ public sealed class AnalysisJobExecutionOptions
         if (LeaseTimeout < TimeSpan.FromMinutes(1) || LeaseTimeout > TimeSpan.FromHours(24))
         {
             throw new InvalidOperationException("Analysis job lease timeout must be between 1 minute and 24 hours.");
+        }
+
+        if (QueueCapacity is < 1 or > 1024)
+        {
+            throw new InvalidOperationException("Analysis job queue capacity must be between 1 and 1024.");
         }
     }
 }

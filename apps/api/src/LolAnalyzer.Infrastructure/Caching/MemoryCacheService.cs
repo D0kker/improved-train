@@ -3,8 +3,9 @@ using LolAnalyzer.Application.Caching;
 
 namespace LolAnalyzer.Infrastructure.Caching;
 
-public sealed class MemoryCacheService(TimeProvider timeProvider) : ICacheService
+public sealed class MemoryCacheService(TimeProvider timeProvider, CacheOptions? options = null) : ICacheService
 {
+    private readonly int maxEntries = options?.MaxMemoryEntries ?? 4096;
     private readonly ConcurrentDictionary<string, CacheEntry> entries = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> taggedKeys = new(StringComparer.Ordinal);
 
@@ -18,7 +19,7 @@ public sealed class MemoryCacheService(TimeProvider timeProvider) : ICacheServic
 
         if (entry.ExpiresAt <= timeProvider.GetUtcNow())
         {
-            entries.TryRemove(key, out _);
+            RemoveKey(key);
             return Task.FromResult<T?>(null);
         }
 
@@ -34,6 +35,7 @@ public sealed class MemoryCacheService(TimeProvider timeProvider) : ICacheServic
     {
         cancellationToken.ThrowIfCancellationRequested();
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(timeToLive, TimeSpan.Zero);
+        TrimExpiredAndBound();
         entries[key] = new CacheEntry(value, timeProvider.GetUtcNow().Add(timeToLive));
         taggedKeys.GetOrAdd(tag, _ => new ConcurrentDictionary<string, byte>(StringComparer.Ordinal))[key] = 0;
         return Task.CompletedTask;
@@ -46,14 +48,44 @@ public sealed class MemoryCacheService(TimeProvider timeProvider) : ICacheServic
         {
             foreach (var key in keys.Keys)
             {
-                entries.TryRemove(key, out _);
+                RemoveKey(key);
             }
         }
 
         return Task.CompletedTask;
     }
 
-    public void RemoveLocal(string key) => entries.TryRemove(key, out _);
+    public void RemoveLocal(string key) => RemoveKey(key);
+
+    private void TrimExpiredAndBound()
+    {
+        var now = timeProvider.GetUtcNow();
+        foreach (var pair in entries)
+        {
+            if (pair.Value.ExpiresAt <= now)
+            {
+                RemoveKey(pair.Key);
+            }
+        }
+
+        while (entries.Count >= maxEntries)
+        {
+            var candidate = entries.Keys.FirstOrDefault();
+            if (candidate is null || !entries.TryRemove(candidate, out _))
+            {
+                break;
+            }
+        }
+    }
+
+    private void RemoveKey(string key)
+    {
+        entries.TryRemove(key, out _);
+        foreach (var tag in taggedKeys.Values)
+        {
+            tag.TryRemove(key, out _);
+        }
+    }
 
     private sealed record CacheEntry(object Value, DateTimeOffset ExpiresAt);
 }

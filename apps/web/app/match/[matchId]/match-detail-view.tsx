@@ -47,20 +47,24 @@ export function MatchDetailView({
       let loadedMatch = await fetchJson<MatchDetail>(path);
       if (ownerPuuid) {
         const syncPlan = latestMatchSyncPlan(loadedMatch, ownerPuuid);
-        let failedTargets = 0;
         setIsRefreshingHistory(syncPlan.length > 0);
-        for (const target of syncPlan) {
-          try {
-            await fetchJson<unknown>(
-              playerSyncPath(target.puuid, target.count),
+        const syncResults = await Promise.allSettled(
+          syncPlan.map((target) =>
+            fetchJson<unknown>(
+              playerSyncPath(
+                target.puuid,
+                target.count,
+                loadedMatch.riotMatchId,
+              ),
               {
                 method: "POST",
               },
-            );
-          } catch {
-            failedTargets += 1;
-          }
-        }
+            ),
+          ),
+        );
+        const failedTargets = syncResults.filter(
+          (result) => result.status === "rejected",
+        ).length;
         setIsRefreshingHistory(false);
         if (failedTargets > 0) {
           setWarning(

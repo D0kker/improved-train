@@ -24,6 +24,11 @@ services:
       Redis__Host: redis
       Redis__Port: 6379
       CACHE_PROVIDER: ${CACHE_PROVIDER:-memory}
+      Cache__RecentMatchIdsTtlSeconds: ${CACHE_RECENT_MATCH_IDS_TTL_SECONDS:-120}
+      Cache__MatchDetailsTtlSeconds: ${CACHE_MATCH_DETAILS_TTL_SECONDS:-3600}
+      Cache__PlayerIdentityTtlSeconds: ${CACHE_PLAYER_IDENTITY_TTL_SECONDS:-1800}
+      Cache__AnalysisResultTtlSeconds: ${CACHE_ANALYSIS_RESULT_TTL_SECONDS:-900}
+      Cache__MaxMemoryEntries: ${CACHE_MAX_MEMORY_ENTRIES:-4096}
       RIOT_API_KEY: ${RIOT_API_KEY:-}
       RIOT_PLATFORM_REGION: ${RIOT_PLATFORM_REGION:-la1}
       RIOT_REGIONAL_ROUTING: ${RIOT_REGIONAL_ROUTING:-americas}

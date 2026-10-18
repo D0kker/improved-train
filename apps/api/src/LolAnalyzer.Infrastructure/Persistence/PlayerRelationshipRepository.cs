@@ -18,16 +18,24 @@ public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext)
     {
         ArgumentNullException.ThrowIfNull(changedRiotMatchIds);
         ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
-        var transaction = await dbContext.Database
+        IDbContextTransaction? transaction = null;
+        if (dbContext.Database.IsRelational())
+        {
             // READ COMMITTED takes its data snapshots after the advisory lock is acquired.
             // A waiting updater therefore observes the previous updater's committed upserts.
-            .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
-            .ConfigureAwait(false);
+            transaction = await dbContext.Database
+                .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
+                .ConfigureAwait(false);
+        }
         try
         {
-            await dbContext.Database
-                .ExecuteSqlRawAsync(RelationshipUpdateLockSql, cancellationToken)
-                .ConfigureAwait(false);
+            if (transaction is not null
+                && dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                await dbContext.Database
+                    .ExecuteSqlRawAsync(RelationshipUpdateLockSql, cancellationToken)
+                    .ConfigureAwait(false);
+            }
             var changedIds = changedRiotMatchIds
                 .Where(matchId => !string.IsNullOrWhiteSpace(matchId))
                 .Distinct(StringComparer.Ordinal)
@@ -96,7 +104,10 @@ public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext)
         }
         catch
         {
-            await transaction.DisposeAsync().ConfigureAwait(false);
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync().ConfigureAwait(false);
+            }
             throw;
         }
     }
@@ -336,7 +347,7 @@ public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext)
 
     private sealed class PlayerRelationshipUpdateScope(
         LolAnalyzerDbContext context,
-        IDbContextTransaction transaction,
+        IDbContextTransaction? transaction,
         IncrementalRelationshipAnalysisInput input) : IPlayerRelationshipUpdateScope
     {
         private bool committed;
@@ -402,18 +413,24 @@ public sealed class PlayerRelationshipRepository(LolAnalyzerDbContext dbContext)
 
         public async Task CommitAsync(CancellationToken cancellationToken)
         {
-            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            }
             committed = true;
         }
 
         public async ValueTask DisposeAsync()
         {
-            if (!committed)
+            if (transaction is not null && !committed)
             {
                 await transaction.RollbackAsync(CancellationToken.None).ConfigureAwait(false);
             }
 
-            await transaction.DisposeAsync().ConfigureAwait(false);
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync().ConfigureAwait(false);
+            }
         }
 
         private static void Apply(PlayerRelationshipAggregate aggregate, PlayerRelationship entity)

@@ -35,6 +35,9 @@ public sealed class OperationalMetrics : IDisposable
     private long echoEncounterLookupCount;
     private long echoEncounterHitCount;
     private long echoKnownPlayersFoundCount;
+    private long matchIdsReturnedCount;
+    private long uniqueMatchIdsCount;
+    private long avoidedMatchDetailRequestCount;
 
     public OperationalMetrics()
     {
@@ -82,6 +85,18 @@ public sealed class OperationalMetrics : IDisposable
 
         Interlocked.Add(ref matchesIngestedCount, count);
         matchesIngested.Add(count);
+    }
+
+    public void RecordMatchAnalysisPlan(int matchIdsReturned, int uniqueMatchIds, int avoidedDetailRequests)
+    {
+        if (matchIdsReturned < 0 || uniqueMatchIds < 0 || avoidedDetailRequests < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(matchIdsReturned));
+        }
+
+        Interlocked.Add(ref matchIdsReturnedCount, matchIdsReturned);
+        Interlocked.Add(ref uniqueMatchIdsCount, uniqueMatchIds);
+        Interlocked.Add(ref avoidedMatchDetailRequestCount, avoidedDetailRequests);
     }
 
     public void RecordCacheAccess(bool hit, bool fallback)
@@ -133,6 +148,13 @@ public sealed class OperationalMetrics : IDisposable
         Interlocked.Increment(ref succeeded ? ref completedJobCount : ref failedJobCount);
     }
 
+    public void RecordSyncDuration(TimeSpan duration, bool completed)
+    {
+        analysisDuration.Record(
+            duration.TotalSeconds,
+            new TagList { { "job.outcome", completed ? "completed" : "partial" }, { "analysis.kind", "match-sync" } });
+    }
+
     public OperationalMetricsSnapshot Snapshot() => new(
         HttpRequests: Interlocked.Read(ref httpRequestCount),
         RiotRequests: Interlocked.Read(ref riotRequestCount),
@@ -147,7 +169,10 @@ public sealed class OperationalMetrics : IDisposable
         EchoMatchesAnalyzed: Interlocked.Read(ref echoMatchesAnalyzedCount),
         EchoEncounterLookups: Interlocked.Read(ref echoEncounterLookupCount),
         EchoEncounterHits: Interlocked.Read(ref echoEncounterHitCount),
-        EchoKnownPlayersFound: Interlocked.Read(ref echoKnownPlayersFoundCount));
+        EchoKnownPlayersFound: Interlocked.Read(ref echoKnownPlayersFoundCount),
+        MatchIdsReturned: Interlocked.Read(ref matchIdsReturnedCount),
+        UniqueMatchIds: Interlocked.Read(ref uniqueMatchIdsCount),
+        AvoidedMatchDetailRequests: Interlocked.Read(ref avoidedMatchDetailRequestCount));
 
     public void Dispose() => meter.Dispose();
 }
@@ -166,7 +191,10 @@ public sealed record OperationalMetricsSnapshot(
     long EchoMatchesAnalyzed,
     long EchoEncounterLookups,
     long EchoEncounterHits,
-    long EchoKnownPlayersFound)
+    long EchoKnownPlayersFound,
+    long MatchIdsReturned,
+    long UniqueMatchIds,
+    long AvoidedMatchDetailRequests)
 {
     public decimal EchoEncounterHitRate => EchoMatchesAnalyzed == 0
         ? 0

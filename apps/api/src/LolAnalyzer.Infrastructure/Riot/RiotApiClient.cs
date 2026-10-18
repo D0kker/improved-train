@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LolAnalyzer.Application.Caching;
 using LolAnalyzer.Application.Observability;
 using LolAnalyzer.Application.Riot;
 
@@ -12,15 +13,31 @@ public sealed class RiotApiClient(
     RiotOptions options,
     IRiotRateLimiter rateLimiter,
     TimeProvider timeProvider,
-    OperationalMetrics metrics) : IRiotApiClient
+    OperationalMetrics metrics,
+    IRiotResponseCache responseCache,
+    CacheOptions cacheOptions) : IRiotApiClient
 {
-    public async Task<RiotAccount?> GetAccountByRiotIdAsync(
+    public Task<RiotAccount?> GetAccountByRiotIdAsync(
         string gameName,
         string tagLine,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(gameName);
         ArgumentException.ThrowIfNullOrWhiteSpace(tagLine);
+
+        return responseCache.GetOrCreateAsync(
+            RiotCacheKeys.Account(gameName, tagLine),
+            TimeSpan.FromSeconds(cacheOptions.PlayerIdentityTtlSeconds),
+            "riot-identity",
+            token => FetchAccountByRiotIdAsync(gameName, tagLine, token),
+            cancellationToken);
+    }
+
+    private async Task<RiotAccount?> FetchAccountByRiotIdAsync(
+        string gameName,
+        string tagLine,
+        CancellationToken cancellationToken)
+    {
 
         var path = $"riot/account/v1/accounts/by-riot-id/{Uri.EscapeDataString(gameName)}/{Uri.EscapeDataString(tagLine)}";
         using var response = await SendGetAsync(path, "account", cancellationToken).ConfigureAwait(false);
@@ -57,6 +74,21 @@ public sealed class RiotApiClient(
         ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 100);
 
+        var cached = await responseCache.GetOrCreateAsync(
+            RiotCacheKeys.MatchIds(puuid, start, count),
+            TimeSpan.FromSeconds(cacheOptions.RecentMatchIdsTtlSeconds),
+            "riot-match-ids",
+            token => FetchMatchIdsAsync(puuid, start, count, token),
+            cancellationToken).ConfigureAwait(false);
+        return cached ?? [];
+    }
+
+    private async Task<List<string>?> FetchMatchIdsAsync(
+        string puuid,
+        int start,
+        int count,
+        CancellationToken cancellationToken)
+    {
         var path = $"lol/match/v5/matches/by-puuid/{Uri.EscapeDataString(puuid)}/ids?start={start}&count={count}";
         using var response = await SendGetAsync(path, "match_ids", cancellationToken).ConfigureAwait(false);
 
@@ -70,9 +102,20 @@ public sealed class RiotApiClient(
         return matchIds ?? [];
     }
 
-    public async Task<RiotMatchData?> GetMatchAsync(string riotMatchId, CancellationToken cancellationToken)
+    public Task<RiotMatchData?> GetMatchAsync(string riotMatchId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(riotMatchId);
+
+        return responseCache.GetOrCreateAsync(
+            RiotCacheKeys.Match(riotMatchId),
+            TimeSpan.FromSeconds(cacheOptions.MatchDetailsTtlSeconds),
+            "riot-match-details",
+            token => FetchMatchAsync(riotMatchId, token),
+            cancellationToken);
+    }
+
+    private async Task<RiotMatchData?> FetchMatchAsync(string riotMatchId, CancellationToken cancellationToken)
+    {
 
         var path = $"lol/match/v5/matches/{Uri.EscapeDataString(riotMatchId)}";
         using var response = await SendGetAsync(path, "match", cancellationToken).ConfigureAwait(false);

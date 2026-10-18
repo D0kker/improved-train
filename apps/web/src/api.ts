@@ -234,12 +234,19 @@ export function matchDetailPath(matchId: string, ownerPuuid?: string): string {
     : path;
 }
 
-export function playerSyncPath(puuid: string, count = 20): string {
+export function playerSyncPath(
+  puuid: string,
+  count = 20,
+  excludeRiotMatchId?: string,
+): string {
   if (!Number.isInteger(count) || count < 1 || count > 20) {
     throw new RangeError("El número de partidas debe estar entre 1 y 20.");
   }
 
-  return `${apiPath("players", puuid, "matches", "sync")}?count=${count}`;
+  const path = `${apiPath("players", puuid, "matches", "sync")}?count=${count}`;
+  return excludeRiotMatchId
+    ? `${path}&excludeRiotMatchId=${encodeURIComponent(excludeRiotMatchId)}`
+    : path;
 }
 
 export function playerRelationshipsPath(

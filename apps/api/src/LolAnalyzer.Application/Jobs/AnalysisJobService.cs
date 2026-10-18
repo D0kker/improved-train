@@ -2,7 +2,10 @@ using LolAnalyzer.Domain.Entities;
 
 namespace LolAnalyzer.Application.Jobs;
 
-public sealed class AnalysisJobService(IAnalysisJobRepository repository, TimeProvider timeProvider)
+public sealed class AnalysisJobService(
+    IAnalysisJobRepository repository,
+    IAnalysisJobDispatcher queue,
+    TimeProvider timeProvider)
 {
     public async Task<AnalysisJobView> StartAsync(
         string puuid,
@@ -22,6 +25,7 @@ public sealed class AnalysisJobService(IAnalysisJobRepository repository, TimePr
         var activeJob = await repository
             .AddOrGetActiveAsync(job, cancellationToken)
             .ConfigureAwait(false);
+        await queue.EnqueueAsync(activeJob.Id, cancellationToken).ConfigureAwait(false);
         return Map(activeJob);
     }
 

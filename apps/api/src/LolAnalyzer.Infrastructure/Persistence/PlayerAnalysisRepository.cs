@@ -1,6 +1,7 @@
 using LolAnalyzer.Application.Analysis;
 using LolAnalyzer.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LolAnalyzer.Infrastructure.Persistence;
 
@@ -115,13 +116,21 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
         IReadOnlyCollection<PlayerEncounterAggregate> encounters,
         CancellationToken cancellationToken)
     {
-        await using var transaction = await dbContext.Database
-            .BeginTransactionAsync(cancellationToken)
-            .ConfigureAwait(false);
-        await dbContext.PlayerEncounters
-            .Where(encounter => encounter.OwnerPlayerId == ownerPlayerId)
-            .ExecuteDeleteAsync(cancellationToken)
-            .ConfigureAwait(false);
+        IDbContextTransaction? transaction = null;
+        if (dbContext.Database.IsRelational())
+        {
+            transaction = await dbContext.Database
+                .BeginTransactionAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        try
+        {
+            var existingEncounters = await dbContext.PlayerEncounters
+                .Where(encounter => encounter.OwnerPlayerId == ownerPlayerId)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            dbContext.PlayerEncounters.RemoveRange(existingEncounters);
 
         dbContext.PlayerEncounters.AddRange(encounters.Select(encounter => new PlayerEncounter
         {
@@ -137,8 +146,19 @@ public sealed class PlayerAnalysisRepository(LolAnalyzerDbContext dbContext) : I
             FirstSeenAt = encounter.FirstSeenAt,
             LastSeenAt = encounter.LastSeenAt,
         }));
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync().ConfigureAwait(false);
+            }
+        }
     }
 
     public async Task<PlayerSummary?> GetSummaryAsync(string puuid, CancellationToken cancellationToken)
