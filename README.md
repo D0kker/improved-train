@@ -52,13 +52,19 @@ docker compose up -d --build
 docker compose ps
 ```
 
+Para la instancia local actualmente publicada en el puerto `8081`, usa:
+
+```bash
+WEB_PORT=8081 CACHE_PROVIDER=memory docker compose up -d
+```
+
 Redis es opcional. Para habilitar caché compartida con fallback local:
 
 ```bash
 CACHE_PROVIDER=redis docker compose --profile redis up -d --build
 ```
 
-La web es el único servicio publicado al host: `http://localhost:38080`. PostgreSQL, API, worker y Redis permanecen privados. La portada y `/api/health` funcionan sin una key; las operaciones Riot devuelven un error controlado mientras `RIOT_API_KEY` no esté configurada.
+La web es el único servicio publicado al host. En la instancia local actual está disponible en `http://localhost:8081`; PostgreSQL, API, worker y Redis permanecen privados. La portada y `/api/health` funcionan sin una key; las operaciones Riot devuelven un error controlado mientras `RIOT_API_KEY` no esté configurada.
 
 ## Secretos
 

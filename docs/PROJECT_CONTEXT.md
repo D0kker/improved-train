@@ -1,6 +1,6 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-09-22
+Última actualización: 2026-10-17
 
 ## Propósito
 
@@ -19,7 +19,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - El repositorio contiene web Next.js, API .NET, worker, PostgreSQL, Redis, pruebas, CI y la especificación original.
 - Foundation y Sprints 1–6 están implementados localmente; Sprint 7 inició con auditoría Riot e inventario de datos.
 - `docs/SPEC_ANALYSIS.md` registra fortalezas, tensiones y el orden recomendado para Sprint 1.
-- El stack Docker está activo con cinco servicios saludables y solo la web publicada en `0.0.0.0:38080`.
+- El stack Docker está activo con cuatro servicios saludables en modo `CACHE_PROVIDER=memory`; solo la web está publicada en `0.0.0.0:8081`. Redis permanece detenido porque es un perfil opcional.
 - ACCOUNT-V1 resuelve Riot ID a PUUID; MATCH-V5 ingesta hasta 20 partidas, consulta primero PostgreSQL, conserva raw JSONB y normaliza participantes.
 - Sprint 3 reconstruye encounters dirigidos owner/other y expone summary, repetidos, historial paginado y detalle de partida.
 - La web permite buscar Riot ID, sincronizar el lote acotado y revisar summary, recurrentes, historial y equipos mediante `/api/v1` same-origin.
@@ -90,6 +90,7 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 - Una verificación efímera de familiaridad contra PostgreSQL obtuvo `known=1`, `unknown=0`, `percentage=100` usando tres partidas sintéticas y eliminó esos datos al terminar.
 - Frontend: los enlaces de conexiones y jugadores recurrentes a perfiles codifican correctamente Riot IDs con espacios o `/`; tests, lint, type-check, formato, build Next.js y build Docker pasan. El contenedor web quedó saludable tras recreación.
 - Runtime posterior a S5-004: la API fue reconstruida/recreada, los cinco servicios permanecen saludables, `/health` responde `Healthy` y la nueva ruta `/network` devuelve un 404 controlado para un jugador inexistente.
+- Verificación operativa 2026-10-17: después de detener todos los contenedores, `WEB_PORT=8081 CACHE_PROVIDER=memory docker compose up -d` dejó PostgreSQL, API, worker y web saludables; la web publicó `0.0.0.0:8081->3000`, `/` respondió 200 y `/api/health` respondió 200. El build iniciado previamente fue interrumpido antes de completar y el arranque final reutilizó las imágenes existentes.
 - Frontend posterior a la presentación de premades: 6 pruebas, lint, type-check, Prettier y build Next.js/Docker aprobados; API y web fueron recreadas, `/health` responde `Healthy` y la ruta dinámica de detalle renderiza.
 - Navegación desde detalle: el componente compartido enlaza Riot IDs completos tanto en las filas de participantes como en la leyenda de premades; pruebas frontend, lint, type-check, Prettier y build local/Docker pasan, y la web recreada queda saludable.
 - S6-004: 48 pruebas unitarias y 18 de integración .NET, `dotnet format --verify-no-changes` y builds Docker de API/worker exitosos. Los casos HTTP simulados cubren 429 con `Retry-After`, reintento acotado, concurrencia y cancelación; no se llamó a Riot.
