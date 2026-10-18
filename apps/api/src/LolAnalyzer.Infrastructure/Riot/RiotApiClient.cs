@@ -123,12 +123,20 @@ public sealed class RiotApiClient(
 
         var summoner = await summonerResponse.Content.ReadFromJsonAsync<SummonerResponse>(
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (summoner is null || string.IsNullOrWhiteSpace(summoner.Id))
+        if (summoner is null)
         {
             throw new RiotApiException(HttpStatusCode.BadGateway);
         }
 
-        var activePath = $"lol/spectator/v5/active-games/by-summoner/{Uri.EscapeDataString(summoner.Id)}";
+        var spectatorIdentity = !string.IsNullOrWhiteSpace(summoner.Id)
+            ? summoner.Id
+            : summoner.Puuid;
+        if (string.IsNullOrWhiteSpace(spectatorIdentity))
+        {
+            throw new RiotApiException(HttpStatusCode.BadGateway);
+        }
+
+        var activePath = $"lol/spectator/v5/active-games/by-summoner/{Uri.EscapeDataString(spectatorIdentity)}";
         using var activeResponse = await SendGetAsync(
             activePath,
             "active_game",
@@ -346,7 +354,8 @@ public sealed class RiotApiClient(
         [property: JsonPropertyName("tagLine")] string? TagLine);
 
     private sealed record SummonerResponse(
-        [property: JsonPropertyName("id")] string? Id);
+        [property: JsonPropertyName("id")] string? Id,
+        [property: JsonPropertyName("puuid")] string? Puuid);
 
     private sealed record ActiveGameResponse(
         [property: JsonPropertyName("gameId")] long GameId,
