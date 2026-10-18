@@ -136,7 +136,7 @@ export function MatchDetailView({
             <section className="match-heading">
               <div>
                 <p className="eyebrow">Detalle de partida</p>
-                <h1>{match.riotMatchId}</h1>
+                <h1>Resultado de la partida</h1>
                 <p className="muted-copy">
                   {queueLabel(match.queueId)} ·{" "}
                   {formatDate(match.gameStartTimestamp)}
@@ -147,6 +147,14 @@ export function MatchDetailView({
                 <strong>{formatDuration(match.gameDurationSeconds)}</strong>
               </div>
             </section>
+
+            {ownerPuuid ? (
+              <ObservedPlayerBanner
+                participant={match.teams
+                  .flatMap((team) => team.participants)
+                  .find((participant) => participant.puuid === ownerPuuid)}
+              />
+            ) : null}
 
             <FamiliaritySummary familiarity={match.familiarity} />
 
@@ -164,6 +172,7 @@ export function MatchDetailView({
                     (group) => group.teamId === team.teamId,
                   )}
                   knownPlayers={match.familiarity?.knownPlayerDetails ?? []}
+                  ownerPuuid={ownerPuuid}
                   teamId={team.teamId}
                   title={teamName(team.teamId, index)}
                 />
@@ -234,12 +243,14 @@ function TeamCard({
   participants,
   premadeGroups,
   knownPlayers,
+  ownerPuuid,
   teamId,
   title,
 }: {
   participants: MatchParticipant[];
   premadeGroups: MatchPremadeGroup[];
   knownPlayers: MatchKnownPlayer[];
+  ownerPuuid?: string;
   teamId: number;
   title: string;
 }) {
@@ -265,6 +276,7 @@ function TeamCard({
               groups={groupsForParticipant(premadeGroups, participant.puuid)}
               index={index}
               participant={participant}
+              isObserved={participant.puuid === ownerPuuid}
               history={knownPlayers.find(
                 (player) => player.puuid === participant.puuid,
               )}
@@ -280,15 +292,17 @@ function ParticipantRow({
   groups,
   history,
   index,
+  isObserved,
   participant,
 }: {
   groups: MatchPremadeGroup[];
   history?: MatchKnownPlayer;
   index: number;
+  isObserved: boolean;
   participant: MatchParticipant;
 }) {
   return (
-    <li>
+    <li className={isObserved ? "observed-player" : undefined}>
       <span className="position-label">
         {positionName(participant.teamPosition, index)}
       </span>
@@ -303,6 +317,9 @@ function ParticipantRow({
             gameName={participant.gameName}
             tagLine={participant.tagLine}
           />
+          {isObserved ? (
+            <span className="observed-player-badge">Jugador observado</span>
+          ) : null}
           {history ? <HistoryBadge player={history} /> : null}
           {groups.length > 0 ? (
             <span className="premade-memberships">
@@ -327,6 +344,29 @@ function ParticipantRow({
         <span>K / D / A</span>
       </p>
     </li>
+  );
+}
+
+function ObservedPlayerBanner({
+  participant,
+}: {
+  participant?: MatchParticipant;
+}) {
+  return (
+    <section className="observed-player-banner" aria-label="Jugador observado">
+      <span className="observed-player-marker" aria-hidden="true">
+        ◎
+      </span>
+      <div>
+        <p className="eyebrow">Jugador observado</p>
+        <strong>
+          {participant?.gameName && participant.tagLine
+            ? `${participant.gameName}#${participant.tagLine}`
+            : "El jugador desde cuyo historial abriste esta partida"}
+        </strong>
+        <span>Su fila está resaltada dentro del equipo correspondiente.</span>
+      </div>
+    </section>
   );
 }
 

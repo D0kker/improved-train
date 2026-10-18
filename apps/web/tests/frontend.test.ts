@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   apiPath,
+  fetchJson,
   matchDetailPath,
   playerActiveGamePath,
   playerNetworkPath,
@@ -59,6 +60,19 @@ test("API paths remain same-origin and encode user-controlled segments", () => {
     playerActiveGamePath("owner/puuid"),
     "/api/v1/players/owner%2Fpuuid/active-game",
   );
+});
+
+test("empty successful responses are treated as null JSON", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(null, { status: 200 });
+  try {
+    assert.equal(
+      await fetchJson<null>("/api/v1/players/test/active-game"),
+      null,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("match synchronization is bounded to twenty matches", () => {

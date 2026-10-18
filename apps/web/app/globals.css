@@ -545,6 +545,44 @@ p {
   white-space: nowrap;
 }
 
+.observed-player-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 1rem 0;
+  border: 1px solid rgb(97 226 180 / 40%);
+  border-radius: 1rem;
+  background: rgb(97 226 180 / 9%);
+  padding: 0.9rem 1rem;
+}
+
+.observed-player-banner > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.observed-player-banner strong {
+  color: var(--text);
+}
+
+.observed-player-banner span:last-child {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.observed-player-marker {
+  display: grid !important;
+  width: 2rem;
+  height: 2rem;
+  margin: 0 !important;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--ink) !important;
+  font-size: 1.1rem !important;
+  font-weight: 900;
+}
+
 .history-badge {
   display: inline-block;
   width: fit-content;
@@ -695,12 +733,23 @@ td > span,
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.9rem;
 }
 
 .match-champion-copy,
 .participant-identity > div {
   min-width: 0;
+}
+
+.participant-identity .player-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.participant-identity .player-link span {
+  display: inline !important;
+  margin-top: 0 !important;
 }
 
 .champion-icon,
@@ -858,6 +907,24 @@ td > span,
   border: 1px solid var(--border-soft);
   border-radius: 1.2rem;
   background: rgb(10 23 20 / 88%);
+}
+
+.team-card.team-100 {
+  border-color: rgb(96 165 250 / 55%);
+  background: linear-gradient(
+    145deg,
+    rgb(30 91 153 / 42%),
+    rgb(10 23 20 / 92%)
+  );
+}
+
+.team-card.team-200 {
+  border-color: rgb(248 113 113 / 55%);
+  background: linear-gradient(
+    145deg,
+    rgb(153 45 61 / 42%),
+    rgb(10 23 20 / 92%)
+  );
 }
 
 .team-card > header {
@@ -1216,6 +1283,23 @@ td > span,
 
 .participant-list li:last-child {
   border-bottom: 0;
+}
+
+.participant-list li.observed-player {
+  background: rgb(97 226 180 / 8%);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.observed-player-badge {
+  display: inline-block !important;
+  width: fit-content;
+  margin-top: 0.35rem !important;
+  border: 1px solid rgb(97 226 180 / 45%);
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+  color: var(--accent) !important;
+  font-size: 0.68rem !important;
+  font-weight: 800;
 }
 
 .position-label {

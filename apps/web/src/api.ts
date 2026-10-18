@@ -270,7 +270,8 @@ export async function fetchJson<T>(
     throw new ApiError(await errorMessage(response), response.status);
   }
 
-  return (await response.json()) as T;
+  const body = await response.text();
+  return (body.trim() ? JSON.parse(body) : null) as T;
 }
 
 async function errorMessage(response: Response): Promise<string> {
