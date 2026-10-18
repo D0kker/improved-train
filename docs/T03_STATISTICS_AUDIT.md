@@ -61,8 +61,16 @@ Las cinco partidas son el tamaño de consulta inicial, no un límite destructivo
 - Frontend Node 24: 14 pruebas aprobadas; lint y type-check aprobados. Los comandos se ejecutaron fuera del sandbox: dentro de él, el runner reportaba solo archivos y Next.js no podía leer correctamente la salida de su subproceso TypeScript.
 - Build de producción Next.js aprobado; rutas de jugador y partida generadas correctamente.
 - Formato whitespace .NET aplicado a los archivos modificados y `git diff --check` aprobado.
-- `docker compose config --quiet` y construcción Docker de API/web aprobados para la arquitectura disponible. Los servicios en ejecución no se recrearon.
-- No se llamó a Riot ni se desplegaron los cambios T03.
+- `docker compose config --quiet` y construcción Docker de API/web aprobados para la arquitectura disponible.
+- No se llamó a Riot en las pruebas.
+
+## Publicación y despliegue autorizados
+
+- Código publicado por SSH en `origin/feature/echo-product-focus`, commit `1f54650`.
+- El PO autorizó el despliegue el 2026-10-18. API y web fueron reconstruidas/recreadas en modo InMemory, con web publicada en 8081.
+- Ambos contenedores están saludables. `/` respondió 200, `/api/health` devolvió `healthy` y readiness interno de API respondió `Healthy`.
+- Se verificaron las imágenes ejecutadas contra los artefactos construidos: API `342899275dc5`, web `21ba547cf9f3`.
+- El reinicio elimina los datos temporales anteriores; no se añadió persistencia durable.
 
 ## Límites
 

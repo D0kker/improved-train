@@ -8,8 +8,9 @@ LoL Network Analyzer será un sitio/sistema de análisis histórico de partidas 
 
 ## Estado real
 
-- T03 revisa estadísticas y familiaridad sobre `648a74a` en `feature/echo-product-focus`: resumen por Match ID/PUUID, participaciones separadas de únicos/recurrentes, cobertura parcial explícita y premades con evidencia estrictamente anterior. Diagnóstico, alcance del corpus y pruebas: `docs/T03_STATISTICS_AUDIT.md`. Se conserva InMemory y el dispatcher de T02; no se ha desplegado T03.
+- T03 revisa estadísticas y familiaridad sobre `648a74a` en `feature/echo-product-focus`: resumen por Match ID/PUUID, participaciones separadas de únicos/recurrentes, cobertura parcial explícita y premades con evidencia estrictamente anterior. Diagnóstico, alcance del corpus y pruebas: `docs/T03_STATISTICS_AUDIT.md`. Se conserva InMemory y el dispatcher de T02. Código publicado y desplegado por autorización del PO en `1f54650`.
 - T03: 75 pruebas unitarias .NET, 21 de integración y 14 frontend aprobadas; lint, type-check, formato, build Next.js, build Release API, Compose e imágenes API/web validados sin consultas reales a Riot.
+- Despliegue T03 (2026-10-18): API/web reconstruidas y recreadas mediante Compose con `CACHE_PROVIDER=memory`, web en 8081 y ambos health checks saludables. `/` respondió 200, `/api/health` devolvió `healthy` y readiness interno de API respondió `Healthy`. Las imágenes en ejecución coinciden con las construidas; el reinicio vació los datos temporales de InMemory.
 
 - ECHO-1 está implementado en `feature/echo-product-focus`: PROJECT ECHO prioriza conocidos, recurrentes y familiaridad histórica sin ampliar la frontera de partidas terminadas.
 - `GET /api/v1/players/{puuid}/known-players` incluye encounters con una aparición; `/encounters` conserva recurrentes con dos o más.
