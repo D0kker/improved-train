@@ -33,6 +33,7 @@ import { browserSecurityHeaders } from "../src/security-headers.ts";
 import {
   familiarityMessage,
   knownPlayerCount,
+  latestMatchSyncPlan,
   repeatedPlayerCount,
 } from "../src/echo.ts";
 
@@ -165,6 +166,76 @@ test("ECHO familiarity copy answers the central match question", () => {
       knownPlayerDetails: [],
     }),
     "3 de 9 jugadores ya habían aparecido antes.",
+  );
+});
+
+test("last-match sync plan is deterministic and configurable", () => {
+  const match = {
+    teams: [
+      {
+        teamId: 100,
+        participants: [
+          {
+            puuid: "owner",
+            championId: 1,
+            championName: "A",
+            kills: 0,
+            deaths: 0,
+            assists: 0,
+          },
+          {
+            puuid: "one",
+            championId: 2,
+            championName: "B",
+            kills: 0,
+            deaths: 0,
+            assists: 0,
+          },
+          {
+            puuid: "two",
+            championId: 3,
+            championName: "C",
+            kills: 0,
+            deaths: 0,
+            assists: 0,
+          },
+        ],
+      },
+      {
+        teamId: 200,
+        participants: [
+          {
+            puuid: "two",
+            championId: 4,
+            championName: "D",
+            kills: 0,
+            deaths: 0,
+            assists: 0,
+          },
+          {
+            puuid: "three",
+            championId: 5,
+            championName: "E",
+            kills: 0,
+            deaths: 0,
+            assists: 0,
+          },
+        ],
+      },
+    ],
+  } as Parameters<typeof latestMatchSyncPlan>[0];
+
+  assert.deepEqual(
+    latestMatchSyncPlan(match, "owner", {
+      ownerMatchCount: 7,
+      otherMatchCount: 2,
+      otherPlayerCount: 2,
+    }),
+    [
+      { puuid: "owner", count: 7 },
+      { puuid: "one", count: 2 },
+      { puuid: "two", count: 2 },
+    ],
   );
 });
 

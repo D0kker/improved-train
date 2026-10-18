@@ -62,6 +62,31 @@ public sealed class PossiblePremadeDetectorTests
     }
 
     [Fact]
+    public void RecentOppositeEvidenceDiscardsPremadeSignal()
+    {
+        var result = CreateDetector().Detect(new PremadeDetectionInput(
+            5,
+            5,
+            RelationshipConfidence.High,
+            RecentOppositeTeamMatches: 1,
+            DistinctSameTeamDates: 3));
+
+        Assert.Equal(PremadeClassification.NoEvidence, result.Classification);
+    }
+
+    [Fact]
+    public void DistinctSameTeamDatesIncreaseClassification()
+    {
+        var result = CreateDetector().Detect(new PremadeDetectionInput(
+            3,
+            2,
+            RelationshipConfidence.High,
+            DistinctSameTeamDates: 2));
+
+        Assert.Equal(PremadeClassification.LikelyPremade, result.Classification);
+    }
+
+    [Fact]
     public void OptionsRejectLikelyThresholdsWeakerThanPossibleThresholds()
     {
         var options = new PremadeDetectionOptions

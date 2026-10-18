@@ -6,6 +6,7 @@ import {
   ApiError,
   apiPath,
   fetchJson,
+  playerSyncPath,
   type MatchDetail,
   type MatchKnownPlayer,
   type MatchPremadeGroup,
@@ -20,7 +21,7 @@ import {
 } from "@/src/premade-groups";
 import { ChampionIcon } from "@/src/champion-icon";
 import { PlayerProfileLink } from "@/src/player-profile-link";
-import { familiarityMessage } from "@/src/echo";
+import { familiarityMessage, latestMatchSyncPlan } from "@/src/echo";
 
 export function MatchDetailView({
   matchId,
@@ -31,16 +32,46 @@ export function MatchDetailView({
 }) {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [isRefreshingHistory, setIsRefreshingHistory] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setWarning(null);
     try {
       const path = ownerPuuid
         ? `${apiPath("matches", matchId)}?ownerPuuid=${encodeURIComponent(ownerPuuid)}`
         : apiPath("matches", matchId);
-      setMatch(await fetchJson<MatchDetail>(path));
+      let loadedMatch = await fetchJson<MatchDetail>(path);
+      if (ownerPuuid) {
+        const syncPlan = latestMatchSyncPlan(loadedMatch, ownerPuuid);
+        let failedTargets = 0;
+        setIsRefreshingHistory(syncPlan.length > 0);
+        for (const target of syncPlan) {
+          try {
+            await fetchJson<unknown>(
+              playerSyncPath(target.puuid, target.count),
+              {
+                method: "POST",
+              },
+            );
+          } catch {
+            failedTargets += 1;
+          }
+        }
+        setIsRefreshingHistory(false);
+        if (failedTargets > 0) {
+          setWarning(
+            "No se pudo actualizar todo el historial; mostramos la evidencia local disponible.",
+          );
+        }
+        if (failedTargets < syncPlan.length) {
+          loadedMatch = await fetchJson<MatchDetail>(path);
+        }
+      }
+      setMatch(loadedMatch);
     } catch (requestError) {
       setError(
         requestError instanceof ApiError || requestError instanceof Error
@@ -48,6 +79,7 @@ export function MatchDetailView({
           : "No pudimos cargar esta partida.",
       );
     } finally {
+      setIsRefreshingHistory(false);
       setIsLoading(false);
     }
   }, [matchId, ownerPuuid]);
@@ -78,7 +110,9 @@ export function MatchDetailView({
           ← Volver al historial
         </button>
 
-        {isLoading ? <MatchLoading /> : null}
+        {isLoading ? (
+          <MatchLoading refreshingHistory={isRefreshingHistory} />
+        ) : null}
         {error ? (
           <section className="message-panel error-panel" role="alert">
             <div>
@@ -94,6 +128,11 @@ export function MatchDetailView({
 
         {match ? (
           <>
+            {warning ? (
+              <p className="warning-banner" role="status">
+                {warning}
+              </p>
+            ) : null}
             <section className="match-heading">
               <div>
                 <p className="eyebrow">Detalle de partida</p>
@@ -205,6 +244,9 @@ function KnownPlayers({ players }: { players: MatchKnownPlayer[] }) {
               <span>
                 {player.allyMatches} aliado · {player.enemyMatches} rival
               </span>
+              <span>
+                Contra el owner: {player.winsAgainst}V · {player.lossesAgainst}D
+              </span>
               <span>Última vez: {formatDate(player.lastEncounterAt)}</span>
             </li>
           ))}
@@ -214,13 +256,17 @@ function KnownPlayers({ players }: { players: MatchKnownPlayer[] }) {
   );
 }
 
-function MatchLoading() {
+function MatchLoading({ refreshingHistory }: { refreshingHistory: boolean }) {
   return (
     <section className="loading-panel" role="status">
       <span className="spinner" aria-hidden="true" />
       <div>
         <p className="eyebrow">Partida</p>
-        <h2>Cargando participantes…</h2>
+        <h2>
+          {refreshingHistory
+            ? "Revisando el historial reciente…"
+            : "Cargando participantes…"}
+        </h2>
       </div>
     </section>
   );

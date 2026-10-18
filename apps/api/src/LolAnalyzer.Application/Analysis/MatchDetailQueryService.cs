@@ -20,7 +20,7 @@ public sealed class MatchDetailQueryService(
         }
 
         var groups = await premadeGroupService
-            .GetAsync(riotMatchId, cancellationToken)
+            .GetAsync(riotMatchId, ownerPuuid, cancellationToken)
             .ConfigureAwait(false);
         var familiarity = string.IsNullOrWhiteSpace(ownerPuuid)
             ? null

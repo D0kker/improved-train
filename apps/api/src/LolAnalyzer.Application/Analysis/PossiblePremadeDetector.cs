@@ -19,12 +19,22 @@ public sealed class PossiblePremadeDetector
         var sameTeamRatio = input.MatchesTogether == 0
             ? 0m
             : (decimal)input.SameTeamMatches / input.MatchesTogether;
-        var classification = MeetsThresholds(
-            input,
-            sameTeamRatio,
-            _options.LikelyMinimumMatchesTogether,
-            _options.LikelyMinimumSameTeamRatio,
-            _options.LikelyMinimumConfidence)
+        var likely = MeetsThresholds(
+                input,
+                sameTeamRatio,
+                _options.LikelyMinimumMatchesTogether,
+                _options.LikelyMinimumSameTeamRatio,
+                _options.LikelyMinimumConfidence)
+            || (input.DistinctSameTeamDates >= _options.DistinctSameTeamDatesForLikely
+                && MeetsThresholds(
+                    input,
+                    sameTeamRatio,
+                    _options.PossibleMinimumMatchesTogether,
+                    _options.PossibleMinimumSameTeamRatio,
+                    _options.LikelyMinimumConfidence));
+        var classification = input.RecentOppositeTeamMatches > 0
+            ? PremadeClassification.NoEvidence
+            : likely
                 ? PremadeClassification.LikelyPremade
                 : MeetsThresholds(
                     input,
@@ -61,6 +71,13 @@ public sealed class PossiblePremadeDetector
         {
             throw new ArgumentException(
                 "Premade evidence counts must be nonnegative and same-team matches cannot exceed total matches.",
+                nameof(input));
+        }
+
+        if (input.RecentOppositeTeamMatches < 0 || input.DistinctSameTeamDates < 0)
+        {
+            throw new ArgumentException(
+                "Recent premade evidence values must be nonnegative.",
                 nameof(input));
         }
 

@@ -279,3 +279,19 @@
 - Decisión: conservar `matches.raw_data` durante ECHO-1 como mecanismo de reprocesamiento, debugging controlado y compatibilidad futura. No fijar todavía una eliminación automática ni un periodo de retención.
 - Razón: borrar ahora impediría recalcular campos sin volver a consumir Riot; conservar indefinidamente también requiere una decisión informada de privacidad y coste.
 - Consecuencias: S7-002 deberá proponer y obtener aprobación para periodo, alcance de borrado/exportación y procedimiento operativo antes de la beta pública.
+
+## D-036 — Contexto automático y parametrizable para la última partida
+
+- Fecha: 2026-10-17
+- Estado: aceptada para la vista de última partida
+- Decisión: al cargar el dashboard o el detalle de una partida con owner, la web solicita al backend el historial reciente del owner y de hasta nueve participantes visibles de esa partida. Los conteos por defecto son 5 para el owner y 3 por participante; se centralizan en `latestMatchSyncConfig` y admiten los overrides públicos `NEXT_PUBLIC_ECHO_OWNER_MATCH_COUNT`, `NEXT_PUBLIC_ECHO_OTHER_MATCH_COUNT` y `NEXT_PUBLIC_ECHO_OTHER_PLAYER_COUNT`.
+- Razón: la tarjeta de última partida debe calcular familiaridad con evidencia reciente sin que el navegador contacte a Riot ni que los límites queden duplicados en varios componentes.
+- Consecuencias: la selección es determinista por orden de equipos/participantes y usa PUUID; las solicitudes pasan por la ruta de sincronización existente, continúan mostrando datos locales si alguna falla y respetan el límite de 20 partidas por llamada. Los overrides se aplican al compilar la web y no contienen secretos. La tarjeta y el detalle muestran, cuando existe evidencia previa, resultados contra el jugador principal (victorias/derrotas).
+
+## D-037 — Evidencia temporal para posibles premades
+
+- Fecha: 2026-10-17
+- Estado: aceptada para la familiaridad de la última partida
+- Decisión: cuando existe owner, la detección de grupos cruza las relaciones del lobby con hasta `PremadeDetection:RecentOwnerMatchCount` partidas recientes del owner. Una coincidencia como rival dentro de esa ventana descarta la señal de premade para la pareja; coincidencias como aliado en fechas distintas elevan la clasificación prudente, sin convertirla en verificación.
+- Razón: repetir equipo en fechas distintas es evidencia más útil que una coincidencia aislada, mientras que alternar entre aliado y rival es compatible con emparejamiento casual.
+- Consecuencias: la ventana y el mínimo de fechas distintas son configurables; si no se transporta owner se conserva la detección histórica existente. Los resultados siguen usando `possible premade`/`likely premade` y nunca afirman una relación confirmada.

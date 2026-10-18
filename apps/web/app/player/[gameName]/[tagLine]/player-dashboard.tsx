@@ -27,6 +27,8 @@ import {
 import {
   familiarityMessage,
   knownPlayerCount,
+  latestMatchSyncPlan,
+  latestMatchSyncConfig,
   repeatedPlayerCount,
 } from "@/src/echo";
 import { PlayerProfileLink } from "@/src/player-profile-link";
@@ -51,7 +53,7 @@ type LoadingStep = "lookup" | "sync" | "results";
 
 const loadingCopy: Record<LoadingStep, string> = {
   lookup: "Resolviendo el Riot ID…",
-  sync: "Sincronizando hasta 20 partidas…",
+  sync: "Sincronizando el historial solicitado…",
   results: "Construyendo el resumen histórico…",
 };
 
@@ -93,53 +95,89 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
         }
 
         setStep("results");
-        const [summary, encounterResponse, matches, relationships] =
-          await Promise.all([
-            fetchJson<PlayerSummary>(
-              apiPath("players", player.puuid, "summary"),
-              {
-                signal,
-              },
-            ),
-            fetchJson<PlayerEncounter[] | { items: PlayerEncounter[] }>(
-              apiPath("players", player.puuid, "known-players"),
-              { signal },
-            ),
-            fetchJson<MatchesResponse>(
-              `${apiPath("players", player.puuid, "matches")}?page=1&pageSize=10`,
-              { signal },
-            ),
-            fetchJson<RelationshipsResponse>(
-              playerRelationshipsPath(player.puuid),
-              { signal },
-            ),
-          ]);
+        const readResults = async () => {
+          const [summary, encounterResponse, matches, relationships] =
+            await Promise.all([
+              fetchJson<PlayerSummary>(
+                apiPath("players", player.puuid, "summary"),
+                {
+                  signal,
+                },
+              ),
+              fetchJson<PlayerEncounter[] | { items: PlayerEncounter[] }>(
+                apiPath("players", player.puuid, "known-players"),
+                { signal },
+              ),
+              fetchJson<MatchesResponse>(
+                `${apiPath("players", player.puuid, "matches")}?page=1&pageSize=10`,
+                { signal },
+              ),
+              fetchJson<RelationshipsResponse>(
+                playerRelationshipsPath(player.puuid),
+                { signal },
+              ),
+            ]);
 
-        let latestMatch: MatchDetail | null = null;
-        if (matches.items[0]) {
-          try {
-            latestMatch = await fetchJson<MatchDetail>(
-              `${apiPath("matches", matches.items[0].riotMatchId)}?ownerPuuid=${encodeURIComponent(player.puuid)}`,
-              { signal },
-            );
-          } catch (latestMatchError) {
-            if (signal?.aborted) return;
-            syncWarning ??= messageFor(
-              latestMatchError,
-              "No se pudo cargar la familiaridad de la última partida.",
-            );
+          let latestMatch: MatchDetail | null = null;
+          if (matches.items[0]) {
+            try {
+              latestMatch = await fetchJson<MatchDetail>(
+                `${apiPath("matches", matches.items[0].riotMatchId)}?ownerPuuid=${encodeURIComponent(player.puuid)}`,
+                { signal },
+              );
+            } catch (latestMatchError) {
+              if (signal?.aborted) throw latestMatchError;
+              syncWarning ??= messageFor(
+                latestMatchError,
+                "No se pudo cargar la familiaridad de la última partida.",
+              );
+            }
+          }
+
+          return {
+            summary,
+            encounters: Array.isArray(encounterResponse)
+              ? encounterResponse
+              : encounterResponse.items,
+            matches,
+            relationships,
+            latestMatch,
+          };
+        };
+
+        let results = await readResults();
+        if (results.latestMatch) {
+          const syncPlan = latestMatchSyncPlan(
+            results.latestMatch,
+            player.puuid,
+          );
+          let failedTargets = 0;
+          for (const target of syncPlan) {
+            try {
+              await fetchJson<unknown>(
+                playerSyncPath(target.puuid, target.count),
+                {
+                  method: "POST",
+                  signal,
+                },
+              );
+            } catch (autoSyncError) {
+              if (signal?.aborted) return;
+              failedTargets += 1;
+              syncWarning ??= messageFor(
+                autoSyncError,
+                "No se pudo actualizar automáticamente el contexto de la última partida.",
+              );
+            }
+          }
+          if (failedTargets < syncPlan.length) {
+            results = await readResults();
           }
         }
 
         setData({
           player,
-          summary,
-          encounters: Array.isArray(encounterResponse)
-            ? encounterResponse
-            : encounterResponse.items,
-          matches,
-          relationships,
-          latestMatch,
+          ...results,
         });
         setWarning(syncWarning);
       } catch (requestError) {
@@ -352,6 +390,11 @@ function LoadingPanel({ step }: { step: LoadingStep }) {
         <p className="eyebrow">Preparando el análisis</p>
         <h2>{loadingCopy[step]}</h2>
         <p>La sincronización está limitada a 20 partidas por solicitud.</p>
+        <p>
+          Última partida: {latestMatchSyncConfig.ownerMatchCount} del jugador y{" "}
+          {latestMatchSyncConfig.otherMatchCount} de hasta{" "}
+          {latestMatchSyncConfig.otherPlayerCount} participantes.
+        </p>
       </div>
     </section>
   );
@@ -438,6 +481,18 @@ function LatestMatch({
               ? familiarityMessage(matchDetail.familiarity)
               : "Familiaridad no disponible."}
           </strong>
+          {matchDetail?.familiarity?.knownPlayerDetails.length ? (
+            <span>
+              Contra conocidos:{" "}
+              {matchDetail.familiarity.knownPlayerDetails
+                .slice(0, 3)
+                .map(
+                  (player) =>
+                    `${player.gameName} (${player.winsAgainst}V/${player.lossesAgainst}D)`,
+                )
+                .join(" · ")}
+            </span>
+          ) : null}
           <span>{formatDate(match.gameStartTimestamp)}</span>
         </div>
         <span className="latest-match-action">Ver partida →</span>
