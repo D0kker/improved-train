@@ -22,7 +22,6 @@ import {
   formatDuration,
   formatPercent,
   queueLabel,
-  winRate,
 } from "@/src/format";
 import {
   familiarityMessage,
@@ -63,6 +62,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMoreMatches, setIsLoadingMoreMatches] = useState(false);
 
   const load = useCallback(
     async (synchronize: boolean, signal?: AbortSignal) => {
@@ -202,6 +202,41 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
     };
   }, [load]);
 
+  const loadMoreMatches = useCallback(async () => {
+    if (
+      !data ||
+      isLoadingMoreMatches ||
+      data.matches.items.length >= data.matches.totalCount
+    ) {
+      return;
+    }
+
+    setIsLoadingMoreMatches(true);
+    try {
+      const nextPage = data.matches.page + 1;
+      const nextMatches = await fetchJson<MatchesResponse>(
+        `${apiPath("players", data.player.puuid, "matches")}?page=${nextPage}&pageSize=10`,
+      );
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              matches: {
+                ...nextMatches,
+                items: [...current.matches.items, ...nextMatches.items],
+              },
+            }
+          : current,
+      );
+    } catch (requestError) {
+      setWarning(
+        messageFor(requestError, "No se pudieron cargar más partidas."),
+      );
+    } finally {
+      setIsLoadingMoreMatches(false);
+    }
+  }, [data, isLoadingMoreMatches]);
+
   return (
     <main className="dashboard-shell">
       <header className="topbar">
@@ -278,10 +313,11 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
               matchDetail={data.latestMatch}
               ownerPuuid={data.player.puuid}
             />
-            <Encounters encounters={data.encounters} />
             <MatchHistory
               matches={data.matches}
               ownerPuuid={data.player.puuid}
+              isLoadingMore={isLoadingMoreMatches}
+              onLoadMore={loadMoreMatches}
             />
             <Relationships relationships={data.relationships} />
             <details className="experimental-section">
@@ -501,79 +537,16 @@ function LatestMatch({
   );
 }
 
-function Encounters({ encounters }: { encounters: PlayerEncounter[] }) {
-  return (
-    <section aria-labelledby="encounters-title">
-      <div className="section-title-row">
-        <div>
-          <p className="eyebrow">Known players</p>
-          <h2 id="encounters-title">Jugadores que ya habías visto</h2>
-        </div>
-        <p className="section-note">
-          Incluye desde el primer encuentro; recurrente significa 2 o más.
-        </p>
-      </div>
-
-      {encounters.length === 0 ? (
-        <EmptyState
-          title="Aún no hay jugadores conocidos"
-          copy="Cuando otro jugador aparezca en una partida analizada, lo verás aquí."
-        />
-      ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Jugador</th>
-                <th>Encuentros</th>
-                <th>Aliado</th>
-                <th>Rival</th>
-                <th>WR juntos</th>
-                <th>WR en contra</th>
-                <th>Última vez</th>
-              </tr>
-            </thead>
-            <tbody>
-              {encounters.map((encounter) => (
-                <tr key={encounter.otherPlayerPuuid}>
-                  <td>
-                    <PlayerProfileLink
-                      gameName={encounter.gameName}
-                      tagLine={encounter.tagLine}
-                    />
-                  </td>
-                  <td>{encounter.totalMatches}</td>
-                  <td>{encounter.sameTeamMatches}</td>
-                  <td>{encounter.enemyTeamMatches}</td>
-                  <td>
-                    {winRate(encounter.winsTogether, encounter.sameTeamMatches)}
-                    <span>
-                      {encounter.winsTogether}V · {encounter.lossesTogether}D
-                    </span>
-                  </td>
-                  <td>
-                    {winRate(encounter.winsAgainst, encounter.enemyTeamMatches)}
-                    <span>
-                      {encounter.winsAgainst}V · {encounter.lossesAgainst}D
-                    </span>
-                  </td>
-                  <td>{formatDate(encounter.lastSeenAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
-}
-
 function MatchHistory({
   matches,
   ownerPuuid,
+  isLoadingMore,
+  onLoadMore,
 }: {
   matches: MatchesResponse;
   ownerPuuid: string;
+  isLoadingMore: boolean;
+  onLoadMore: () => void;
 }) {
   return (
     <section aria-labelledby="matches-title">
@@ -630,6 +603,18 @@ function MatchHistory({
           ))}
         </div>
       )}
+      {matches.items.length > 0 && matches.items.length < matches.totalCount ? (
+        <div className="section-actions">
+          <button
+            className="secondary-button"
+            disabled={isLoadingMore}
+            onClick={onLoadMore}
+            type="button"
+          >
+            {isLoadingMore ? "Cargando partidas…" : "Cargar 10 partidas más"}
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }

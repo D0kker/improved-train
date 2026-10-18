@@ -599,6 +599,12 @@ td > span,
   gap: 0.65rem;
 }
 
+.section-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
 .match-champion,
 .participant-identity {
   display: flex;
