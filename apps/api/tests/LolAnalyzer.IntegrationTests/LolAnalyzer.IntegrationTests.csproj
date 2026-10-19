@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
+    <Compile Include="../LolAnalyzer.UnitTests/StatelessFixture.cs" Link="Fixtures/StatelessFixture.cs" />
     <ProjectReference Include="../../src/LolAnalyzer.Api/LolAnalyzer.Api.csproj" />
   </ItemGroup>
   <ItemGroup>

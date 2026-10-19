@@ -3,7 +3,12 @@ import test from "node:test";
 
 import {
   apiPath,
+  analyzeSelectedMatch,
+  playerSearchPath,
+  recentMatchesPath,
+  fetchJson,
   matchDetailPath,
+  playerActiveGamePath,
   playerNetworkPath,
   playerLookupPath,
   playerProfilePath,
@@ -30,6 +35,13 @@ import {
   dataDragonVersion,
 } from "../src/data-dragon.ts";
 import { browserSecurityHeaders } from "../src/security-headers.ts";
+import {
+  familiarityMessage,
+  historyAnalysisStatus,
+  knownPlayerCount,
+  latestMatchSyncPlan,
+  repeatedPlayerCount,
+} from "../src/echo.ts";
 
 test("API paths remain same-origin and encode user-controlled segments", () => {
   assert.equal(
@@ -48,6 +60,64 @@ test("API paths remain same-origin and encode user-controlled segments", () => {
     apiPath("matches", "LA1_123/456"),
     "/api/v1/matches/LA1_123%2F456",
   );
+  assert.equal(
+    playerActiveGamePath("owner/puuid"),
+    "/api/v1/players/owner%2Fpuuid/active-game",
+  );
+});
+
+test("empty successful responses are treated as null JSON", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(null, { status: 200 });
+  try {
+    assert.equal(
+      await fetchJson<null>("/api/v1/players/test/active-game"),
+      null,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("stateless search and recent-match paths preserve the five-match window", () => {
+  assert.equal(
+    playerSearchPath("Ana Uno", "LA/N"),
+    "/api/v1/players/by-riot-id/Ana%20Uno/LA%2FN/analysis",
+  );
+  assert.equal(
+    recentMatchesPath("owner/puuid", 5, "EUW1"),
+    "/api/v1/players/owner%2Fpuuid/recent-matches?count=5&start=5&platformRegion=EUW1",
+  );
+});
+
+test("selected-match analysis is one independent HTTP request with owner and cancellation", async () => {
+  const originalFetch = globalThis.fetch;
+  const controller = new AbortController();
+  const result = {
+    match: { riotMatchId: "LA1_123" },
+    coverage: { status: "partial" },
+  };
+  let calls = 0;
+  globalThis.fetch = async (path, init) => {
+    calls++;
+    assert.equal(path, "/api/v1/matches/LA1_123/analyze");
+    assert.equal(init?.method, "POST");
+    assert.deepEqual(JSON.parse(String(init?.body)), {
+      ownerPuuid: "owner",
+      platformRegion: "LA1",
+    });
+    assert.equal(init?.signal, controller.signal);
+    return Response.json(result);
+  };
+  try {
+    assert.deepEqual(
+      await analyzeSelectedMatch("LA1_123", "owner", "LA1", controller.signal),
+      result,
+    );
+    assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("match synchronization is bounded to twenty matches", () => {
@@ -136,6 +206,156 @@ test("presentation helpers normalize percentages and durations", () => {
   assert.equal(formatPercent(1), "1%");
   assert.equal(winRate(3, 4), "75%");
   assert.equal(winRate(0, 0), "—");
+});
+
+test("ECHO distinguishes known and repeated players", () => {
+  const encounters = [
+    { totalMatches: 1, otherPlayerPuuid: "one" },
+    { totalMatches: 2, otherPlayerPuuid: "two" },
+    { totalMatches: 7, otherPlayerPuuid: "three" },
+    { totalMatches: 7, otherPlayerPuuid: "three" },
+    { totalMatches: 2, otherPlayerPuuid: "" },
+    { totalMatches: 2, otherPlayerPuuid: "owner" },
+  ] as Parameters<typeof knownPlayerCount>[0];
+
+  assert.equal(knownPlayerCount(encounters, "owner"), 3);
+  assert.equal(repeatedPlayerCount(encounters, "owner"), 2);
+});
+
+test("partial HTTP successes and failed syncs never become definitive zero familiarity", () => {
+  const complete = {
+    matchIdsReturned: 3,
+    alreadyStored: 1,
+    downloaded: 2,
+    notFound: 0,
+    failed: 0,
+  };
+  const fulfilled = { status: "fulfilled" as const, value: complete };
+  assert.equal(historyAnalysisStatus([fulfilled]), "complete");
+  assert.equal(
+    historyAnalysisStatus([
+      fulfilled,
+      { status: "rejected", reason: new Error("mock") },
+    ]),
+    "partial",
+  );
+  assert.equal(
+    historyAnalysisStatus([
+      { ...fulfilled, value: { ...complete, downloaded: 1, failed: 1 } },
+    ]),
+    "partial",
+  );
+  assert.equal(
+    historyAnalysisStatus([{ status: "rejected", reason: new Error("mock") }]),
+    "error",
+  );
+  assert.equal(historyAnalysisStatus([]), "insufficient");
+  const familiarity = {
+    knownPlayers: 0,
+    unknownPlayers: 9,
+    evaluablePlayers: 9,
+    familiarityPercentage: 0,
+    status: "Available" as const,
+    knownPlayerDetails: [],
+  };
+  assert.match(familiarityMessage(familiarity, "partial"), /Análisis parcial/);
+  assert.match(familiarityMessage(familiarity, "error"), /Error de análisis/);
+  assert.match(
+    familiarityMessage(familiarity),
+    /No se detectaron coincidencias/,
+  );
+  assert.match(
+    familiarityMessage({ ...familiarity, status: "NoPriorHistory" }),
+    /Información insuficiente/,
+  );
+  assert.match(
+    familiarityMessage({ ...familiarity, status: "PartialParticipants" }),
+    /Análisis parcial/,
+  );
+});
+
+test("ECHO familiarity copy answers the central match question", () => {
+  assert.equal(
+    familiarityMessage({
+      knownPlayers: 3,
+      unknownPlayers: 6,
+      evaluablePlayers: 9,
+      familiarityPercentage: 33.3,
+      status: "Available",
+      knownPlayerDetails: [],
+    }),
+    "3 de 9 jugadores ya habían aparecido antes.",
+  );
+});
+
+test("last-match sync plan is deterministic and configurable", () => {
+  const match = {
+    teams: [
+      {
+        teamId: 100,
+        participants: [
+          {
+            puuid: "owner",
+            championId: 1,
+            championName: "A",
+            kills: 0,
+            deaths: 0,
+            assists: 0,
+          },
+          {
+            puuid: "one",
+            championId: 2,
+            championName: "B",
+            kills: 0,
+            deaths: 0,
+            assists: 0,
+          },
+          {
+            puuid: "two",
+            championId: 3,
+            championName: "C",
+            kills: 0,
+            deaths: 0,
+            assists: 0,
+          },
+        ],
+      },
+      {
+        teamId: 200,
+        participants: [
+          {
+            puuid: "two",
+            championId: 4,
+            championName: "D",
+            kills: 0,
+            deaths: 0,
+            assists: 0,
+          },
+          {
+            puuid: "three",
+            championId: 5,
+            championName: "E",
+            kills: 0,
+            deaths: 0,
+            assists: 0,
+          },
+        ],
+      },
+    ],
+  } as Parameters<typeof latestMatchSyncPlan>[0];
+
+  assert.deepEqual(
+    latestMatchSyncPlan(match, "owner", {
+      ownerMatchCount: 7,
+      otherMatchCount: 2,
+      otherPlayerCount: 2,
+    }),
+    [
+      { puuid: "owner", count: 7 },
+      { puuid: "one", count: 2 },
+      { puuid: "two", count: 2 },
+    ],
+  );
 });
 
 test("premade groups remain distinguishable without relying on color", () => {

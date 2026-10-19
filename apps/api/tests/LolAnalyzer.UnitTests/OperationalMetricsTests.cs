@@ -14,6 +14,8 @@ public sealed class OperationalMetricsTests
         metrics.RecordRiotRequest("match_ids", 429);
         metrics.RecordMatchesIngested(3);
         metrics.RecordCacheAccess(hit: true, fallback: true);
+        metrics.RecordMatchFamiliarity(3);
+        metrics.RecordMatchFamiliarity(0);
         metrics.StartJob();
 
         var running = metrics.Snapshot();
@@ -32,5 +34,10 @@ public sealed class OperationalMetricsTests
         Assert.Equal(0, result.ActiveJobs);
         Assert.Equal(1, result.CompletedJobs);
         Assert.Equal(0, result.StoppedJobs);
+        Assert.Equal(2, result.EchoMatchesAnalyzed);
+        Assert.Equal(2, result.EchoEncounterLookups);
+        Assert.Equal(1, result.EchoEncounterHits);
+        Assert.Equal(3, result.EchoKnownPlayersFound);
+        Assert.Equal(50m, result.EchoEncounterHitRate);
     }
 }

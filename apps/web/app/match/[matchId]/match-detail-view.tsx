@@ -6,7 +6,9 @@ import {
   ApiError,
   apiPath,
   fetchJson,
+  analyzeSelectedMatch,
   type MatchDetail,
+  type MatchKnownPlayer,
   type MatchPremadeGroup,
   type MatchParticipant,
 } from "@/src/api";
@@ -19,48 +21,91 @@ import {
 } from "@/src/premade-groups";
 import { ChampionIcon } from "@/src/champion-icon";
 import { PlayerProfileLink } from "@/src/player-profile-link";
+import { familiarityMessage, type HistoryAnalysisStatus } from "@/src/echo";
 
 export function MatchDetailView({
   matchId,
   ownerPuuid,
+  platformRegion,
 }: {
   matchId: string;
   ownerPuuid?: string;
+  platformRegion?: string;
 }) {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [isRefreshingHistory, setIsRefreshingHistory] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [historyStatus, setHistoryStatus] =
+    useState<HistoryAnalysisStatus>("insufficient");
 
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const path = ownerPuuid
-        ? `${apiPath("matches", matchId)}?ownerPuuid=${encodeURIComponent(ownerPuuid)}`
-        : apiPath("matches", matchId);
-      setMatch(await fetchJson<MatchDetail>(path));
-    } catch (requestError) {
-      setError(
-        requestError instanceof ApiError || requestError instanceof Error
-          ? requestError.message
-          : "No pudimos cargar esta partida.",
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  }, [matchId, ownerPuuid]);
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      setIsLoading(true);
+      setError(null);
+      setWarning(null);
+      setHistoryStatus("insufficient");
+      try {
+        if (ownerPuuid) {
+          setIsRefreshingHistory(true);
+          const result = await analyzeSelectedMatch(
+            matchId,
+            ownerPuuid,
+            platformRegion,
+            signal,
+          );
+          if (signal?.aborted) return;
+          setMatch(result.match);
+          setHistoryStatus(result.coverage.status);
+          if (result.coverage.status !== "complete")
+            setWarning(
+              result.coverage.status === "error"
+                ? "No se pudo recuperar el historial; la evidencia es insuficiente."
+                : "Análisis limitado: faltan partidas elegibles o algunas consultas fallaron. Puede haber más coincidencias.",
+            );
+        } else {
+          const loaded = await fetchJson<MatchDetail>(
+            apiPath("matches", matchId) +
+              (platformRegion
+                ? `?platformRegion=${encodeURIComponent(platformRegion)}`
+                : ""),
+            { signal },
+          );
+          if (!signal?.aborted) setMatch(loaded);
+        }
+      } catch (requestError) {
+        if (signal?.aborted) return;
+        setError(
+          requestError instanceof ApiError || requestError instanceof Error
+            ? requestError.message
+            : "No pudimos cargar esta partida.",
+        );
+      } finally {
+        if (!signal?.aborted) {
+          setIsRefreshingHistory(false);
+          setIsLoading(false);
+        }
+      }
+    },
+    [matchId, ownerPuuid, platformRegion],
+  );
 
   useEffect(() => {
-    const request = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(request);
+    const controller = new AbortController();
+    const request = window.setTimeout(() => void load(controller.signal), 0);
+    return () => {
+      window.clearTimeout(request);
+      controller.abort();
+    };
   }, [load]);
 
   return (
     <main className="dashboard-shell">
       <header className="topbar">
         <Link className="wordmark" href="/">
-          <span className="wordmark-icon">LN</span>
-          <span>LoL Network Analyzer</span>
+          <span className="wordmark-icon">E</span>
+          <span>PROJECT ECHO</span>
         </Link>
         <Link className="text-link" href="/">
           Buscar jugador
@@ -76,7 +121,9 @@ export function MatchDetailView({
           ← Volver al historial
         </button>
 
-        {isLoading ? <MatchLoading /> : null}
+        {isLoading ? (
+          <MatchLoading refreshingHistory={isRefreshingHistory} />
+        ) : null}
         {error ? (
           <section className="message-panel error-panel" role="alert">
             <div>
@@ -92,10 +139,15 @@ export function MatchDetailView({
 
         {match ? (
           <>
+            {warning ? (
+              <p className="warning-banner" role="status">
+                {warning}
+              </p>
+            ) : null}
             <section className="match-heading">
               <div>
                 <p className="eyebrow">Detalle de partida</p>
-                <h1>{match.riotMatchId}</h1>
+                <h1>Resultado de la partida</h1>
                 <p className="muted-copy">
                   {queueLabel(match.queueId)} ·{" "}
                   {formatDate(match.gameStartTimestamp)}
@@ -107,9 +159,15 @@ export function MatchDetailView({
               </div>
             </section>
 
-            <FamiliaritySummary familiarity={match.familiarity} />
+            <FamiliaritySummary
+              familiarity={match.familiarity}
+              historyStatus={historyStatus}
+            />
 
-            <PremadeSummary groups={match.premadeGroups} />
+            <PremadeSummary
+              groups={match.premadeGroups}
+              knownPlayers={match.familiarity?.knownPlayerDetails ?? []}
+            />
 
             <div className="teams-grid">
               {match.teams.map((team, index) => (
@@ -119,6 +177,8 @@ export function MatchDetailView({
                   premadeGroups={match.premadeGroups.filter(
                     (group) => group.teamId === team.teamId,
                   )}
+                  knownPlayers={match.familiarity?.knownPlayerDetails ?? []}
+                  ownerPuuid={ownerPuuid}
                   teamId={team.teamId}
                   title={teamName(team.teamId, index)}
                 />
@@ -133,8 +193,10 @@ export function MatchDetailView({
 
 function FamiliaritySummary({
   familiarity,
+  historyStatus,
 }: {
   familiarity: MatchDetail["familiarity"];
+  historyStatus: HistoryAnalysisStatus;
 }) {
   if (!familiarity) {
     return (
@@ -149,40 +211,44 @@ function FamiliaritySummary({
     );
   }
 
-  const messages = {
-    Available: `${familiarity.knownPlayers} de ${familiarity.evaluablePlayers} jugadores ya habían aparecido antes.`,
-    NoPriorHistory: "Esta es la primera partida evaluable del historial.",
-    NoEvaluableParticipants:
-      "No hay participantes visibles suficientes para calcular familiaridad.",
-    OwnerNotPresent: "El jugador de referencia no aparece en esta partida.",
-  };
   return (
     <section
       className="familiarity-summary"
       aria-labelledby="familiarity-title"
     >
       <div>
-        <p className="eyebrow">Familiaridad del lobby</p>
-        <h2 id="familiarity-title">{messages[familiarity.status]}</h2>
+        <p className="eyebrow">Familiaridad</p>
+        <h2 id="familiarity-title">
+          {familiarityMessage(familiarity, historyStatus)}
+        </h2>
         <p className="muted-copy">
           Solo usa partidas estrictamente anteriores.
         </p>
       </div>
       <div className="familiarity-value">
-        <strong>{familiarity.familiarityPercentage}%</strong>
-        <span>{familiarity.unknownPlayers} no conocidos</span>
+        <strong>
+          {historyStatus === "complete" && familiarity.status === "Available"
+            ? `${familiarity.familiarityPercentage}%`
+            : "—"}
+        </strong>
+        <span>{familiarity.evaluablePlayers} jugadores evaluables</span>
+        <span>{familiarity.knownPlayers} con antecedentes detectados</span>
       </div>
     </section>
   );
 }
 
-function MatchLoading() {
+function MatchLoading({ refreshingHistory }: { refreshingHistory: boolean }) {
   return (
     <section className="loading-panel" role="status">
       <span className="spinner" aria-hidden="true" />
       <div>
         <p className="eyebrow">Partida</p>
-        <h2>Cargando participantes…</h2>
+        <h2>
+          {refreshingHistory
+            ? "Revisando el historial reciente…"
+            : "Cargando participantes…"}
+        </h2>
       </div>
     </section>
   );
@@ -191,11 +257,15 @@ function MatchLoading() {
 function TeamCard({
   participants,
   premadeGroups,
+  knownPlayers,
+  ownerPuuid,
   teamId,
   title,
 }: {
   participants: MatchParticipant[];
   premadeGroups: MatchPremadeGroup[];
+  knownPlayers: MatchKnownPlayer[];
+  ownerPuuid?: string;
   teamId: number;
   title: string;
 }) {
@@ -204,7 +274,6 @@ function TeamCard({
     <section className={`team-card team-${teamId}`}>
       <header>
         <div>
-          <p className="eyebrow">Equipo {teamId}</p>
           <h2>{title}</h2>
         </div>
         <span className={won ? "team-result win" : "team-result loss"}>
@@ -219,8 +288,11 @@ function TeamCard({
             <ParticipantRow
               key={participant.puuid || `${participant.championName}-${index}`}
               groups={groupsForParticipant(premadeGroups, participant.puuid)}
-              index={index}
               participant={participant}
+              isObserved={participant.puuid === ownerPuuid}
+              history={knownPlayers.find(
+                (player) => player.puuid === participant.puuid,
+              )}
             />
           ))}
         </ol>
@@ -231,18 +303,17 @@ function TeamCard({
 
 function ParticipantRow({
   groups,
-  index,
+  history,
+  isObserved,
   participant,
 }: {
   groups: MatchPremadeGroup[];
-  index: number;
+  history?: MatchKnownPlayer;
+  isObserved: boolean;
   participant: MatchParticipant;
 }) {
   return (
-    <li>
-      <span className="position-label">
-        {positionName(participant.teamPosition, index)}
-      </span>
+    <li className={isObserved ? "observed-player" : undefined}>
       <div className="participant-identity">
         <ChampionIcon
           championId={participant.championId}
@@ -254,6 +325,7 @@ function ParticipantRow({
             gameName={participant.gameName}
             tagLine={participant.tagLine}
           />
+          {history ? <HistoryBadge player={history} /> : null}
           {groups.length > 0 ? (
             <span className="premade-memberships">
               {groups.map((group) => (
@@ -280,7 +352,13 @@ function ParticipantRow({
   );
 }
 
-function PremadeSummary({ groups }: { groups: MatchPremadeGroup[] }) {
+function PremadeSummary({
+  groups,
+  knownPlayers,
+}: {
+  groups: MatchPremadeGroup[];
+  knownPlayers: MatchKnownPlayer[];
+}) {
   return (
     <section className="premade-summary" aria-labelledby="premade-title">
       <div className="section-title-row">
@@ -321,23 +399,55 @@ function PremadeSummary({ groups }: { groups: MatchPremadeGroup[] }) {
           ))}
         </ul>
       )}
+      {knownPlayers.length > 0 ? (
+        <div className="history-evidence">
+          <strong>Jugadores conocidos</strong>
+          <div className="history-evidence-grid">
+            {knownPlayers.map((player) => (
+              <article className="history-evidence-card" key={player.puuid}>
+                <PlayerProfileLink
+                  compact
+                  gameName={player.gameName}
+                  tagLine={player.tagLine}
+                />
+                <HistoryBadge player={player} />
+                <span>
+                  {player.allyMatches} como equipo · {player.enemyMatches} como
+                  rival
+                </span>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
 
-function positionName(position: string | undefined, index: number): string {
-  const labels: Record<string, string> = {
-    TOP: "TOP",
-    JUNGLE: "JGL",
-    MIDDLE: "MID",
-    MID: "MID",
-    BOTTOM: "ADC",
-    UTILITY: "SUP",
-    SUPPORT: "SUP",
-  };
-  return position
-    ? (labels[position.toUpperCase()] ?? position)
-    : `${index + 1}`;
+function HistoryBadge({ player }: { player: MatchKnownPlayer }) {
+  const playedTogether = player.allyMatches > 0;
+  const playedAgainst = player.enemyMatches > 0;
+  const label =
+    playedTogether && playedAgainst
+      ? "Aliado y rival"
+      : playedTogether
+        ? "Ya jugó junto"
+        : "Ya jugó en contra";
+  const tone =
+    playedTogether && playedAgainst
+      ? "mixed"
+      : playedTogether
+        ? "ally"
+        : "opponent";
+
+  return (
+    <span
+      className={`history-badge ${tone}`}
+      title={`${label}: ${player.winsAgainst}V / ${player.lossesAgainst}D contra el owner`}
+    >
+      {label}
+    </span>
+  );
 }
 
 function teamName(teamId: number, index: number): string {

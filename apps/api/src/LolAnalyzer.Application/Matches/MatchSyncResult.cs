@@ -6,4 +6,6 @@ public sealed record MatchSyncResult(
     int AlreadyStored,
     int Downloaded,
     int Persisted,
-    int NotFound);
+    int NotFound,
+    int Failed,
+    IReadOnlyList<string> PersistedMatchIds);

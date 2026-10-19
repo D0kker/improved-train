@@ -9,6 +9,7 @@ public sealed class PlayerRelationshipAnalyzerTests
     private static readonly Guid PlayerA = Guid.Parse("00000000-0000-0000-0000-000000000001");
     private static readonly Guid PlayerB = Guid.Parse("00000000-0000-0000-0000-000000000002");
     private static readonly Guid PlayerC = Guid.Parse("00000000-0000-0000-0000-000000000003");
+    private static readonly Guid PlayerD = Guid.Parse("00000000-0000-0000-0000-000000000004");
 
     [Fact]
     public void AnalyzeBuildsOneCanonicalPairWithStableChronologyAndTeamCounters()
@@ -55,26 +56,66 @@ public sealed class PlayerRelationshipAnalyzerTests
     }
 
     [Fact]
-    public async Task RebuildAsyncReplacesTheGlobalSnapshotOnEveryRun()
+    public async Task IncrementalUpdateUpsertsOnlyAffectedPairsAndIsIdempotent()
     {
         var matches = new[]
         {
             Match("MATCH_1", DateTimeOffset.UnixEpoch, (PlayerA, 100), (PlayerB, 100)),
+            Match("MATCH_2", DateTimeOffset.UnixEpoch.AddMinutes(20), (PlayerC, 100), (PlayerD, 100)),
+            Match("MATCH_3", DateTimeOffset.UnixEpoch.AddMinutes(40), (PlayerA, 100), (PlayerC, 100)),
         };
-        var repository = new RecordingRelationshipRepository(matches);
+        var repository = new RecordingRelationshipRepository(
+            new IncrementalRelationshipAnalysisInput(
+                1,
+                [
+                    new PlayerRelationshipPair(PlayerA, PlayerB),
+                    new PlayerRelationshipPair(PlayerA, PlayerC),
+                ],
+                matches));
         var service = new PlayerRelationshipAnalysisService(
             repository,
             CreateAnalyzer(),
             new PlayerRelationshipAnalysisOptions { ReadBatchSize = 1, WriteBatchSize = 1 });
 
-        var first = await service.RebuildAsync(TestContext.Current.CancellationToken);
-        var second = await service.RebuildAsync(TestContext.Current.CancellationToken);
+        var first = await service.UpdateIncrementallyAsync(
+            ["MATCH_1"],
+            TestContext.Current.CancellationToken);
+        var second = await service.UpdateIncrementallyAsync(
+            ["MATCH_1", "MATCH_1"],
+            TestContext.Current.CancellationToken);
 
         Assert.Equal(first, second);
-        Assert.Equal(2, repository.ReplacementCount);
+        Assert.Equal(2, repository.UpsertCount);
         Assert.Equal(repository.Snapshots[0], repository.Snapshots[1]);
+        Assert.Equal(2, repository.Snapshots[0].Count);
+        var existingRelationship = Assert.Single(
+            repository.Snapshots[0],
+            relationship => relationship.PlayerAId == PlayerA && relationship.PlayerBId == PlayerB);
+        var scoreBeforeNewMatch = Assert.Single(CreateAnalyzer().Analyze([matches[0]])).RelationshipScore;
+        Assert.True(existingRelationship.RelationshipScore < scoreBeforeNewMatch);
+        Assert.DoesNotContain(
+            repository.Snapshots[0],
+            relationship => relationship.PlayerAId == PlayerC && relationship.PlayerBId == PlayerD);
         Assert.All(repository.ReadBatchSizes, size => Assert.Equal(1, size));
         Assert.All(repository.WriteBatchSizes, size => Assert.Equal(1, size));
+        Assert.Equal(2, repository.CommitCount);
+    }
+
+    [Fact]
+    public async Task IncrementalUpdateWithNoPersistedMatchesDoesNotOpenAnUpdateScope()
+    {
+        var repository = new RecordingRelationshipRepository(
+            new IncrementalRelationshipAnalysisInput(0, [], []));
+        var service = new PlayerRelationshipAnalysisService(
+            repository,
+            CreateAnalyzer(),
+            new PlayerRelationshipAnalysisOptions());
+
+        var result = await service.UpdateIncrementallyAsync([], TestContext.Current.CancellationToken);
+
+        Assert.Equal(new PlayerRelationshipAnalysisResult(0, 0), result);
+        Assert.Empty(repository.ReadBatchSizes);
+        Assert.Equal(0, repository.UpsertCount);
     }
 
     private static PlayerRelationshipAnalyzer CreateAnalyzer() =>
@@ -90,9 +131,11 @@ public sealed class PlayerRelationshipAnalyzerTests
             participants.Select(item => new RelationshipParticipant(item.PlayerId, item.TeamId)).ToArray());
 
     private sealed class RecordingRelationshipRepository(
-        IReadOnlyList<RelationshipMatchSnapshot> matches) : IPlayerRelationshipRepository
+        IncrementalRelationshipAnalysisInput input) : IPlayerRelationshipRepository
     {
-        public int ReplacementCount { get; private set; }
+        public int UpsertCount { get; private set; }
+
+        public int CommitCount { get; private set; }
 
         public List<int> ReadBatchSizes { get; } = [];
 
@@ -100,23 +143,14 @@ public sealed class PlayerRelationshipAnalyzerTests
 
         public List<IReadOnlyCollection<PlayerRelationshipAggregate>> Snapshots { get; } = [];
 
-        public Task<IReadOnlyList<RelationshipMatchSnapshot>> LoadMatchesAsync(
+        public Task<IPlayerRelationshipUpdateScope> BeginIncrementalUpdateAsync(
+            IReadOnlyCollection<string> changedRiotMatchIds,
             int batchSize,
             CancellationToken cancellationToken)
         {
             ReadBatchSizes.Add(batchSize);
-            return Task.FromResult(matches);
-        }
-
-        public Task ReplaceRelationshipsAsync(
-            IReadOnlyCollection<PlayerRelationshipAggregate> relationships,
-            int batchSize,
-            CancellationToken cancellationToken)
-        {
-            ReplacementCount++;
-            WriteBatchSizes.Add(batchSize);
-            Snapshots.Add(relationships.ToArray());
-            return Task.CompletedTask;
+            Assert.Single(changedRiotMatchIds);
+            return Task.FromResult<IPlayerRelationshipUpdateScope>(new RecordingUpdateScope(this, input));
         }
 
         public Task<PagedPlayerRelationshipQuery?> GetRelationshipsAsync(
@@ -130,5 +164,31 @@ public sealed class PlayerRelationshipAnalyzerTests
         public Task<MatchPremadeGroupInput?> LoadMatchPremadeGroupInputAsync(
             string riotMatchId,
             CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        private sealed class RecordingUpdateScope(
+            RecordingRelationshipRepository owner,
+            IncrementalRelationshipAnalysisInput input) : IPlayerRelationshipUpdateScope
+        {
+            public IncrementalRelationshipAnalysisInput Input { get; } = input;
+
+            public Task UpsertRelationshipsAsync(
+                IReadOnlyCollection<PlayerRelationshipAggregate> relationships,
+                int batchSize,
+                CancellationToken cancellationToken)
+            {
+                owner.UpsertCount++;
+                owner.WriteBatchSizes.Add(batchSize);
+                owner.Snapshots.Add(relationships.ToArray());
+                return Task.CompletedTask;
+            }
+
+            public Task CommitAsync(CancellationToken cancellationToken)
+            {
+                owner.CommitCount++;
+                return Task.CompletedTask;
+            }
+
+            public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        }
     }
 }

@@ -15,8 +15,6 @@ using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var postgresConnectionString = builder.Configuration.GetConnectionString("Postgres")
-    ?? throw new InvalidOperationException("ConnectionStrings:Postgres must be configured.");
 var redisHost = builder.Configuration["REDIS_HOST"] ?? builder.Configuration["Redis:Host"] ?? "localhost";
 var redisPort = int.TryParse(builder.Configuration["REDIS_PORT"], out var configuredRedisPort)
     ? configuredRedisPort
@@ -68,6 +66,7 @@ relationshipAnalysisOptions.Validate();
 var cacheOptions = builder.Configuration
     .GetSection(CacheOptions.SectionName)
     .Get<CacheOptions>() ?? new CacheOptions();
+cacheOptions.Provider = builder.Configuration["CACHE_PROVIDER"] ?? cacheOptions.Provider;
 if (int.TryParse(builder.Configuration["CACHE_PLAYER_SUMMARY_TTL_SECONDS"], out var configuredSummaryTtl))
 {
     cacheOptions.PlayerSummaryTtlSeconds = configuredSummaryTtl;
@@ -78,18 +77,25 @@ cacheOptions.Validate();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddSingleton<OperationalMetrics>();
 builder.Services.AddSingleton<IRiotRateLimiter, RiotRateLimiter>();
-builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(new ConfigurationOptions
-{
-    EndPoints = { { redisHost, redisPort } },
-    AbortOnConnectFail = false,
-    ConnectRetry = 1,
-    ConnectTimeout = 500,
-    AsyncTimeout = 500,
-    SyncTimeout = 500,
-}));
-builder.Services.AddSingleton<IRedisCacheStore, StackExchangeRedisCacheStore>();
 builder.Services.AddSingleton<MemoryCacheService>();
-builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+if (cacheOptions.UsesRedis)
+{
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(new ConfigurationOptions
+    {
+        EndPoints = { { redisHost, redisPort } },
+        AbortOnConnectFail = false,
+        ConnectRetry = 1,
+        ConnectTimeout = 500,
+        AsyncTimeout = 500,
+        SyncTimeout = 500,
+    }));
+    builder.Services.AddSingleton<IRedisCacheStore, StackExchangeRedisCacheStore>();
+    builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+}
+else
+{
+    builder.Services.AddSingleton<ICacheService>(services => services.GetRequiredService<MemoryCacheService>());
+}
 builder.Services.AddSingleton(riotOptions);
 builder.Services.AddSingleton(cacheOptions);
 builder.Services.AddSingleton(jobOptions);
@@ -98,7 +104,8 @@ builder.Services.AddSingleton(relationshipScoreOptions);
 builder.Services.AddSingleton<RelationshipScoreCalculator>();
 builder.Services.AddSingleton(relationshipAnalysisOptions);
 builder.Services.AddSingleton<PlayerRelationshipAnalyzer>();
-builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
+builder.Services.AddDbContext<LolAnalyzerDbContext>(options =>
+    options.UseInMemoryDatabase("lol-analyzer-worker-runtime"));
 builder.Services.AddScoped<IAnalysisJobRepository, AnalysisJobRepository>();
 builder.Services.AddScoped<IPlayerRefreshScheduleRepository, PlayerRefreshScheduleRepository>();
 builder.Services.AddScoped<PlayerRefreshScheduleService>();
@@ -115,9 +122,12 @@ builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
         client.Timeout = TimeSpan.FromSeconds(riotOptions.RequestTimeoutSeconds);
     });
 builder.Services.AddHostedService<WorkerProcess>();
-builder.Services.AddHealthChecks()
-    .AddCheck<PostgresHealthCheck>("postgresql", tags: ["ready"])
-    .AddCheck("redis", new RedisHealthCheck(redisHost, redisPort), tags: ["ready"]);
+var healthChecks = builder.Services.AddHealthChecks()
+    .AddCheck<PostgresHealthCheck>("postgresql", tags: ["ready"]);
+if (cacheOptions.UsesRedis)
+{
+    healthChecks.AddCheck("redis", new RedisHealthCheck(redisHost, redisPort), tags: ["ready"]);
+}
 
 var app = builder.Build();
 

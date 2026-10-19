@@ -10,6 +10,8 @@ const apiBaseUrl = (process.env.API_BASE_URL || "http://api:8080").replace(
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  // The API has a 180s total analysis budget, including Riot throttling.
+  experimental: { proxyTimeout: 210_000 },
   async headers() {
     return [
       {

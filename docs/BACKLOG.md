@@ -1,6 +1,6 @@
 # Tablero Kanban
 
-Última actualización: 2026-08-31
+Última actualización: 2026-09-22
 
 Este archivo conserva las historias y criterios versionados. GitHub Project mantiene el estado operativo una vez sincronizado. Los estados son **Por hacer**, **Listo para Codex**, **En curso**, **Bloqueado** y **Completado**; una tarea solo se completa con la evidencia exigida en `AGENTS.md`.
 
@@ -8,6 +8,34 @@ Este archivo conserva las historias y criterios versionados. GitHub Project mant
 - **Tablero operativo:** [LoL Network Analyzer — Kanban](https://github.com/users/D0kker/projects/5)
 - **Sincronización actual:** 55 historias registradas como issues `#1` a `#55`; GitHub Project es la fuente operativa del estado y este archivo conserva criterios y decisiones de flujo.
 - **Prioridades:** P0 bloquea el sprint; P1 es necesaria para el resultado; P2 mejora continuidad u operación sin bloquear el núcleo.
+
+## Oportunidades posteriores a ECHO-1
+
+Estas historias conservan hallazgos del cierre de ECHO-1. No forman parte del sprint activo ni autorizan infraestructura nueva.
+
+### ECHO-F01 — Probar concurrencia incremental contra PostgreSQL real
+
+- **Prioridad:** P1 antes de una beta con concurrencia real.
+- **Alcance:** añadir una prueba de integración que ejecute dos actualizaciones de relaciones solapadas y verifique resultados canónicos, idempotentes y visibles después de esperar el advisory lock.
+- **Criterios de aceptación:** la prueba reproduce la carrera sobre PostgreSQL, no usa Riot y demuestra que una actualización en espera observa el commit anterior.
+- **Dependencias:** corpus sintético de partidas y entorno PostgreSQL de pruebas.
+- **Límites:** no introducir colas, coordinación distribuida ni nuevos servicios; optimizar el lock solo con evidencia de contención.
+
+### ECHO-F02 — Medir antes de paginar known players
+
+- **Prioridad:** P2.
+- **Alcance:** medir tamaño y latencia de `/known-players` con historiales de beta y paginar únicamente si los datos muestran un problema.
+- **Criterios de aceptación:** registrar distribución de resultados y umbral acordado; si se supera, definir contrato paginado compatible y pruebas de orden estable.
+- **Dependencias:** uso real o corpus representativo de 100–200 partidas.
+- **Límites:** no cambiar el contrato por anticipado ni añadir almacenamiento.
+
+### ECHO-F03 — Evaluar persistencia de métricas de producto
+
+- **Prioridad:** P2, después de validar utilidad con usuarios.
+- **Alcance:** decidir si los contadores por proceso requieren exportación o persistencia para el go/no-go de producto.
+- **Criterios de aceptación:** documentar ventana de medición, reinicios tolerados y destino mínimo; implementar solo si los snapshots actuales no bastan.
+- **Dependencias:** plan de beta y preguntas concretas de producto.
+- **Límites:** sin plataforma analítica, identificadores de jugador ni labels de alta cardinalidad por defecto.
 
 ## Sprint 1/2 — completados
 

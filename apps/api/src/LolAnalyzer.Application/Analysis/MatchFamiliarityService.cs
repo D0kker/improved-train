@@ -1,6 +1,10 @@
+using LolAnalyzer.Application.Observability;
+
 namespace LolAnalyzer.Application.Analysis;
 
-public sealed class MatchFamiliarityService(IPlayerAnalysisRepository repository)
+public sealed class MatchFamiliarityService(
+    IPlayerAnalysisRepository repository,
+    OperationalMetrics metrics)
 {
     public async Task<MatchFamiliarityResult?> CalculateAsync(
         string ownerPuuid,
@@ -14,6 +18,13 @@ public sealed class MatchFamiliarityService(IPlayerAnalysisRepository repository
             .LoadFamiliarityInputAsync(ownerPuuid, targetRiotMatchId, cancellationToken)
             .ConfigureAwait(false);
 
-        return input is null ? null : MatchFamiliarityCalculator.Calculate(input);
+        if (input is null)
+        {
+            return null;
+        }
+
+        var result = MatchFamiliarityCalculator.Calculate(input);
+        metrics.RecordMatchFamiliarity(result.KnownPlayers);
+        return result;
     }
 }

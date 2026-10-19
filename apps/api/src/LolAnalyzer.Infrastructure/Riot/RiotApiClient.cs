@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LolAnalyzer.Application.Caching;
 using LolAnalyzer.Application.Observability;
 using LolAnalyzer.Application.Riot;
 
@@ -12,15 +13,45 @@ public sealed class RiotApiClient(
     RiotOptions options,
     IRiotRateLimiter rateLimiter,
     TimeProvider timeProvider,
-    OperationalMetrics metrics) : IRiotApiClient
+    OperationalMetrics metrics,
+    IRiotResponseCache responseCache,
+    CacheOptions cacheOptions) : IRiotApiClient
 {
-    public async Task<RiotAccount?> GetAccountByRiotIdAsync(
+    public IRiotApiClient ForPlatform(string platformRegion) => new RiotApiClient(
+        httpClient,
+        new RiotOptions
+        {
+            ApiKey = options.ApiKey,
+            PlatformRegion = platformRegion.Trim().ToLowerInvariant(),
+            RegionalRouting = RiotRouting.Regional(platformRegion),
+            RequestTimeoutSeconds = options.RequestTimeoutSeconds,
+            RequestConcurrency = options.RequestConcurrency,
+            MaxRetryAttempts = options.MaxRetryAttempts,
+            BaseRetryDelayMilliseconds = options.BaseRetryDelayMilliseconds,
+            MaxRetryDelaySeconds = options.MaxRetryDelaySeconds,
+        }, rateLimiter, timeProvider, metrics, responseCache, cacheOptions);
+
+    public Task<RiotAccount?> GetAccountByRiotIdAsync(
         string gameName,
         string tagLine,
         CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(gameName);
         ArgumentException.ThrowIfNullOrWhiteSpace(tagLine);
+
+        return responseCache.GetOrCreateAsync(
+            $"{options.RegionalRouting}:{RiotCacheKeys.Account(gameName, tagLine)}",
+            TimeSpan.FromSeconds(cacheOptions.PlayerIdentityTtlSeconds),
+            "riot-identity",
+            token => FetchAccountByRiotIdAsync(gameName, tagLine, token),
+            cancellationToken);
+    }
+
+    private async Task<RiotAccount?> FetchAccountByRiotIdAsync(
+        string gameName,
+        string tagLine,
+        CancellationToken cancellationToken)
+    {
 
         var path = $"riot/account/v1/accounts/by-riot-id/{Uri.EscapeDataString(gameName)}/{Uri.EscapeDataString(tagLine)}";
         using var response = await SendGetAsync(path, "account", cancellationToken).ConfigureAwait(false);
@@ -57,7 +88,39 @@ public sealed class RiotApiClient(
         ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 100);
 
+        var cached = await responseCache.GetOrCreateAsync(
+            $"{options.RegionalRouting}:{RiotCacheKeys.MatchIds(puuid, start, count)}",
+            TimeSpan.FromSeconds(cacheOptions.RecentMatchIdsTtlSeconds),
+            "riot-match-ids",
+            token => FetchMatchIdsAsync(puuid, start, count, token),
+            cancellationToken).ConfigureAwait(false);
+        return cached ?? [];
+    }
+
+    public async Task<IReadOnlyList<string>> GetMatchIdsBeforeAsync(
+        string puuid, int count, long endTime, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(puuid);
+        ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 100);
+        ArgumentOutOfRangeException.ThrowIfNegative(endTime);
+        var cached = await responseCache.GetOrCreateAsync(
+            $"{options.RegionalRouting}:{RiotCacheKeys.MatchIds(puuid, 0, count)}:before:{endTime}",
+            TimeSpan.FromSeconds(cacheOptions.RecentMatchIdsTtlSeconds),
+            "riot-match-ids",
+            token => FetchMatchIdsAsync(puuid, 0, count, token, endTime), cancellationToken).ConfigureAwait(false);
+        return cached ?? [];
+    }
+
+    private async Task<List<string>?> FetchMatchIdsAsync(
+        string puuid,
+        int start,
+        int count,
+        CancellationToken cancellationToken,
+        long? endTime = null)
+    {
         var path = $"lol/match/v5/matches/by-puuid/{Uri.EscapeDataString(puuid)}/ids?start={start}&count={count}";
+        if (endTime.HasValue) path += $"&endTime={endTime.Value}";
         using var response = await SendGetAsync(path, "match_ids", cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
@@ -70,9 +133,20 @@ public sealed class RiotApiClient(
         return matchIds ?? [];
     }
 
-    public async Task<RiotMatchData?> GetMatchAsync(string riotMatchId, CancellationToken cancellationToken)
+    public Task<RiotMatchData?> GetMatchAsync(string riotMatchId, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(riotMatchId);
+
+        return responseCache.GetOrCreateAsync(
+            $"{options.RegionalRouting}:{RiotCacheKeys.Match(riotMatchId)}",
+            TimeSpan.FromSeconds(cacheOptions.MatchDetailsTtlSeconds),
+            "riot-match-details",
+            token => FetchMatchAsync(riotMatchId, token),
+            cancellationToken);
+    }
+
+    private async Task<RiotMatchData?> FetchMatchAsync(string riotMatchId, CancellationToken cancellationToken)
+    {
 
         var path = $"lol/match/v5/matches/{Uri.EscapeDataString(riotMatchId)}";
         using var response = await SendGetAsync(path, "match", cancellationToken).ConfigureAwait(false);
@@ -98,10 +172,143 @@ public sealed class RiotApiClient(
         }
     }
 
+    public async Task<RiotActiveGame?> GetActiveGameAsync(
+        string puuid,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(puuid);
+
+        var summonerPath = $"lol/summoner/v4/summoners/by-puuid/{Uri.EscapeDataString(puuid)}";
+        using var summonerResponse = await SendGetAsync(
+            summonerPath,
+            "summoner",
+            cancellationToken,
+            options.GetPlatformBaseUri())
+            .ConfigureAwait(false);
+        if (summonerResponse.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        if (!summonerResponse.IsSuccessStatusCode)
+        {
+            throw new RiotApiException(summonerResponse.StatusCode);
+        }
+
+        var summoner = await summonerResponse.Content.ReadFromJsonAsync<SummonerResponse>(
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (summoner is null)
+        {
+            throw new RiotApiException(HttpStatusCode.BadGateway);
+        }
+
+        var spectatorIdentity = !string.IsNullOrWhiteSpace(summoner.Id)
+            ? summoner.Id
+            : summoner.Puuid;
+        if (string.IsNullOrWhiteSpace(spectatorIdentity))
+        {
+            throw new RiotApiException(HttpStatusCode.BadGateway);
+        }
+
+        var activePath = $"lol/spectator/v5/active-games/by-summoner/{Uri.EscapeDataString(spectatorIdentity)}";
+        using var activeResponse = await SendGetAsync(
+            activePath,
+            "active_game",
+            cancellationToken,
+            options.GetPlatformBaseUri())
+            .ConfigureAwait(false);
+        if (activeResponse.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        if (!activeResponse.IsSuccessStatusCode)
+        {
+            throw new RiotApiException(activeResponse.StatusCode);
+        }
+
+        var payload = await activeResponse.Content.ReadFromJsonAsync<ActiveGameResponse>(
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (payload is null || payload.GameId <= 0 || payload.GameStartTime <= 0)
+        {
+            throw new RiotApiException(HttpStatusCode.BadGateway);
+        }
+
+        var participants = await EnrichActiveGameParticipantsAsync(
+                payload.Participants ?? [],
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return new RiotActiveGame(
+            payload.GameId,
+            payload.GameQueueConfigId,
+            DateTimeOffset.FromUnixTimeMilliseconds(payload.GameStartTime),
+            Math.Max(0, payload.GameLength),
+            participants);
+    }
+
+    private async Task<IReadOnlyList<RiotActiveGameParticipant>> EnrichActiveGameParticipantsAsync(
+        IReadOnlyList<ActiveGameParticipantResponse> participants,
+        CancellationToken cancellationToken)
+    {
+        var enriched = new List<RiotActiveGameParticipant>(participants.Count);
+        foreach (var participant in participants)
+        {
+            var puuid = participant.Puuid;
+            var gameName = participant.SummonerName;
+            string? tagLine = null;
+            var summonerId = participant.SummonerId;
+
+            if (!string.IsNullOrWhiteSpace(summonerId))
+            {
+                var summonerPath = $"lol/summoner/v4/summoners/by-summoner/{Uri.EscapeDataString(summonerId)}";
+                using var summonerResponse = await SendGetAsync(
+                    summonerPath,
+                    "active_game_participant",
+                    cancellationToken,
+                    options.GetPlatformBaseUri()).ConfigureAwait(false);
+                if (summonerResponse.IsSuccessStatusCode)
+                {
+                    var summoner = await summonerResponse.Content.ReadFromJsonAsync<SummonerResponse>(
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                    puuid ??= summoner?.Puuid;
+                    gameName ??= summoner?.Name;
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(puuid))
+            {
+                var accountPath = $"riot/account/v1/accounts/by-puuid/{Uri.EscapeDataString(puuid)}";
+                using var accountResponse = await SendGetAsync(
+                    accountPath,
+                    "active_game_participant_account",
+                    cancellationToken).ConfigureAwait(false);
+                if (accountResponse.IsSuccessStatusCode)
+                {
+                    var account = await accountResponse.Content.ReadFromJsonAsync<AccountResponse>(
+                        cancellationToken: cancellationToken).ConfigureAwait(false);
+                    gameName = account?.GameName ?? gameName;
+                    tagLine = account?.TagLine;
+                }
+            }
+
+            enriched.Add(new RiotActiveGameParticipant(
+                puuid,
+                gameName,
+                tagLine,
+                summonerId,
+                participant.ChampionId,
+                participant.TeamId));
+        }
+
+        return enriched;
+    }
+
     private async Task<HttpResponseMessage> SendGetAsync(
         string path,
         string endpoint,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Uri? baseUri = null)
     {
         if (string.IsNullOrWhiteSpace(options.ApiKey))
         {
@@ -112,12 +319,13 @@ public sealed class RiotApiClient(
         {
             HttpResponseMessage response;
             using (await rateLimiter.AcquireAsync(cancellationToken).ConfigureAwait(false))
-            using (var request = new HttpRequestMessage(HttpMethod.Get, path))
             {
+                var requestUri = new Uri(baseUri ?? options.GetRegionalBaseUri(), path).AbsoluteUri;
+                using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
                 request.Headers.TryAddWithoutValidation("X-Riot-Token", options.ApiKey);
                 response = await httpClient.SendAsync(
                     request,
-                    HttpCompletionOption.ResponseHeadersRead,
+                    HttpCompletionOption.ResponseContentRead,
                     cancellationToken).ConfigureAwait(false);
             }
 
@@ -175,7 +383,7 @@ public sealed class RiotApiClient(
             .Select(ParseParticipant)
             .ToArray();
 
-        if (participants.Length == 0 || participants.Select(participant => participant.Puuid).Distinct(StringComparer.Ordinal).Count() != participants.Length)
+        if (participants.Length is 0 or > 10 || participants.Select(participant => participant.Puuid).Distinct(StringComparer.Ordinal).Count() != participants.Length)
         {
             throw new JsonException("Match response has invalid participants.");
         }
@@ -279,4 +487,23 @@ public sealed class RiotApiClient(
         [property: JsonPropertyName("puuid")] string? Puuid,
         [property: JsonPropertyName("gameName")] string? GameName,
         [property: JsonPropertyName("tagLine")] string? TagLine);
+
+    private sealed record SummonerResponse(
+        [property: JsonPropertyName("id")] string? Id,
+        [property: JsonPropertyName("puuid")] string? Puuid,
+        [property: JsonPropertyName("name")] string? Name);
+
+    private sealed record ActiveGameResponse(
+        [property: JsonPropertyName("gameId")] long GameId,
+        [property: JsonPropertyName("gameStartTime")] long GameStartTime,
+        [property: JsonPropertyName("gameLength")] int GameLength,
+        [property: JsonPropertyName("gameQueueConfigId")] int GameQueueConfigId,
+        [property: JsonPropertyName("participants")] IReadOnlyList<ActiveGameParticipantResponse>? Participants);
+
+    private sealed record ActiveGameParticipantResponse(
+        [property: JsonPropertyName("puuid")] string? Puuid,
+        [property: JsonPropertyName("summonerName")] string? SummonerName,
+        [property: JsonPropertyName("summonerId")] string? SummonerId,
+        [property: JsonPropertyName("championId")] int ChampionId,
+        [property: JsonPropertyName("teamId")] int TeamId);
 }

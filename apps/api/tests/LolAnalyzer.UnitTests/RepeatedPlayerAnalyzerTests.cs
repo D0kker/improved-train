@@ -56,6 +56,14 @@ public sealed class RepeatedPlayerAnalyzerTests
     }
 
     [Fact]
+    public void SharedMatchesAndUnidentifiablePlayersDoNotInflateEncounters()
+    {
+        var match = Match(DateTimeOffset.UnixEpoch, true, (AllyId, 100), (Guid.Empty, 200));
+        var result = RepeatedPlayerAnalyzer.Analyze(new PlayerAnalysisInput(OwnerId, [match, match]));
+        Assert.Equal(1, Assert.Single(result).TotalMatches);
+    }
+
+    [Fact]
     public async Task RebuildAsyncReplacesTheOwnersSnapshotOnEveryRun()
     {
         var repository = new RecordingAnalysisRepository(new PlayerAnalysisInput(
@@ -111,6 +119,10 @@ public sealed class RepeatedPlayerAnalyzerTests
             throw new NotSupportedException();
 
         public Task<IReadOnlyList<PlayerEncounterView>?> GetRepeatedPlayersAsync(
+            string puuid,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<PlayerEncounterView>?> GetKnownPlayersAsync(
             string puuid,
             CancellationToken cancellationToken) => throw new NotSupportedException();
 

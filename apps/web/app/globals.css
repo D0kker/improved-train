@@ -272,7 +272,9 @@ p {
 
 .player-link {
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.3rem;
   color: inherit;
 }
 
@@ -290,7 +292,9 @@ p {
 
 .player-identity-incomplete {
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.3rem;
 }
 
 .player-link:hover strong,
@@ -400,24 +404,69 @@ p {
   margin: 0;
 }
 
+.latest-match-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  border: 1px solid rgb(97 226 180 / 45%);
+  border-radius: 1.2rem;
+  background: linear-gradient(
+    135deg,
+    rgb(97 226 180 / 12%),
+    rgb(10 23 20 / 88%)
+  );
+  padding: clamp(1.2rem, 3vw, 2rem);
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.latest-match-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.latest-match-card > div {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.latest-match-card strong {
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+  letter-spacing: -0.025em;
+}
+
+.latest-match-id,
+.latest-match-card > div > span:last-child {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.latest-match-action {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-weight: 800;
+}
+
 .stat-card {
-  min-height: 8.5rem;
+  min-height: 6.5rem;
   border: 1px solid var(--border-soft);
   border-radius: 1rem;
   background: linear-gradient(145deg, rgb(19 37 33 / 85%), rgb(11 24 21 / 88%));
-  padding: 1.15rem;
+  padding: 0.85rem;
 }
 
 .stat-card dt {
-  min-height: 2.2rem;
+  min-height: 1.9rem;
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.35;
 }
 
 .stat-card dd {
-  margin: 1rem 0 0;
-  font-size: clamp(1.55rem, 3vw, 2.25rem);
+  margin: 0.65rem 0 0;
+  font-size: clamp(1.35rem, 2.5vw, 2rem);
   font-weight: 800;
   letter-spacing: -0.04em;
 }
@@ -478,6 +527,206 @@ p {
   color: #fde68a;
   padding: 0.85rem 1rem;
   line-height: 1.5;
+}
+
+.active-game-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgb(97 226 180 / 35%);
+  border-radius: 1rem;
+  background: linear-gradient(120deg, rgb(97 226 180 / 12%), var(--surface));
+  padding: 1rem 1.2rem;
+}
+
+.active-game-banner h2 {
+  margin: 0.2rem 0 0;
+}
+
+.active-game-banner strong {
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.active-game-actions {
+  display: grid;
+  justify-items: end;
+  gap: 0.55rem;
+}
+
+.active-game-actions .primary-button {
+  white-space: nowrap;
+}
+
+.live-teams-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.live-team {
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  border-radius: 1.2rem;
+  background: rgb(10 23 20 / 88%);
+}
+
+.live-team-100 {
+  border-color: rgb(96 165 250 / 55%);
+  background: linear-gradient(
+    145deg,
+    rgb(30 91 153 / 42%),
+    rgb(10 23 20 / 92%)
+  );
+}
+
+.live-team-200 {
+  border-color: rgb(248 113 113 / 55%);
+  background: linear-gradient(
+    145deg,
+    rgb(153 45 61 / 42%),
+    rgb(10 23 20 / 92%)
+  );
+}
+
+.live-team > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-soft);
+  padding: 1.1rem 1.2rem;
+}
+
+.live-team > header strong {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.live-participant-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.live-participant-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 4.3rem;
+  border-bottom: 1px solid var(--border-soft);
+  padding: 0.75rem 1.2rem;
+}
+
+.live-participant-list li:last-child {
+  border-bottom: 0;
+}
+
+.live-participant-list li > div:last-child {
+  min-width: 0;
+}
+
+.live-participant-list li > div:last-child > span {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.live-participant-list .player-link {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.live-participant-list .player-link span {
+  display: inline !important;
+  margin-top: 0 !important;
+}
+
+.live-champion-icon {
+  display: grid;
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: rgb(10 23 20 / 55%);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.live-observed-player {
+  background: rgb(97 226 180 / 10%);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.history-badge {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.45rem;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.history-badge.ally {
+  border-color: rgb(97 226 180 / 45%);
+  color: var(--accent);
+}
+
+.history-badge.opponent {
+  border-color: rgb(251 113 133 / 45%);
+  color: #fda4af;
+}
+
+.history-badge.mixed {
+  border-color: rgb(251 191 36 / 45%);
+  color: #fde68a;
+}
+
+.history-evidence {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 1rem;
+  border-top: 1px solid var(--border-soft);
+  padding-top: 1rem;
+}
+
+.history-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.5rem 0.75rem;
+}
+
+.history-evidence-card {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 0.75rem;
+  background: var(--surface-raised);
+  padding: 0.7rem;
+}
+
+.history-evidence-card > span:last-child {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.history-evidence-card > .history-badge {
+  width: fit-content;
+}
+
+.history-evidence-card > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .table-wrap {
@@ -554,12 +803,18 @@ td > span,
   gap: 0.65rem;
 }
 
+.section-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
 .match-champion,
 .participant-identity {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.9rem;
 }
 
 .match-champion-copy,
@@ -567,11 +822,33 @@ td > span,
   min-width: 0;
 }
 
+.participant-identity > div > strong {
+  display: inline-block;
+  margin: 0 0.55rem 0 0;
+}
+
+.participant-identity .player-link {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.participant-identity .player-link span {
+  display: inline !important;
+  margin-top: 0 !important;
+}
+
+.participant-identity .history-badge {
+  display: block;
+  margin-top: 0.35rem;
+}
+
 .champion-icon,
 .champion-icon-fallback {
-  flex: 0 0 2.5rem;
-  width: 2.5rem;
-  height: 2.5rem;
+  flex: 0 0 3.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
   border: 1px solid var(--border);
   border-radius: 0.55rem;
   object-fit: cover;
@@ -715,6 +992,7 @@ td > span,
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+  margin-top: 1rem;
 }
 
 .team-card {
@@ -722,6 +1000,24 @@ td > span,
   border: 1px solid var(--border-soft);
   border-radius: 1.2rem;
   background: rgb(10 23 20 / 88%);
+}
+
+.team-card.team-100 {
+  border-color: rgb(96 165 250 / 55%);
+  background: linear-gradient(
+    145deg,
+    rgb(30 91 153 / 42%),
+    rgb(10 23 20 / 92%)
+  );
+}
+
+.team-card.team-200 {
+  border-color: rgb(248 113 113 / 55%);
+  background: linear-gradient(
+    145deg,
+    rgb(153 45 61 / 42%),
+    rgb(10 23 20 / 92%)
+  );
 }
 
 .team-card > header {
@@ -768,6 +1064,73 @@ td > span,
   display: block;
 }
 
+.known-player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.known-player-grid li {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 1rem;
+  background: rgb(10 23 20 / 84%);
+  padding: 1rem;
+}
+
+.known-player-grid li > span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.compact-empty-state {
+  padding: 1.5rem 1rem;
+}
+
+.experimental-section {
+  margin-top: 4rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 1rem;
+  background: rgb(10 23 20 / 55%);
+}
+
+.experimental-section > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+}
+
+.experimental-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.experimental-section > summary span:first-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.experimental-section > summary strong {
+  color: var(--text);
+}
+
+.experimental-section > summary small {
+  font-size: 0.72rem;
+}
+
+.experimental-section > section {
+  border-top: 1px solid var(--border-soft);
+  padding: 1.2rem;
+}
+
 .familiarity-value strong {
   color: var(--accent);
   font-size: 1.8rem;
@@ -812,6 +1175,10 @@ td > span,
   display: flex !important;
   flex-wrap: wrap;
   gap: 0.25rem 0.65rem;
+}
+
+.premade-member-links .player-link.compact {
+  margin-right: 0.15rem;
 }
 
 .premade-memberships {
@@ -1003,7 +1370,7 @@ td > span,
 
 .participant-list li {
   display: grid;
-  grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
   gap: 0.8rem;
   align-items: center;
   min-height: 5rem;
@@ -1015,16 +1382,9 @@ td > span,
   border-bottom: 0;
 }
 
-.position-label {
-  display: grid !important;
-  width: 2.2rem;
-  height: 2.2rem;
-  place-items: center;
-  border-radius: 0.55rem;
-  background: rgb(97 226 180 / 9%);
-  color: var(--accent) !important;
-  font-size: 0.65rem !important;
-  font-weight: 800;
+.participant-list li.observed-player {
+  background: rgb(97 226 180 / 8%);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .participant-list p {
@@ -1045,12 +1405,30 @@ td > span,
     grid-template-columns: 5.5rem minmax(8rem, 1fr) minmax(7rem, auto) auto;
   }
 
+  .latest-match-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .match-meta {
     grid-column: 2 / -1;
   }
 
   .teams-grid {
     grid-template-columns: 1fr;
+  }
+
+  .live-teams-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .active-game-banner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .active-game-actions {
+    justify-items: start;
   }
 
   .network-layout {
@@ -1134,7 +1512,7 @@ td > span,
   }
 
   .participant-list li {
-    grid-template-columns: 2.4rem minmax(0, 1fr);
+    grid-template-columns: 3.5rem minmax(0, 1fr);
   }
 
   .participant-list p {

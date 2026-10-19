@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "LoL Network Analyzer",
+  title: "PROJECT ECHO",
   description:
-    "Análisis histórico de jugadores recurrentes en League of Legends.",
+    "Descubre con quién ya habías jugado usando tu historial de League of Legends.",
 };
 
 export default function RootLayout({

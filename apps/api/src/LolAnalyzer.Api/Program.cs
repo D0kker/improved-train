@@ -1,571 +1,190 @@
 using System.Net;
 using System.Threading.RateLimiting;
+using LolAnalyzer.Api;
 using LolAnalyzer.Application.Analysis;
 using LolAnalyzer.Application.Caching;
-using LolAnalyzer.Application.Jobs;
-using LolAnalyzer.Application.Matches;
 using LolAnalyzer.Application.Observability;
-using LolAnalyzer.Application.Players;
 using LolAnalyzer.Application.Riot;
-using LolAnalyzer.Infrastructure.Health;
+using LolAnalyzer.Application.Stateless;
 using LolAnalyzer.Infrastructure.Caching;
-using LolAnalyzer.Infrastructure.Persistence;
 using LolAnalyzer.Infrastructure.Riot;
-using LolAnalyzer.Api;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
-using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 64 * 1024);
-var apiConcurrencyLimit = builder.Configuration.GetValue("API_CONCURRENCY_LIMIT", 32);
-var apiQueueLimit = builder.Configuration.GetValue("API_QUEUE_LIMIT", 32);
-if (apiConcurrencyLimit is < 1 or > 512 || apiQueueLimit is < 0 or > 1024)
-{
-    throw new InvalidOperationException(
-        "API_CONCURRENCY_LIMIT must be 1-512 and API_QUEUE_LIMIT must be 0-1024.");
-}
-
+var concurrency = builder.Configuration.GetValue("API_CONCURRENCY_LIMIT", 8);
+var queue = builder.Configuration.GetValue("API_QUEUE_LIMIT", 16);
+if (concurrency is < 1 or > 64 || queue is < 0 or > 128)
+    throw new InvalidOperationException("API concurrency must be 1-64 and queue size 0-128.");
 var riotOptions = builder.Configuration.GetSection(RiotOptions.SectionName).Get<RiotOptions>() ?? new RiotOptions();
 riotOptions.ApiKey = builder.Configuration["RIOT_API_KEY"] ?? riotOptions.ApiKey;
 riotOptions.PlatformRegion = builder.Configuration["RIOT_PLATFORM_REGION"] ?? riotOptions.PlatformRegion;
 riotOptions.RegionalRouting = builder.Configuration["RIOT_REGIONAL_ROUTING"] ?? riotOptions.RegionalRouting;
-if (int.TryParse(builder.Configuration["RIOT_REQUEST_TIMEOUT_SECONDS"], out var configuredTimeout))
-{
-    riotOptions.RequestTimeoutSeconds = configuredTimeout;
-}
-
-if (int.TryParse(builder.Configuration["RIOT_REQUEST_CONCURRENCY"], out var configuredConcurrency))
-{
-    riotOptions.RequestConcurrency = configuredConcurrency;
-}
-
-if (int.TryParse(builder.Configuration["RIOT_MAX_RETRY_ATTEMPTS"], out var configuredRetryAttempts))
-{
-    riotOptions.MaxRetryAttempts = configuredRetryAttempts;
-}
-
-if (int.TryParse(builder.Configuration["RIOT_BASE_RETRY_DELAY_MILLISECONDS"], out var configuredBaseRetryDelay))
-{
-    riotOptions.BaseRetryDelayMilliseconds = configuredBaseRetryDelay;
-}
-
-if (int.TryParse(builder.Configuration["RIOT_MAX_RETRY_DELAY_SECONDS"], out var configuredMaxRetryDelay))
-{
-    riotOptions.MaxRetryDelaySeconds = configuredMaxRetryDelay;
-}
-
+riotOptions.RequestTimeoutSeconds = builder.Configuration.GetValue("RIOT_REQUEST_TIMEOUT_SECONDS", riotOptions.RequestTimeoutSeconds);
+riotOptions.RequestConcurrency = builder.Configuration.GetValue("RIOT_REQUEST_CONCURRENCY", riotOptions.RequestConcurrency);
+riotOptions.MaxRetryAttempts = builder.Configuration.GetValue("RIOT_MAX_RETRY_ATTEMPTS", riotOptions.MaxRetryAttempts);
+riotOptions.BaseRetryDelayMilliseconds = builder.Configuration.GetValue("RIOT_BASE_RETRY_DELAY_MILLISECONDS", riotOptions.BaseRetryDelayMilliseconds);
+riotOptions.MaxRetryDelaySeconds = builder.Configuration.GetValue("RIOT_MAX_RETRY_DELAY_SECONDS", riotOptions.MaxRetryDelaySeconds);
 riotOptions.Validate();
-
-var relationshipScoreOptions = builder.Configuration
-    .GetSection(RelationshipScoreOptions.SectionName)
-    .Get<RelationshipScoreOptions>() ?? new RelationshipScoreOptions();
-relationshipScoreOptions.Validate();
-var relationshipAnalysisOptions = builder.Configuration
-    .GetSection(PlayerRelationshipAnalysisOptions.SectionName)
-    .Get<PlayerRelationshipAnalysisOptions>() ?? new PlayerRelationshipAnalysisOptions();
-relationshipAnalysisOptions.Validate();
-var premadeDetectionOptions = builder.Configuration
-    .GetSection(PremadeDetectionOptions.SectionName)
-    .Get<PremadeDetectionOptions>() ?? new PremadeDetectionOptions();
-premadeDetectionOptions.Validate();
-var premadeGroupDetectionOptions = builder.Configuration
-    .GetSection(PremadeGroupDetectionOptions.SectionName)
-    .Get<PremadeGroupDetectionOptions>() ?? new PremadeGroupDetectionOptions();
-premadeGroupDetectionOptions.Validate();
-var playerNetworkOptions = builder.Configuration
-    .GetSection(PlayerNetworkOptions.SectionName)
-    .Get<PlayerNetworkOptions>() ?? new PlayerNetworkOptions();
-playerNetworkOptions.Validate();
-var cacheOptions = builder.Configuration
-    .GetSection(CacheOptions.SectionName)
-    .Get<CacheOptions>() ?? new CacheOptions();
-if (int.TryParse(builder.Configuration["CACHE_PLAYER_SUMMARY_TTL_SECONDS"], out var configuredSummaryTtl))
-{
-    cacheOptions.PlayerSummaryTtlSeconds = configuredSummaryTtl;
-}
-
+var analysisOptions = builder.Configuration.GetSection(OnDemandAnalysisOptions.SectionName).Get<OnDemandAnalysisOptions>() ?? new OnDemandAnalysisOptions();
+analysisOptions.Validate();
+var cacheOptions = builder.Configuration.GetSection(CacheOptions.SectionName).Get<CacheOptions>() ?? new CacheOptions();
 cacheOptions.Validate();
-
-var postgresConnectionString = BuildPostgresConnectionString(builder.Configuration)
-    ?? throw new InvalidOperationException("ConnectionStrings:Postgres or POSTGRES_HOST must be configured.");
-var redisHost = builder.Configuration["REDIS_HOST"] ?? builder.Configuration["Redis:Host"] ?? "localhost";
-var redisPort = int.TryParse(builder.Configuration["REDIS_PORT"], out var configuredRedisPort)
-    ? configuredRedisPort
-    : builder.Configuration.GetValue("Redis:Port", 6379);
+var scoreOptions = builder.Configuration.GetSection(RelationshipScoreOptions.SectionName).Get<RelationshipScoreOptions>() ?? new RelationshipScoreOptions();
+scoreOptions.Validate();
+var premadeOptions = builder.Configuration.GetSection(PremadeDetectionOptions.SectionName).Get<PremadeDetectionOptions>() ?? new PremadeDetectionOptions();
+premadeOptions.Validate();
+var groupOptions = builder.Configuration.GetSection(PremadeGroupDetectionOptions.SectionName).Get<PremadeGroupDetectionOptions>() ?? new PremadeGroupDetectionOptions();
+groupOptions.Validate();
 
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton(riotOptions);
+builder.Services.AddSingleton(analysisOptions);
+builder.Services.AddSingleton(cacheOptions);
+builder.Services.AddSingleton(scoreOptions);
+builder.Services.AddSingleton(premadeOptions);
+builder.Services.AddSingleton(groupOptions);
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddSingleton<OperationalMetrics>();
+builder.Services.AddSingleton<IRiotRateLimiter, RiotRateLimiter>();
+builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
+builder.Services.AddSingleton<IRiotResponseCache, RiotResponseCache>();
+builder.Services.AddSingleton<RelationshipScoreCalculator>();
+builder.Services.AddSingleton<PlayerRelationshipAnalyzer>();
+builder.Services.AddSingleton<PossiblePremadeDetector>();
+builder.Services.AddSingleton<PossiblePremadeGroupDetector>();
+builder.Services.AddSingleton<RequestAnalysisCalculator>();
+builder.Services.AddScoped<OnDemandAnalysisService>();
+builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(riotOptions.RequestTimeoutSeconds);
+    client.MaxResponseContentBufferSize = 1024 * 1024;
+});
+builder.Services.AddHealthChecks().AddCheck("stateless-runtime", () =>
+    Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), tags: ["ready"]);
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
         context.Request.Path.StartsWithSegments("/api/v1")
-            ? RateLimitPartition.GetConcurrencyLimiter(
-                "public-api",
-                _ => new ConcurrencyLimiterOptions
-                {
-                    PermitLimit = apiConcurrencyLimit,
-                    QueueLimit = apiQueueLimit,
-                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                })
-            : RateLimitPartition.GetNoLimiter("internal"));
+            ? RateLimitPartition.GetConcurrencyLimiter("analysis-api", _ => new ConcurrencyLimiterOptions
+            { PermitLimit = concurrency, QueueLimit = queue, QueueProcessingOrder = QueueProcessingOrder.OldestFirst })
+            : RateLimitPartition.GetNoLimiter("health"));
 });
-builder.Services.AddSingleton(riotOptions);
-builder.Services.AddSingleton(new MatchIngestionOptions { RequestConcurrency = riotOptions.RequestConcurrency });
-builder.Services.AddSingleton(relationshipScoreOptions);
-builder.Services.AddSingleton<RelationshipScoreCalculator>();
-builder.Services.AddSingleton(relationshipAnalysisOptions);
-builder.Services.AddSingleton<PlayerRelationshipAnalyzer>();
-builder.Services.AddSingleton(premadeDetectionOptions);
-builder.Services.AddSingleton<PossiblePremadeDetector>();
-builder.Services.AddSingleton(premadeGroupDetectionOptions);
-builder.Services.AddSingleton<PossiblePremadeGroupDetector>();
-builder.Services.AddSingleton(playerNetworkOptions);
-builder.Services.AddSingleton(cacheOptions);
-builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
-builder.Services.AddSingleton<OperationalMetrics>();
-builder.Services.AddSingleton<IRiotRateLimiter, RiotRateLimiter>();
-builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(new ConfigurationOptions
-{
-    EndPoints = { { redisHost, redisPort } },
-    AbortOnConnectFail = false,
-    ConnectRetry = 1,
-    ConnectTimeout = 500,
-    AsyncTimeout = 500,
-    SyncTimeout = 500,
-}));
-builder.Services.AddSingleton<IRedisCacheStore, StackExchangeRedisCacheStore>();
-builder.Services.AddSingleton<MemoryCacheService>();
-builder.Services.AddSingleton<ICacheService, RedisCacheService>();
-builder.Services.AddDbContext<LolAnalyzerDbContext>(options => options.UseNpgsql(postgresConnectionString));
-builder.Services.AddScoped<IAnalysisJobRepository, AnalysisJobRepository>();
-builder.Services.AddScoped<AnalysisJobService>();
-builder.Services.AddScoped<IPlayerRefreshScheduleRepository, PlayerRefreshScheduleRepository>();
-builder.Services.AddScoped<PlayerRefreshScheduleService>();
-builder.Services.AddScoped<IPlayerRepository, PlayerRepository>();
-builder.Services.AddScoped<PlayerLookupService>();
-builder.Services.AddScoped<IMatchRepository, MatchRepository>();
-builder.Services.AddScoped<MatchIngestionService>();
-builder.Services.AddScoped<IPlayerAnalysisRepository, PlayerAnalysisRepository>();
-builder.Services.AddScoped<RepeatedPlayerAnalysisService>();
-builder.Services.AddScoped<MatchFamiliarityService>();
-builder.Services.AddScoped<MatchPremadeGroupService>();
-builder.Services.AddScoped<MatchDetailQueryService>();
-builder.Services.AddScoped<PlayerSummaryQueryService>();
-builder.Services.AddScoped<IPlayerRelationshipRepository, PlayerRelationshipRepository>();
-builder.Services.AddScoped<PlayerRelationshipAnalysisService>();
-builder.Services.AddScoped<PlayerRelationshipQueryService>();
-builder.Services.AddScoped<PlayerNetworkQueryService>();
-builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
-    {
-        client.BaseAddress = riotOptions.GetRegionalBaseUri();
-        client.Timeout = TimeSpan.FromSeconds(riotOptions.RequestTimeoutSeconds);
-    });
-builder.Services.AddHealthChecks()
-    .AddCheck<PostgresHealthCheck>("postgresql", tags: ["ready"])
-    .AddCheck("redis", new RedisHealthCheck(redisHost, redisPort), tags: ["ready"]);
 
 var app = builder.Build();
 app.UseMiddleware<SafeRequestLoggingMiddleware>();
 app.Use(async (context, next) =>
 {
-    context.Response.OnStarting(() =>
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    context.Response.Headers.XFrameOptions = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "same-origin";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=()";
+    if (context.Request.ContentLength > 64 * 1024)
     {
-        context.Response.Headers.XContentTypeOptions = "nosniff";
-        context.Response.Headers.XFrameOptions = "DENY";
-        context.Response.Headers["Referrer-Policy"] = "same-origin";
-        context.Response.Headers["Permissions-Policy"] = "camera=(), geolocation=(), microphone=()";
-        return Task.CompletedTask;
-    });
-    await next(context).ConfigureAwait(false);
+        context.Response.StatusCode = StatusCodes.Status413PayloadTooLarge;
+        return;
+    }
+    using var budget = CancellationTokenSource.CreateLinkedTokenSource(context.RequestAborted);
+    budget.CancelAfter(TimeSpan.FromSeconds(context.RequestServices.GetRequiredService<OnDemandAnalysisOptions>().RequestTimeoutSeconds));
+    var disconnected = context.RequestAborted;
+    context.RequestAborted = budget.Token;
+    try { await next(context).ConfigureAwait(false); }
+    catch (OperationCanceledException) when (disconnected.IsCancellationRequested) { context.Abort(); }
+    catch (OperationCanceledException)
+    {
+        context.RequestAborted = disconnected;
+        await Results.Problem(statusCode: 504, title: "Analysis time budget exceeded. Try again; cached Riot data may reduce the duration.").ExecuteAsync(context);
+    }
+    catch (RiotApiException error)
+    {
+        var status = error.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden ? 502 : 503;
+        await Results.Problem(statusCode: status, title: error.StatusCode == HttpStatusCode.TooManyRequests
+            ? "Riot API rate limit reached." : "Riot API is unavailable.").ExecuteAsync(context);
+    }
+    catch (HttpRequestException)
+    { await Results.Problem(statusCode: 503, title: "Riot API is unavailable.").ExecuteAsync(context); }
+    catch (BadHttpRequestException error)
+    { await Results.Problem(statusCode: error.StatusCode, title: "Invalid request body.").ExecuteAsync(context); }
+    catch (ArgumentException)
+    { await Results.Problem(statusCode: 400, title: "Invalid player, match, platform or pagination.").ExecuteAsync(context); }
+    catch (InvalidOperationException error) when (error.Message.Contains("RIOT_API_KEY", StringComparison.Ordinal))
+    { await Results.Problem(statusCode: 503, title: "Riot API is not configured.").ExecuteAsync(context); }
+    catch (Exception)
+    { await Results.Problem(statusCode: 500, title: "Analysis could not be completed.").ExecuteAsync(context); }
 });
 app.UseRateLimiter();
-
-if (builder.Configuration.GetValue("Database:ApplyMigrations", true))
-{
-    using var scope = app.Services.CreateScope();
-    var dbContext = scope.ServiceProvider.GetRequiredService<LolAnalyzerDbContext>();
-    await dbContext.Database.MigrateAsync();
-}
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
+if (app.Environment.IsDevelopment()) app.MapOpenApi();
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = registration => registration.Tags.Contains("ready") });
 app.MapGet("/metrics", (OperationalMetrics metrics) => Results.Ok(metrics.Snapshot()));
 
+app.MapGet("/api/v1/players/by-riot-id/{gameName}/{tagLine}/analysis", async Task<IResult> (
+    string gameName, string tagLine, string? platformRegion, OnDemandAnalysisService service, RiotOptions configuration, ILogger<Program> logger, CancellationToken token) =>
+{
+    var result = await service.SearchAsync(gameName, tagLine, platformRegion ?? configuration.PlatformRegion, token).ConfigureAwait(false);
+    if (result is not null) AnalysisLog.Completed(logger, "player-search", 1, result.Coverage.MatchIdsObtained,
+        result.Coverage.UniqueMatchIds, result.Coverage.MatchesRecovered, result.Coverage.Failures.Count, result.Coverage.Status);
+    return result is null ? Results.NotFound() : Results.Ok(result);
+});
 app.MapGet("/api/v1/players/by-riot-id/{gameName}/{tagLine}", async Task<IResult> (
-    string gameName,
-    string tagLine,
-    PlayerLookupService lookupService,
-    RiotOptions options,
-    CancellationToken cancellationToken) =>
+    string gameName, string tagLine, string? platformRegion, IRiotApiClient riot, RiotOptions configuration, CancellationToken token) =>
 {
-    if (string.IsNullOrWhiteSpace(gameName) || string.IsNullOrWhiteSpace(tagLine))
-    {
-        return Results.ValidationProblem(new Dictionary<string, string[]>
-        {
-            ["riotId"] = ["gameName and tagLine are required."],
-        });
-    }
-
-    try
-    {
-        var player = await lookupService.FindByRiotIdAsync(
-            gameName,
-            tagLine,
-            options.PlatformRegion,
-            cancellationToken);
-
-        return player is null
-            ? Results.NotFound()
-            : Results.Ok(new PlayerResponse(player.Puuid, player.GameName, player.TagLine, player.PlatformRegion));
-    }
-    catch (RiotApiException exception) when (exception.StatusCode == HttpStatusCode.TooManyRequests)
-    {
-        return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Riot API rate limit reached.");
-    }
-    catch (RiotApiException exception) when (exception.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-    {
-        return Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "Riot API authorization failed.");
-    }
-    catch (RiotApiException)
-    {
-        return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Riot API is unavailable.");
-    }
-    catch (InvalidOperationException)
-    {
-        return Results.Problem(
-            statusCode: StatusCodes.Status503ServiceUnavailable,
-            title: "Riot API is not configured.");
-    }
+    var platform = platformRegion ?? configuration.PlatformRegion;
+    var account = await riot.ForPlatform(platform).GetAccountByRiotIdAsync(gameName, tagLine, token).ConfigureAwait(false);
+    return account is null ? Results.NotFound() : Results.Ok(new PlayerIdentity(account.Puuid, account.GameName, account.TagLine, platform));
 });
-
-app.MapPost("/api/v1/players/{puuid}/analysis", async Task<IResult> (
-    string puuid,
-    StartAnalysisRequest request,
-    AnalysisJobService jobService,
-    CancellationToken cancellationToken) =>
+app.MapGet("/api/v1/players/{puuid}/recent-matches", async Task<IResult> (
+    string puuid, int? start, int? count, string? platformRegion, OnDemandAnalysisService service, RiotOptions configuration, CancellationToken token) =>
 {
-    const int maximumCount = 200;
-    if (string.IsNullOrWhiteSpace(puuid) || request.MatchCount is < 1 or > maximumCount)
-    {
-        return Results.ValidationProblem(new Dictionary<string, string[]>
-        {
-            ["analysis"] = [$"puuid is required and count must be between 1 and {maximumCount}."],
-        });
-    }
-
-    var job = await jobService
-        .StartAsync(puuid, request.MatchCount, cancellationToken)
-        .ConfigureAwait(false);
-    return Results.Accepted($"/api/v1/jobs/{job.JobId}", job);
+    if (start is < 0 or > 1000) return Results.BadRequest();
+    return Results.Ok(await service.RecentAsync(puuid, platformRegion ?? configuration.PlatformRegion, start ?? 0, count ?? 5, token).ConfigureAwait(false));
 });
-
-app.MapGet("/api/v1/jobs/{jobId:guid}", async Task<IResult> (
-    Guid jobId,
-    AnalysisJobService jobService,
-    CancellationToken cancellationToken) =>
+app.MapPost("/api/v1/matches/{matchId}/analyze", async Task<IResult> (
+    string matchId, AnalyzeMatchRequest request, OnDemandAnalysisService service, RiotOptions configuration, ILogger<Program> logger, CancellationToken token) =>
 {
-    var job = await jobService.FindAsync(jobId, cancellationToken).ConfigureAwait(false);
-    return job is null ? Results.NotFound() : Results.Ok(job);
+    var result = await service.AnalyzeAsync(matchId, request.OwnerPuuid, RiotRouting.PlatformForMatch(matchId, request.PlatformRegion, configuration.PlatformRegion), token).ConfigureAwait(false);
+    if (result is not null) AnalysisLog.Completed(logger, "selected-match", result.Coverage.Participants,
+        result.Coverage.MatchIdsObtained, result.Coverage.UniqueMatchIds, result.Coverage.MatchesRecovered,
+        result.Coverage.Failures.Count, result.Coverage.Status);
+    return result is null ? Results.NotFound() : Results.Ok(result);
 });
-
-app.MapPost("/api/v1/jobs/{jobId:guid}/cancel", async Task<IResult> (
-    Guid jobId,
-    AnalysisJobService jobService,
-    CancellationToken cancellationToken) =>
-{
-    var job = await jobService.CancelAsync(jobId, cancellationToken).ConfigureAwait(false);
-    return job is null ? Results.NotFound() : Results.Ok(job);
-});
-
-app.MapGet("/api/v1/players/{puuid}/refresh-schedule", async Task<IResult> (
-    string puuid,
-    PlayerRefreshScheduleService scheduleService,
-    CancellationToken cancellationToken) =>
-{
-    if (string.IsNullOrWhiteSpace(puuid))
-    {
-        return Results.BadRequest();
-    }
-
-    var schedule = await scheduleService.FindAsync(puuid, cancellationToken).ConfigureAwait(false);
-    return schedule is null ? Results.NotFound() : Results.Ok(schedule);
-});
-
-app.MapPut("/api/v1/players/{puuid}/refresh-schedule", async Task<IResult> (
-    string puuid,
-    ConfigureRefreshScheduleRequest request,
-    PlayerRefreshScheduleService scheduleService,
-    CancellationToken cancellationToken) =>
-{
-    if (string.IsNullOrWhiteSpace(puuid)
-        || request.MatchCount is < 1 or > PlayerRefreshScheduleService.MaximumRequestedCount
-        || request.IntervalMinutes is < PlayerRefreshScheduleService.MinimumIntervalMinutes
-            or > PlayerRefreshScheduleService.MaximumIntervalMinutes)
-    {
-        return Results.ValidationProblem(new Dictionary<string, string[]>
-        {
-            ["schedule"] = ["puuid is required, matchCount must be 1-200 and intervalMinutes must be 15-10080."],
-        });
-    }
-
-    var schedule = await scheduleService.ConfigureAsync(
-        puuid,
-        request.MatchCount,
-        request.IntervalMinutes,
-        request.Enabled,
-        cancellationToken).ConfigureAwait(false);
-    return schedule is null ? Results.NotFound() : Results.Ok(schedule);
-});
-
-app.MapPost("/api/v1/players/{puuid}/matches/sync", async Task<IResult> (
-    string puuid,
-    int? count,
-    MatchIngestionService ingestionService,
-    RepeatedPlayerAnalysisService analysisService,
-    PlayerRelationshipAnalysisService relationshipAnalysisService,
-    ICacheService cache,
-    RiotOptions options,
-    CancellationToken cancellationToken) =>
-{
-    const int defaultCount = 20;
-    const int maximumCount = 20;
-    var requestedCount = count ?? defaultCount;
-    if (string.IsNullOrWhiteSpace(puuid) || requestedCount is < 1 or > maximumCount)
-    {
-        return Results.ValidationProblem(new Dictionary<string, string[]>
-        {
-            ["sync"] = [$"puuid is required and count must be between 1 and {maximumCount}."],
-        });
-    }
-
-    try
-    {
-        var result = await ingestionService
-            .SynchronizeAsync(puuid, requestedCount, options.PlatformRegion, cancellationToken)
-            .ConfigureAwait(false);
-        var analysis = await analysisService.RebuildAsync(puuid, cancellationToken).ConfigureAwait(false);
-        var relationshipAnalysis = await relationshipAnalysisService
-            .RebuildAsync(cancellationToken)
-            .ConfigureAwait(false);
-        await cache.RemoveTagAsync(PlayerCacheKeys.Tag(puuid), cancellationToken).ConfigureAwait(false);
-        return Results.Ok(new
-        {
-            result.RequestedCount,
-            result.MatchIdsReturned,
-            result.AlreadyStored,
-            result.Downloaded,
-            result.Persisted,
-            result.NotFound,
-            Analysis = analysis,
-            RelationshipAnalysis = relationshipAnalysis,
-        });
-    }
-    catch (RiotApiException exception) when (exception.StatusCode == HttpStatusCode.TooManyRequests)
-    {
-        return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Riot API rate limit reached.");
-    }
-    catch (RiotApiException exception) when (exception.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
-    {
-        return Results.Problem(statusCode: StatusCodes.Status502BadGateway, title: "Riot API authorization failed.");
-    }
-    catch (RiotApiException)
-    {
-        return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Riot API is unavailable.");
-    }
-    catch (InvalidOperationException)
-    {
-        return Results.Problem(
-            statusCode: StatusCodes.Status503ServiceUnavailable,
-            title: "Riot API is not configured.");
-    }
-});
-
-app.MapGet("/api/v1/players/{puuid}/summary", async Task<IResult> (
-    string puuid,
-    PlayerSummaryQueryService queryService,
-    CancellationToken cancellationToken) =>
-{
-    if (string.IsNullOrWhiteSpace(puuid))
-    {
-        return Results.BadRequest();
-    }
-
-    var summary = await queryService.GetAsync(puuid, cancellationToken).ConfigureAwait(false);
-    return summary is null ? Results.NotFound() : Results.Ok(summary);
-});
-
-app.MapGet("/api/v1/players/{puuid}/encounters", async Task<IResult> (
-    string puuid,
-    IPlayerAnalysisRepository repository,
-    CancellationToken cancellationToken) =>
-{
-    if (string.IsNullOrWhiteSpace(puuid))
-    {
-        return Results.BadRequest();
-    }
-
-    var encounters = await repository.GetRepeatedPlayersAsync(puuid, cancellationToken).ConfigureAwait(false);
-    return encounters is null ? Results.NotFound() : Results.Ok(encounters);
-});
-
-app.MapGet("/api/v1/players/{puuid}/matches", async Task<IResult> (
-    string puuid,
-    int? page,
-    int? pageSize,
-    int? queue,
-    IPlayerAnalysisRepository repository,
-    CancellationToken cancellationToken) =>
-{
-    const int maximumPage = 10_000;
-    var requestedPage = page ?? 1;
-    var requestedPageSize = pageSize ?? 20;
-    if (string.IsNullOrWhiteSpace(puuid)
-        || requestedPage is < 1 or > maximumPage
-        || requestedPageSize is < 1 or > 100)
-    {
-        return Results.ValidationProblem(new Dictionary<string, string[]>
-        {
-            ["pagination"] = [$"puuid is required, page must be between 1 and {maximumPage} and pageSize between 1 and 100."],
-        });
-    }
-
-    var matches = await repository
-        .GetMatchesAsync(puuid, requestedPage, requestedPageSize, queue, cancellationToken)
-        .ConfigureAwait(false);
-    return matches is null ? Results.NotFound() : Results.Ok(matches);
-});
-
 app.MapGet("/api/v1/matches/{matchId}", async Task<IResult> (
-    string matchId,
-    string? ownerPuuid,
-    MatchDetailQueryService queryService,
-    CancellationToken cancellationToken) =>
+    string matchId, string? ownerPuuid, string? platformRegion, OnDemandAnalysisService service, IRiotApiClient riot, RiotOptions configuration, CancellationToken token) =>
 {
-    if (string.IsNullOrWhiteSpace(matchId))
+    var platform = RiotRouting.PlatformForMatch(matchId, platformRegion, configuration.PlatformRegion);
+    if (!string.IsNullOrWhiteSpace(ownerPuuid))
     {
-        return Results.BadRequest();
+        var analysis = await service.AnalyzeAsync(matchId, ownerPuuid, platform, token).ConfigureAwait(false);
+        return analysis is null ? Results.NotFound() : Results.Ok(analysis.Match);
     }
-
-    var match = await queryService.GetAsync(matchId, ownerPuuid, cancellationToken).ConfigureAwait(false);
-    return match is null ? Results.NotFound() : Results.Ok(match);
+    var match = await riot.ForPlatform(platform).GetMatchAsync(matchId, token).ConfigureAwait(false);
+    return match is null ? Results.NotFound() : Results.Ok(RequestAnalysisCalculator.Detail(match));
 });
+app.MapGet("/api/v1/players/{puuid}/active-game", async Task<IResult> (
+    string puuid, string? platformRegion, IRiotApiClient riot, RiotOptions configuration, CancellationToken token) =>
+    Results.Ok(await riot.ForPlatform(platformRegion ?? configuration.PlatformRegion).GetActiveGameAsync(puuid, token).ConfigureAwait(false)));
 
-app.MapGet("/api/v1/players/{puuid}/relationships", async Task<IResult> (
-    string puuid,
-    int? page,
-    int? pageSize,
-    string? minimumConfidence,
-    int? minimumScore,
-    PlayerRelationshipQueryService queryService,
-    CancellationToken cancellationToken) =>
+// Compatibility reads fetch their entire window independently from Riot.
+app.MapGet("/api/v1/players/{puuid}/summary", async (string puuid, OnDemandAnalysisService service, RiotOptions configuration, CancellationToken token) =>
+    (await service.RecentAsync(puuid, configuration.PlatformRegion, 0, 5, token).ConfigureAwait(false)).Summary);
+app.MapGet("/api/v1/players/{puuid}/known-players", async (string puuid, OnDemandAnalysisService service, RiotOptions configuration, CancellationToken token) =>
+    (await service.RecentAsync(puuid, configuration.PlatformRegion, 0, 5, token).ConfigureAwait(false)).Encounters);
+app.MapGet("/api/v1/players/{puuid}/encounters", async (string puuid, OnDemandAnalysisService service, RiotOptions configuration, CancellationToken token) =>
+    (await service.RecentAsync(puuid, configuration.PlatformRegion, 0, 5, token).ConfigureAwait(false)).Encounters.Where(player => player.TotalMatches >= 2));
+app.MapGet("/api/v1/players/{puuid}/matches", async Task<IResult> (
+    string puuid, int? page, int? pageSize, OnDemandAnalysisService service, RiotOptions configuration, CancellationToken token) =>
 {
-    const int maximumPage = 10_000;
-    var requestedPage = page ?? 1;
-    var requestedPageSize = pageSize ?? 20;
-    var requestedConfidence = RelationshipConfidence.Low;
-    var requestedMinimumScore = minimumScore ?? 0;
-    if (!string.IsNullOrWhiteSpace(minimumConfidence)
-        && !RelationshipConfidenceExtensions.TryParseLabel(minimumConfidence, out requestedConfidence))
-    {
-        return Results.ValidationProblem(new Dictionary<string, string[]>
-        {
-            ["minimumConfidence"] = ["Use LOW, MEDIUM, HIGH or VERY_HIGH."],
-        });
-    }
-
-    if (string.IsNullOrWhiteSpace(puuid)
-        || requestedPage is < 1 or > maximumPage
-        || requestedPageSize is < 1 or > 100
-        || requestedMinimumScore is < 0 or > 100)
-    {
-        return Results.ValidationProblem(new Dictionary<string, string[]>
-        {
-            ["query"] = [$"puuid is required, page must be between 1 and {maximumPage}, pageSize between 1 and 100 and minimumScore between 0 and 100."],
-        });
-    }
-
-    var relationships = await queryService
-        .GetAsync(puuid, requestedPage, requestedPageSize, requestedConfidence, requestedMinimumScore, cancellationToken)
-        .ConfigureAwait(false);
-    return relationships is null ? Results.NotFound() : Results.Ok(relationships);
+    if ((page ?? 1) is < 1 or > 200 || (pageSize ?? 5) is < 1 or > 5) return Results.BadRequest();
+    return Results.Ok((await service.RecentAsync(puuid, configuration.PlatformRegion, ((page ?? 1) - 1) * (pageSize ?? 5), pageSize ?? 5, token).ConfigureAwait(false)).Matches);
 });
-
-app.MapGet("/api/v1/players/{puuid}/network", async Task<IResult> (
-    string puuid,
-    int? maxNodes,
-    int? maxEdges,
-    string? minimumConfidence,
-    int? minimumScore,
-    PlayerNetworkOptions options,
-    PlayerNetworkQueryService queryService,
-    CancellationToken cancellationToken) =>
-{
-    var requestedMaxNodes = maxNodes ?? options.MaximumNodes;
-    var requestedMaxEdges = maxEdges ?? options.MaximumEdges;
-    var requestedMinimumScore = minimumScore ?? 0;
-    var requestedConfidence = RelationshipConfidence.Low;
-    if (!string.IsNullOrWhiteSpace(minimumConfidence)
-        && !RelationshipConfidenceExtensions.TryParseLabel(minimumConfidence, out requestedConfidence))
-    {
-        return Results.ValidationProblem(new Dictionary<string, string[]>
-        {
-            ["minimumConfidence"] = ["Use LOW, MEDIUM, HIGH or VERY_HIGH."],
-        });
-    }
-
-    if (string.IsNullOrWhiteSpace(puuid)
-        || !queryService.LimitsAreValid(requestedMaxNodes, requestedMaxEdges)
-        || requestedMinimumScore is < 0 or > 100)
-    {
-        return Results.ValidationProblem(new Dictionary<string, string[]>
-        {
-            ["query"] = [$"puuid is required, maxNodes must be between 1 and {options.MaximumNodes}, maxEdges between 1 and {options.MaximumEdges} and minimumScore between 0 and 100."],
-        });
-    }
-
-    var network = await queryService
-        .GetAsync(
-            puuid,
-            requestedMaxNodes,
-            requestedMaxEdges,
-            requestedConfidence,
-            requestedMinimumScore,
-            cancellationToken)
-        .ConfigureAwait(false);
-    return network is null ? Results.NotFound() : Results.Ok(network);
-});
+foreach (var retired in new[] { "/api/v1/players/{puuid}/analysis", "/api/v1/jobs/{jobId}", "/api/v1/jobs/{jobId}/cancel",
+    "/api/v1/players/{puuid}/refresh-schedule", "/api/v1/players/{puuid}/matches/sync",
+    "/api/v1/players/{puuid}/relationships", "/api/v1/players/{puuid}/network" })
+    app.MapMethods(retired, ["GET", "POST", "PUT"], () => Results.Problem(statusCode: 410,
+        title: "This stateful endpoint has been retired. Use recent-matches or POST /matches/{matchId}/analyze."));
 
 app.Run();
 
-internal sealed record PlayerResponse(string Puuid, string GameName, string TagLine, string PlatformRegion);
-
-internal sealed record StartAnalysisRequest(int MatchCount);
-
-internal sealed record ConfigureRefreshScheduleRequest(bool Enabled, int IntervalMinutes, int MatchCount);
-
-public partial class Program
-{
-    private static string? BuildPostgresConnectionString(ConfigurationManager configuration)
-    {
-        var host = configuration["POSTGRES_HOST"];
-        if (string.IsNullOrWhiteSpace(host))
-        {
-            return configuration.GetConnectionString("Postgres");
-        }
-
-        var port = int.TryParse(configuration["POSTGRES_PORT"], out var configuredPort) ? configuredPort : 5432;
-        var database = configuration["POSTGRES_DB"] ?? "lol_analyzer";
-        var username = configuration["POSTGRES_USER"] ?? "lol";
-        var password = configuration["POSTGRES_PASSWORD"];
-        var connection = $"Host={host};Port={port};Database={database};Username={username}";
-
-        return string.IsNullOrWhiteSpace(password) ? connection : $"{connection};Password={password}";
-    }
-}
+public partial class Program;

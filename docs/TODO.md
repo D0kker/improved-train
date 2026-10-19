@@ -1,8 +1,34 @@
 # Roadmap
 
-Última actualización: 2026-08-31
+Última actualización: 2026-10-18
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
+
+## T03.5 — API stateless
+
+- [x] Verificar rama base con T01/T02/T03 y aislar implementación en `feature/t03-5-stateless-api`.
+- [x] Implementar búsqueda autocontenida de cinco partidas y análisis directo sin búsqueda previa.
+- [x] Conservar cinco históricas del owner y tres por otro participante, con objetivo/futuro excluidos y deduplicación.
+- [x] Eliminar dependencias EF/Redis/jobs del runtime; preservar regresiones y benchmark en proyecto Legacy.
+- [x] Acotar caché/concurrencia/payloads, cancelar operaciones y transportar cobertura parcial explícita.
+- [x] Cerrar validación final y registrar pruebas/benchmark en `T03_5_STATELESS_ARCHITECTURE.md` (94 unitarias, 15 integración, 16 frontend; builds/formato/imágenes correctos).
+- [x] Publicar rama feature y abrir [PR #83](https://github.com/D0kker/improved-train/pull/83) a main, sin merge ni deploy; código en `3afd6c6` y evidencia documental posterior en el historial de la rama.
+- [x] Desplegar T03.5 por autorización separada del PO: API/web saludables en 8081, imágenes verificadas, clave preservada y smoke HTTP sin consumo Riot; evidencia en `PROJECT_CONTEXT.md`.
+- [ ] Validar análisis real y comportamiento bajo cuota/carga autorizada; revisar timeout/cuota agregada antes de otro hosting o varias instancias.
+
+Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redis, corpus compartido, jobs y despliegues anteriores no describen requisitos del runtime T03.5. Ver D-042 y el informe `T03_5_STATELESS_ARCHITECTURE.md`.
+
+## ECHO-1 — enfoque del producto
+
+- [x] Separar jugadores conocidos (`>= 1`) de recurrentes (`>= 2`) sin recrear `PlayerEncounter`.
+- [x] Exponer conocidos individuales de cada partida con conteos estrictamente anteriores.
+- [x] Priorizar encounters y familiaridad en Home, dashboard y detalle de partida.
+- [x] Mantener el grafo funcional como sección secundaria/experimental sin ampliarlo.
+- [x] Sustituir la reconstrucción global ordinaria por actualización incremental de parejas afectadas.
+- [x] Permitir `CACHE_PROVIDER=memory` sin Redis y conservar `CACHE_PROVIDER=redis` con fallback.
+- [x] Añadir métricas de producto ECHO agregadas y de baja cardinalidad.
+- [x] Conservar worker y refresh programado sin ampliar sus funcionalidades.
+- [x] Mantener `raw_data` y registrar la decisión de retención como pendiente.
 
 ## Foundation — completada
 
@@ -73,6 +99,17 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] S6-006: refresh programado opt-in con frecuencia configurable, claim durable sin solapes y desactivación segura.
 - [x] S6-007: instrumentar logs seguros y métricas agregadas de requests, Riot/429, ingesta, caché y jobs sin identificadores ni payloads.
 - [x] S6-008: verificar reinicio, deduplicación, 429, Redis caído y consultas reales; documentar planes y runbook reproducible.
+
+## T02 — estabilización InMemory y AnalysisJobs
+
+- [x] Procesar jobs de la API con cola acotada y `BackgroundService` en el mismo proceso.
+- [x] Eliminar operaciones de actualización masiva incompatibles con el proveedor InMemory y serializar transiciones de estado.
+- [x] Documentar la limitación de instancia única y pérdida de jobs al reiniciar.
+- [ ] Evolucionar a coordinación compartida únicamente junto con una decisión explícita de persistencia durable.
+
+## T03 — estadísticas y familiaridad
+
+- [x] Validar resumen, encuentros y familiaridad con fixtures InMemory completos, repetidos y parciales; 75 pruebas unitarias, 21 de integración y 14 frontend aprobadas. Evidencia en `docs/T03_STATISTICS_AUDIT.md`.
 
 ## Sprint 7 — planificado
 

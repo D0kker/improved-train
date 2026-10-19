@@ -38,7 +38,7 @@ public sealed class LolAnalyzerDbContext(DbContextOptions<LolAnalyzerDbContext> 
             entity.HasKey(match => match.Id);
             entity.Property(match => match.RiotMatchId).HasMaxLength(64).IsRequired();
             entity.Property(match => match.GameVersion).HasMaxLength(32);
-            entity.Property(match => match.RawData).HasColumnType("jsonb");
+            entity.Ignore(match => match.RawData);
             entity.HasIndex(match => match.RiotMatchId).IsUnique();
         });
 

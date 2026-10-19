@@ -1,6 +1,9 @@
 using System.Net;
 using System.Text;
+using LolAnalyzer.Application.Caching;
 using LolAnalyzer.Application.Observability;
+using LolAnalyzer.Application.Riot;
+using LolAnalyzer.Infrastructure.Caching;
 using LolAnalyzer.Infrastructure.Riot;
 using Xunit;
 
@@ -8,6 +11,34 @@ namespace LolAnalyzer.UnitTests;
 
 public sealed class RiotApiClientTests
 {
+    [Fact]
+    public async Task HistoricalListsUseEndTimeSecondsAndRegionalCacheKeys()
+    {
+        var hosts = new List<string>();
+        using var handler = new StubHttpMessageHandler(request =>
+        {
+            hosts.Add(request.RequestUri!.Host);
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("[]", Encoding.UTF8, "application/json") };
+        });
+        using var http = new HttpClient(handler);
+        var client = CreateRiotClient(http, new RiotOptions { ApiKey = "unit-test-key" });
+        await client.ForPlatform("EUW1").GetMatchIdsBeforeAsync("owner", 6, 1_700_000_000, TestContext.Current.CancellationToken);
+        Assert.Contains("count=6&endTime=1700000000", handler.Request!.RequestUri!.Query, StringComparison.Ordinal);
+        await client.ForPlatform("LA1").GetMatchIdsBeforeAsync("owner", 6, 1_700_000_000, TestContext.Current.CancellationToken);
+        Assert.Equal(["europe.api.riotgames.com", "americas.api.riotgames.com"], hosts);
+        Assert.Equal("EUW1", RiotRouting.PlatformForMatch("EUW1_123", null, "LA1"));
+    }
+
+    [Fact]
+    public async Task OversizedRiotBodiesAreRejectedBeforeDeserialization()
+    {
+        using var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        { Content = new StringContent(new string('x', 2048)) });
+        using var http = new HttpClient(handler) { MaxResponseContentBufferSize = 1024 };
+        var client = CreateRiotClient(http, new RiotOptions { ApiKey = "unit-test-key" });
+        await Assert.ThrowsAsync<HttpRequestException>(() => client.GetMatchAsync("LA1_TEST", TestContext.Current.CancellationToken));
+    }
+
     [Fact]
     public async Task GetAccountByRiotIdAsyncUsesRegionalEndpointEncodedPathAndTokenHeader()
     {
@@ -192,12 +223,16 @@ public sealed class RiotApiClientTests
     {
         options.Validate();
         var timeProvider = TimeProvider.System;
+        var cacheOptions = new CacheOptions();
+        cacheOptions.Validate();
         return new RiotApiClient(
             client,
             options,
             new RiotRateLimiter(options, timeProvider),
             timeProvider,
-            new OperationalMetrics());
+            new OperationalMetrics(),
+            new RiotResponseCache(new MemoryCacheService(timeProvider, cacheOptions)),
+            cacheOptions);
     }
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler

@@ -39,6 +39,7 @@ public sealed class MatchFamiliarityCalculatorTests
         Assert.Equal(3, result.EvaluablePlayers);
         Assert.Equal(66.7m, result.FamiliarityPercentage);
         Assert.Equal([AllyId, EnemyId], result.KnownPlayerIds);
+        Assert.Equal(2, result.KnownPlayerDetails.Count);
     }
 
     [Fact]
@@ -112,8 +113,78 @@ public sealed class MatchFamiliarityCalculatorTests
         var ordered = Calculate(matches);
         var reversed = Calculate(matches.Reverse().ToArray());
 
-        Assert.Equal(ordered with { KnownPlayerIds = [] }, reversed with { KnownPlayerIds = [] });
+        Assert.Equal(
+            ordered with { KnownPlayerIds = [], KnownPlayerDetails = [] },
+            reversed with { KnownPlayerIds = [], KnownPlayerDetails = [] });
         Assert.Equal(ordered.KnownPlayerIds, reversed.KnownPlayerIds);
+        Assert.Equal(ordered.KnownPlayerDetails, reversed.KnownPlayerDetails);
+    }
+
+    [Fact]
+    public void KnownPlayerDetailsUseOnlyStrictlyPriorMatches()
+    {
+        var first = new FamiliarityMatch(
+            "MATCH-1",
+            BaseTime,
+            [
+                new(OwnerId, "owner", "Owner", "LAN", 100, true),
+                new(AllyId, "ally", "Ally", "LAN", 100, true),
+            ]);
+        var second = new FamiliarityMatch(
+            "MATCH-2",
+            BaseTime.AddHours(1),
+            [
+                new(OwnerId, "owner", "Owner", "LAN", 100, false),
+                new(AllyId, "ally", "Ally", "LAN", 200, true),
+            ]);
+        var target = new FamiliarityMatch(
+            "MATCH-3",
+            BaseTime.AddHours(2),
+            [
+                new(OwnerId, "owner", "Owner", "LAN", 100, true),
+                new(AllyId, "ally", "Ally", "LAN", 200, false),
+                new(StrangerId, "stranger", "Stranger", "LAN", 100, true),
+            ]);
+        var future = new FamiliarityMatch(
+            "MATCH-4",
+            BaseTime.AddHours(3),
+            [
+                new(OwnerId, "owner", "Owner", "LAN", 100, true),
+                new(AllyId, "ally", "Ally", "LAN", 100, true),
+            ]);
+
+        var result = MatchFamiliarityCalculator.Calculate(
+            new MatchFamiliarityInput(OwnerId, "MATCH-3", [future, target, second, first]));
+
+        var known = Assert.Single(result.KnownPlayerDetails);
+        Assert.Equal("ally", known.Puuid);
+        Assert.Equal("Ally", known.GameName);
+        Assert.Equal(2, known.PlayedBefore);
+        Assert.Equal(1, known.AllyMatches);
+        Assert.Equal(1, known.EnemyMatches);
+        Assert.Equal(1, known.WinsTogether);
+        Assert.Equal(0, known.LossesTogether);
+        Assert.Equal(0, known.WinsAgainst);
+        Assert.Equal(1, known.LossesAgainst);
+        Assert.Equal(BaseTime, known.FirstEncounterAt);
+        Assert.Equal(BaseTime.AddHours(1), known.LastEncounterAt);
+    }
+
+    [Fact]
+    public void CompleteLobbyHasAtMostNineOthersAndMissingRosterIsPartial()
+    {
+        var players = Enumerable.Range(1, 10).Select(Id).ToArray();
+        var prior = Match("MATCH-1", BaseTime, players);
+        var target = Match("MATCH-2", BaseTime.AddHours(1), players);
+        var full = MatchFamiliarityCalculator.Calculate(new MatchFamiliarityInput(OwnerId, "MATCH-2", [prior, target], 10));
+        Assert.Equal(9, full.KnownPlayers);
+        Assert.Equal(9, full.EvaluablePlayers);
+        Assert.Equal(100, full.FamiliarityPercentage);
+        Assert.Equal(MatchFamiliarityStatus.Available, full.Status);
+        var missing = target with { Participants = target.Participants.Take(9).ToArray() };
+        var partial = MatchFamiliarityCalculator.Calculate(new MatchFamiliarityInput(OwnerId, "MATCH-2", [prior, missing], 10));
+        Assert.Equal(MatchFamiliarityStatus.PartialParticipants, partial.Status);
+        Assert.Equal(8, partial.EvaluablePlayers);
     }
 
     [Fact]

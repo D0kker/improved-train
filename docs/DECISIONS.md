@@ -1,5 +1,7 @@
 # Decisiones del proyecto
 
+Vigente para el runtime del checkout: **D-042 — stateless, sin base de datos ni jobs**. Las decisiones anteriores se conservan como historia; no deben interpretarse como requisitos de persistencia actuales. Los servicios activos siguen en T03 hasta un despliegue autorizado por separado.
+
 ## D-001 — Foundation documental antes del código
 
 - Fecha: 2026-08-29
@@ -247,3 +249,92 @@
 - Decisión: mantener funcionando el grafo de profundidad uno tal como está, pero no invertir más tiempo en ampliarlo durante Sprints 7–8 ni convertirlo en dependencia de nuevas funcionalidades.
 - Razón: el PO no encuentra útil o clara la visualización actual; tablas, historial A–B, recurrentes, posibles premades y rankings responden mejor las preguntas prioritarias del producto.
 - Consecuencias: no se elimina código, API o datos ahora. `UX-001/#82` lo reevaluará únicamente con feedback o petición posterior, comparando mejorar, simplificar, ocultar o retirar de forma reversible.
+
+## D-032 — PROJECT ECHO prioriza encounters y familiaridad
+
+- Fecha: 2026-09-21
+- Estado: aceptada por el PO para ECHO-1
+- Decisión: distinguir `known player` con uno o más encuentros de `repeated player` con dos o más; hacer de la familiaridad histórica y sus jugadores conocidos la experiencia principal. Relaciones y posibles premades permanecen como contexto secundario, y el grafo pasa a una sección experimental sin nueva inversión.
+- Razón: estas capacidades ya se derivan de partidas persistidas y responden directamente a “¿ya jugué antes con esta persona?” sin competir con productos de estadísticas generales.
+- Consecuencias: `/known-players` incluye encuentros únicos, `/encounters` conserva recurrentes, y la UI prioriza matches analizados, conocidos, recurrentes, última partida y familiaridad.
+
+## D-033 — Actualización incremental de relaciones afectadas
+
+- Fecha: 2026-09-21
+- Estado: aceptada para ECHO-1
+- Decisión: después de ingerir partidas nuevas, recalcular y hacer upsert únicamente de las parejas canónicas afectadas usando las partidas persistidas en PostgreSQL; no borrar ni reconstruir el snapshot global en cada sincronización.
+- Razón: el reemplazo global crece con todo el corpus aunque una sincronización agregue pocas partidas.
+- Consecuencias: el cálculo mantiene orden determinista, `player_a_id < player_b_id`, idempotencia y exclusión transaccional. Una reconstrucción global queda como operación explícita de reparación, no como ruta ordinaria.
+
+## D-034 — Redis opcional mediante proveedor explícito
+
+- Fecha: 2026-09-21
+- Estado: aceptada para ECHO-1
+- Decisión: `CACHE_PROVIDER=memory` ejecuta API y worker sin Redis; `CACHE_PROVIDER=redis` conserva caché compartida y fallback local. PostgreSQL permanece como fuente de verdad.
+- Razón: Redis no aporta valor imprescindible para validar el MVP en una sola instancia y no debe bloquear readiness.
+- Consecuencias: Redis usa un perfil opcional de Compose y solo participa en el health check cuando está seleccionado.
+
+## D-035 — Retención de raw JSON pendiente de decisión
+
+- Fecha: 2026-09-21
+- Estado: pendiente del PO
+- Decisión: conservar `matches.raw_data` durante ECHO-1 como mecanismo de reprocesamiento, debugging controlado y compatibilidad futura. No fijar todavía una eliminación automática ni un periodo de retención.
+- Razón: borrar ahora impediría recalcular campos sin volver a consumir Riot; conservar indefinidamente también requiere una decisión informada de privacidad y coste.
+- Consecuencias: S7-002 deberá proponer y obtener aprobación para periodo, alcance de borrado/exportación y procedimiento operativo antes de la beta pública.
+
+## D-036 — Contexto automático y parametrizable para la última partida
+
+- Fecha: 2026-10-17
+- Estado: aceptada para la vista de última partida
+- Decisión: al cargar el dashboard o el detalle de una partida con owner, la web solicita al backend el historial reciente del owner y de hasta nueve participantes visibles de esa partida. Los conteos por defecto son 5 para el owner y 3 por participante; se centralizan en `latestMatchSyncConfig` y admiten los overrides públicos `NEXT_PUBLIC_ECHO_OWNER_MATCH_COUNT`, `NEXT_PUBLIC_ECHO_OTHER_MATCH_COUNT` y `NEXT_PUBLIC_ECHO_OTHER_PLAYER_COUNT`.
+- Razón: la tarjeta de última partida debe calcular familiaridad con evidencia reciente sin que el navegador contacte a Riot ni que los límites queden duplicados en varios componentes.
+- Consecuencias: la selección es determinista por orden de equipos/participantes y usa PUUID; las solicitudes pasan por la ruta de sincronización existente, continúan mostrando datos locales si alguna falla y respetan el límite de 20 partidas por llamada. Los overrides se aplican al compilar la web y no contienen secretos. La tarjeta y el detalle muestran, cuando existe evidencia previa, resultados contra el jugador principal (victorias/derrotas).
+
+## D-037 — Evidencia temporal para posibles premades
+
+- Fecha: 2026-10-17
+- Estado: aceptada para la familiaridad de la última partida
+- Decisión: cuando existe owner, la detección de grupos cruza las relaciones del lobby con hasta `PremadeDetection:RecentOwnerMatchCount` partidas recientes del owner. Una coincidencia como rival dentro de esa ventana descarta la señal de premade para la pareja; coincidencias como aliado en fechas distintas elevan la clasificación prudente, sin convertirla en verificación.
+- Razón: repetir equipo en fechas distintas es evidencia más útil que una coincidencia aislada, mientras que alternar entre aliado y rival es compatible con emparejamiento casual.
+- Consecuencias: la ventana y el mínimo de fechas distintas son configurables; si no se transporta owner se conserva la detección histórica existente. Los resultados siguen usando `possible premade`/`likely premade` y nunca afirman una relación confirmada.
+
+## D-038 — Estado de partida activa exclusivamente server-side
+
+- Fecha: 2026-10-17
+- Estado: aceptada para el dashboard de jugador
+- Decisión: consultar desde la API (nunca desde el navegador) el summoner-v4 por PUUID y luego spectator-v5 active-games; devolver solo un resumen mínimo de partida activa: cola, inicio, duración y game ID.
+- Razón: Riot expone el estado activo mediante endpoints protegidos y la API key debe permanecer en API/worker. La señal es útil en la pantalla principal, pero no amplía el historial de partidas terminadas.
+- Consecuencias: 404 de Riot se representa como `null` y no como error; errores de cuota/autorización se degradan a warning en la UI. El endpoint se vuelve a consultar al buscar/refrescar el dashboard.
+## D-039 — Excluir la partida objetivo de la evidencia histórica reciente
+
+- Fecha: 2026-10-18
+- Estado: aceptada para la optimización del análisis de partidas
+- Decisión: cuando se analiza una partida seleccionada, las ventanas de historial solicitadas para el owner y sus participantes deben devolver hasta `count` partidas adicionales, excluyendo el `riot_match_id` objetivo. La partida objetivo sigue disponible para mostrar sus equipos, pero no cuenta como encuentro histórico previo.
+- Razón: incluir la partida seleccionada como evidencia inflaría encuentros aliados/rivales y podría producir una inferencia de premade basada en el mismo evento que se está evaluando.
+- Consecuencias: la petición de Match-V5 puede solicitar una partida adicional para compensar la exclusión; la deduplicación y caché se realizan por Match ID, y la familiaridad/premade deben mantener la exclusión incluso si el objetivo ya estaba almacenado localmente.
+
+## D-040 — AnalysisJobs en cola acotada dentro de la API
+
+- Fecha: 2026-10-18
+- Estado: aceptada para el runtime InMemory actual
+- Decisión: los jobs creados por la API se procesan en el mismo proceso mediante `BackgroundService` y un `Channel<Guid>` acotado. El repositorio InMemory usa mutaciones EF rastreadas y un candado de proceso en vez de operaciones SQL relacionales.
+- Razón: el ingestion-worker no está declarado en Compose y usa otro almacén InMemory; no puede compartir los jobs de la API.
+- Consecuencias: los jobs y resultados se pierden al reiniciar y la capacidad queda limitada a una instancia. La coordinación compartida queda para una decisión futura de persistencia durable.
+
+## D-041 — Métricas de corpus y cobertura histórica explícita
+
+- Fecha: 2026-10-18
+- Estado: aplicada para T03
+- Decisión: el resumen describe todas las partidas disponibles del owner en InMemory; cinco es el tamaño inicial de consulta. Únicos se deduplica por PUUID y participaciones por (Match ID, PUUID). Familiaridad y grupos de un lobby usan solo evidencia anterior al objetivo. Las vistas distinguen cobertura parcial, insuficiente y error del cero evaluable.
+- Razón: los historiales de participantes se solapan y pueden ampliar el corpus del owner; contar filas, reutilizar agregados globales como evidencia previa o ignorar errores parciales produciría cifras engañosas.
+- Consecuencias: se conserva el contrato previo con un contador adicional de participaciones y un estado de roster parcial; el porcentaje definitivo solo se presenta con cobertura evaluable. El GET local no certifica cobertura de Riot. Una ventana aislada por consulta necesitaría un contrato posterior explícito.
+
+## D-042 — Procesamiento stateless por solicitud, sin base de datos
+
+- Fecha: 2026-10-18
+- Estado: aceptada para T03.5; desplegada localmente por autorización posterior explícita del PO el 2026-10-18 (Panamá), con evidencia en `docs/PROJECT_CONTEXT.md`
+- Decisión: búsqueda y análisis seleccionado obtienen todos sus datos desde Riot o caché opcional y calculan sobre objetos locales. La API no registra EF Core, repositorios, jobs, Channel, BackgroundService ni Redis. Los históricos se limitan a cinco del owner y tres por otro participante, excluyendo el objetivo y partidas posteriores con `endTime` y validación local de fechas.
+- Razón: el MVP no necesita conservar historiales ni resultados funcionales entre solicitudes. Un proceso sin datos previos debe poder analizar directamente una partida. La arquitectura anterior exigía sincronización/corpus previo y coordinaba estado que el frontend actual no necesita.
+- Consecuencias: reemplaza para el runtime las decisiones previas de persistencia (incluyendo D-021–D-026), D-040 sobre jobs y el corpus global de D-041; conserva sus definiciones estadísticas y degradación de cobertura. EF/Redis/repositorios históricos se compilan exclusivamente en el proyecto Legacy para pruebas y benchmark; el worker queda fuera del runtime/Compose. Los endpoints stateful retirados responden 410 y el frontend usa contratos autocontenidos. No existe progreso persistido ni reanudación de jobs. Caché acotada y single-flight solo optimizan llamadas, nunca constituyen un almacén funcional.
+- Límites: presupuesto HTTP configurable (180 s por defecto), proxy Next 210 s y cancelación hasta Riot. Benchmarks simulados no certifican duración bajo cuota real; un presupuesto agotado devuelve 504 y requiere reintento explícito. La cuota agregada entre instancias sigue pendiente de diseño antes de escalar.
+- Evidencia y contratos: `docs/T03_5_STATELESS_ARCHITECTURE.md`. No autoriza despliegue, reinicio, cambios de secretos ni merge automático.

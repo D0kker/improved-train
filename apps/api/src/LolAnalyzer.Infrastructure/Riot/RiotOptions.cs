@@ -58,4 +58,15 @@ public sealed class RiotOptions
 
         return new Uri($"https://{routing}.api.riotgames.com/", UriKind.Absolute);
     }
+
+    public Uri GetPlatformBaseUri()
+    {
+        var platform = PlatformRegion.Trim().ToLowerInvariant();
+        if (platform.Length is < 2 or > 8 || platform.Any(character => !char.IsLetterOrDigit(character)))
+        {
+            throw new InvalidOperationException("Riot:PlatformRegion must be a valid platform routing value.");
+        }
+
+        return new Uri($"https://{platform}.api.riotgames.com/", UriKind.Absolute);
+    }
 }

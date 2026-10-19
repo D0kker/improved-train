@@ -9,11 +9,12 @@ public static class RepeatedPlayerAnalyzer
         var aggregates = new Dictionary<Guid, MutableEncounter>();
         foreach (var match in input.Matches
                      .Where(match => match.OwnerPlayerId == input.OwnerPlayerId)
+                     .DistinctBy(match => match.MatchId)
                      .OrderBy(match => match.OccurredAt)
                      .ThenBy(match => match.MatchId))
         {
             foreach (var participant in match.Participants
-                         .Where(participant => participant.PlayerId != input.OwnerPlayerId)
+                         .Where(participant => participant.PlayerId != Guid.Empty && participant.PlayerId != input.OwnerPlayerId)
                          .DistinctBy(participant => participant.PlayerId))
             {
                 if (!aggregates.TryGetValue(participant.PlayerId, out var encounter))

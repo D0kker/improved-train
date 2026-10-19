@@ -21,7 +21,9 @@ public static class PremadeClassificationExtensions
 public sealed record PremadeDetectionInput(
     int MatchesTogether,
     int SameTeamMatches,
-    RelationshipConfidence RelationshipConfidence);
+    RelationshipConfidence RelationshipConfidence,
+    int RecentOppositeTeamMatches = 0,
+    int DistinctSameTeamDates = 0);
 
 public sealed record PremadeDetectionResult(
     PremadeClassification Classification,

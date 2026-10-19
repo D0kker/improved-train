@@ -1,34 +1,29 @@
 using LolAnalyzer.Application.Jobs;
 using LolAnalyzer.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
-using System.Data;
 
 namespace LolAnalyzer.Infrastructure.Persistence;
 
 public sealed class AnalysisJobRepository(LolAnalyzerDbContext dbContext) : IAnalysisJobRepository
 {
-    private const string ActiveRequestIndex = "ux_analysis_jobs_active_request";
+    private static readonly SemaphoreSlim StateGate = new(1, 1);
 
     public async Task<AnalysisJob> AddOrGetActiveAsync(AnalysisJob job, CancellationToken cancellationToken)
     {
-        var activeJob = await FindActiveEquivalentAsync(job, cancellationToken).ConfigureAwait(false);
-        if (activeJob is not null)
-        {
-            return activeJob;
-        }
-
-        dbContext.AnalysisJobs.Add(job);
+        await StateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            var activeJob = await FindActiveEquivalentAsync(job, cancellationToken).ConfigureAwait(false);
+            if (activeJob is not null)
+            {
+                return activeJob;
+            }
+
+            dbContext.AnalysisJobs.Add(job);
             await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
             return job;
         }
-        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
-        {
-            SqlState: PostgresErrorCodes.UniqueViolation,
-            ConstraintName: ActiveRequestIndex,
-        })
+        catch (DbUpdateException)
         {
             dbContext.Entry(job).State = EntityState.Detached;
             var existingJob = await FindActiveEquivalentAsync(job, cancellationToken).ConfigureAwait(false);
@@ -38,6 +33,10 @@ public sealed class AnalysisJobRepository(LolAnalyzerDbContext dbContext) : IAna
             }
 
             return existingJob;
+        }
+        finally
+        {
+            StateGate.Release();
         }
     }
 
@@ -51,112 +50,116 @@ public sealed class AnalysisJobRepository(LolAnalyzerDbContext dbContext) : IAna
         DateTimeOffset staleBefore,
         CancellationToken cancellationToken)
     {
-        await using var transaction = await dbContext.Database
-            .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
-            .ConfigureAwait(false);
-        var queued = AnalysisJobStatus.Queued.ToString();
-        var running = AnalysisJobStatus.Running.ToString();
-        var job = await dbContext.AnalysisJobs
-            .FromSqlInterpolated($"""
-                SELECT *
-                FROM analysis_jobs
-                WHERE status = {queued}
-                   OR (status = {running} AND updated_at < {staleBefore})
-                ORDER BY CASE WHEN status = {running} THEN 0 ELSE 1 END, created_at, id
-                FOR UPDATE SKIP LOCKED
-                LIMIT 1
-                """)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (job is null)
+        await StateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-            return null;
-        }
+            var job = await dbContext.AnalysisJobs
+                .Where(candidate => candidate.Status == AnalysisJobStatus.Queued
+                    || (candidate.Status == AnalysisJobStatus.Running && candidate.UpdatedAt < staleBefore))
+                .OrderBy(candidate => candidate.Status == AnalysisJobStatus.Running ? 0 : 1)
+                .ThenBy(candidate => candidate.CreatedAt)
+                .ThenBy(candidate => candidate.Id)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
 
-        job.Status = AnalysisJobStatus.Running;
-        job.StartedAt ??= now;
-        job.UpdatedAt = now;
-        job.ErrorCode = null;
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
-        return job;
+            if (job is null)
+            {
+                return null;
+            }
+
+            job.Status = AnalysisJobStatus.Running;
+            job.StartedAt ??= now;
+            job.UpdatedAt = now;
+            job.ErrorCode = null;
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return job;
+        }
+        finally
+        {
+            StateGate.Release();
+        }
     }
 
-    public Task UpdateProgressAsync(
+    public async Task UpdateProgressAsync(
         Guid jobId,
         int matchesProcessed,
         DateTimeOffset now,
-        CancellationToken cancellationToken) =>
-        dbContext.AnalysisJobs
-            .Where(job => job.Id == jobId && job.Status == AnalysisJobStatus.Running)
-            .ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(job => job.MatchesProcessed, matchesProcessed)
-                    .SetProperty(job => job.UpdatedAt, now),
-                cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        await MutateAsync(jobId, AnalysisJobStatus.Running, job =>
+        {
+            job.MatchesProcessed = matchesProcessed;
+            job.UpdatedAt = now;
+        }, cancellationToken).ConfigureAwait(false);
+    }
 
-    public Task CompleteAsync(
+    public async Task CompleteAsync(
         Guid jobId,
         int matchesProcessed,
         DateTimeOffset now,
-        CancellationToken cancellationToken) =>
-        dbContext.AnalysisJobs
-            .Where(job => job.Id == jobId && job.Status == AnalysisJobStatus.Running)
-            .ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(job => job.Status, AnalysisJobStatus.Completed)
-                    .SetProperty(job => job.MatchesProcessed, matchesProcessed)
-                    .SetProperty(job => job.ErrorCode, (string?)null)
-                    .SetProperty(job => job.UpdatedAt, now)
-                    .SetProperty(job => job.CompletedAt, now),
-                cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        await MutateAsync(jobId, AnalysisJobStatus.Running, job =>
+        {
+            job.Status = AnalysisJobStatus.Completed;
+            job.MatchesProcessed = matchesProcessed;
+            job.ErrorCode = null;
+            job.UpdatedAt = now;
+            job.CompletedAt = now;
+        }, cancellationToken).ConfigureAwait(false);
+    }
 
-    public Task FailAsync(
+    public async Task FailAsync(
         Guid jobId,
         string errorCode,
         DateTimeOffset now,
-        CancellationToken cancellationToken) =>
-        dbContext.AnalysisJobs
-            .Where(job => job.Id == jobId && job.Status == AnalysisJobStatus.Running)
-            .ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(job => job.Status, AnalysisJobStatus.Failed)
-                    .SetProperty(job => job.ErrorCode, errorCode)
-                    .SetProperty(job => job.UpdatedAt, now)
-                    .SetProperty(job => job.CompletedAt, now),
-                cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        await MutateAsync(jobId, AnalysisJobStatus.Running, job =>
+        {
+            job.Status = AnalysisJobStatus.Failed;
+            job.ErrorCode = errorCode;
+            job.UpdatedAt = now;
+            job.CompletedAt = now;
+        }, cancellationToken).ConfigureAwait(false);
+    }
 
-    public Task RequeueAsync(
+    public async Task RequeueAsync(
         Guid jobId,
         DateTimeOffset now,
-        CancellationToken cancellationToken) =>
-        dbContext.AnalysisJobs
-            .Where(job => job.Id == jobId && job.Status == AnalysisJobStatus.Running)
-            .ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(job => job.Status, AnalysisJobStatus.Queued)
-                    .SetProperty(job => job.UpdatedAt, now),
-                cancellationToken);
+        CancellationToken cancellationToken)
+    {
+        await MutateAsync(jobId, AnalysisJobStatus.Running, job =>
+        {
+            job.Status = AnalysisJobStatus.Queued;
+            job.UpdatedAt = now;
+        }, cancellationToken).ConfigureAwait(false);
+    }
 
     public async Task<AnalysisJob?> CancelAsync(
         Guid jobId,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        await dbContext.AnalysisJobs
-            .Where(job => job.Id == jobId
-                && (job.Status == AnalysisJobStatus.Queued || job.Status == AnalysisJobStatus.Running))
-            .ExecuteUpdateAsync(
-                setters => setters
-                    .SetProperty(job => job.Status, AnalysisJobStatus.Cancelled)
-                    .SetProperty(job => job.ErrorCode, (string?)null)
-                    .SetProperty(job => job.UpdatedAt, now)
-                    .SetProperty(job => job.CompletedAt, now),
-                cancellationToken)
-            .ConfigureAwait(false);
-        return await FindAsync(jobId, cancellationToken).ConfigureAwait(false);
+        await StateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var job = await dbContext.AnalysisJobs.SingleOrDefaultAsync(candidate => candidate.Id == jobId, cancellationToken).ConfigureAwait(false);
+            if (job is not null && job.Status is AnalysisJobStatus.Queued or AnalysisJobStatus.Running)
+            {
+                job.Status = AnalysisJobStatus.Cancelled;
+                job.ErrorCode = null;
+                job.UpdatedAt = now;
+                job.CompletedAt = now;
+                await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            return job;
+        }
+        finally
+        {
+            StateGate.Release();
+        }
     }
 
     public Task<bool> IsCancelledAsync(Guid jobId, CancellationToken cancellationToken) =>
@@ -175,4 +178,28 @@ public sealed class AnalysisJobRepository(LolAnalyzerDbContext dbContext) : IAna
                 && (candidate.Status == AnalysisJobStatus.Queued || candidate.Status == AnalysisJobStatus.Running))
             .OrderBy(candidate => candidate.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
+
+    private async Task MutateAsync(
+        Guid jobId,
+        AnalysisJobStatus expectedStatus,
+        Action<AnalysisJob> mutation,
+        CancellationToken cancellationToken)
+    {
+        await StateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var job = await dbContext.AnalysisJobs.SingleOrDefaultAsync(candidate => candidate.Id == jobId, cancellationToken).ConfigureAwait(false);
+            if (job is null || job.Status != expectedStatus)
+            {
+                return;
+            }
+
+            mutation(job);
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            StateGate.Release();
+        }
+    }
 }

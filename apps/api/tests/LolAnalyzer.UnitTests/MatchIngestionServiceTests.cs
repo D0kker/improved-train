@@ -67,6 +67,29 @@ public sealed class MatchIngestionServiceTests
         Assert.Equal([0, 100], riotClient.RequestedStarts);
     }
 
+    [Fact]
+    public async Task ExcludedTargetIsReplacedByAnAdditionalHistoryMatch()
+    {
+        var riotClient = new SimulatedRiotApiClient(["TARGET", "HISTORY_1", "HISTORY_2", "HISTORY_3"]);
+        var repository = new SimulatedMatchRepository(new HashSet<string>(StringComparer.Ordinal));
+        var service = new MatchIngestionService(
+            riotClient,
+            repository,
+            new MatchIngestionOptions { RequestConcurrency = 2 },
+            new OperationalMetrics());
+
+        var result = await service.SynchronizeAsync(
+            "owner-puuid",
+            3,
+            "la1",
+            TestContext.Current.CancellationToken,
+            "TARGET");
+
+        Assert.Equal(3, result.MatchIdsReturned);
+        Assert.DoesNotContain("TARGET", riotClient.DownloadedMatchIds);
+        Assert.Equal(["HISTORY_1", "HISTORY_2", "HISTORY_3"], repository.SavedMatchIds);
+    }
+
     private sealed class SimulatedRiotApiClient(
         IReadOnlyList<string> matchIds,
         bool honorPaging = false) : IRiotApiClient

@@ -7,6 +7,8 @@
 **Juego:** League of Legends  
 **Proveedor de datos:** Riot Games API
 
+> Esta especificación conserva el diseño inicial. Para el runtime del checkout T03.5, las decisiones de base de datos/jobs quedan sustituidas por [D-042](docs/DECISIONS.md) y la [arquitectura stateless](docs/T03_5_STATELESS_ARCHITECTURE.md); no se exige persistencia ni EF Core para ejecutar la API.
+
 ---
 
 # 1. Visión del proyecto

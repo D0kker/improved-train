@@ -1,58 +1,51 @@
-# LoL Network Analyzer
+# PROJECT ECHO
 
-Sistema de análisis histórico y post-partida para descubrir jugadores recurrentes, relaciones y patrones dentro del historial de League of Legends. Comienza como una herramienta personal y aspira a convertirse en un sitio público útil para muchas personas en distintas regiones del mundo.
+Análisis de partidas terminadas de League of Legends: jugadores encontrados, encuentros como aliado/rival, familiaridad e inferencias prudentes de posibles premades. La identidad interna es PUUID, no el nombre mutable.
 
-Los Sprints 1–4 están implementados; Sprint 5 está refinado y Sprint 8 creado. La fuente funcional y técnica continúa siendo [`lol_network_analyzer_spec.md`](lol_network_analyzer_spec.md).
-
-## Enfoque del producto
-
-- Identificar jugadores por PUUID, no por nombre visible.
-- Reutilizar partidas persistidas para reducir llamadas a Riot.
-- Distinguir encuentros como aliado y como rival.
-- Inferir relaciones con lenguaje prudente, sin afirmar duos verificados.
-- Mantener la Riot API key únicamente en backend o worker.
-- Ejecutar el MVP de forma local en Raspberry Pi mediante Docker Compose.
-- Evolucionar gradualmente hacia un servicio público sostenible; la publicidad u otra monetización solo se evaluará después de cumplir políticas Riot, privacidad, seguridad y requisitos legales.
-
-## Arquitectura implementada
+## Arquitectura del checkout T03.5
 
 ```text
-Browser -> Next.js -> .NET API -> PostgreSQL
-                         |      -> Redis
-                         +-----> Riot API
-                         +-----> ingestion worker
+Browser → Next.js 16 / React 19 → ASP.NET Core .NET 10 → Riot API
+                                      ↓
+                              Objetos por solicitud
+                              Caché Riot opcional
 ```
 
-El detalle y la separación entre estado planificado e implementado están en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). El análisis de alcance, fortalezas, tensiones y decisiones pendientes está en [`docs/SPEC_ANALYSIS.md`](docs/SPEC_ANALYSIS.md).
+La API no requiere base de datos ni conserva resultados funcionales entre solicitudes. La caché solo evita llamadas repetidas. Los algoritmos y optimizaciones T01–T03 se conservan; EF Core, Redis y los jobs históricos quedan fuera del runtime de la API.
 
-## Estado actual
+- Búsqueda: Riot ID → identidad y últimas cinco partidas con resumen y cobertura.
+- Partida seleccionada: análisis independiente con cinco partidas históricas del owner y tres de cada otro participante; excluye objetivo y futuro, deduplica partidas y señala datos parciales o insuficientes.
+- La API key permanece en el backend. El navegador usa únicamente rutas same-origin.
+- El análisis es heurístico; nunca confirma una premade ni identifica jugadores ocultos.
 
-- [x] Especificación inicial analizada y preservada.
-- [x] Documentación de arquitectura, decisiones y continuidad creada.
-- [x] Configuración de Codex, memoria y skill del repositorio preparada.
-- [x] Sprint 1: monorepo, servicios, health checks y primera integración de Riot.
-- [x] Sprint 2: ingesta acotada, raw JSONB, normalización y deduplicación de partidas.
-- [x] Sprint 3: encounters, analizador de repetidos, APIs de lectura y primeras vistas funcionales.
-- [x] Sprint 4: relaciones, detector prudente, API paginada y vista web.
-- [ ] Sprint 5: familiaridad, grupos y red social.
-- [ ] Sprint 8: insights históricos y tarjetas compartibles seguras.
+Consulta [arquitectura y mediciones T03.5](docs/T03_5_STATELESS_ARCHITECTURE.md), [contexto actual](docs/PROJECT_CONTEXT.md), [decisiones](docs/DECISIONS.md) y [roadmap](docs/TODO.md).
 
-Consulta [`docs/TODO.md`](docs/TODO.md) para el roadmap y [`docs/PROJECT_CONTEXT.md`](docs/PROJECT_CONTEXT.md) antes de comenzar una nueva sesión.
-
-## Ejecutar y validar
+## Validación local
 
 ```bash
-cp .env.example .env
-docker compose up -d --build
-docker compose ps
+dotnet restore LolAnalyzer.slnx
+dotnet build LolAnalyzer.slnx --configuration Release --no-restore
+dotnet test LolAnalyzer.slnx --configuration Release --no-build
+dotnet format LolAnalyzer.slnx --verify-no-changes --no-restore
+cd apps/web
+npm test
+npm run lint
+npm run type-check
+npm run build
 ```
 
-La web es el único servicio publicado al host: `http://localhost:38080`. En la máquina actual también responde en `http://192.168.100.55:38080`. La portada y `/api/health` funcionan sin una key; las operaciones Riot devuelven un `503` controlado mientras `RIOT_API_KEY` no esté configurada.
+Las pruebas usan Riot simulado. Los repositorios anteriores se mantienen en `LolAnalyzer.Legacy` para regresiones/benchmarks; ese proyecto no forma parte del artefacto API. El benchmark opcional se ejecuta con `RUN_STATELESS_BENCHMARK=1`, como indica el informe.
 
-## Secretos
+## Ejecución futura, solo con autorización de despliegue
 
-Copia `.env.example` como `.env`, define credenciales locales y nunca publiques `.env`, una Riot API key, credenciales de PostgreSQL ni tokens.
+Compose define únicamente API y web. La configuración ignorada `.env` conserva la key Riot en runtime; jamás publicarla. `Cache__Enabled=false` desactiva la caché sin cambiar los flujos.
+
+```bash
+WEB_PORT=8081 docker compose up -d --build
+```
+
+La refactorización T03.5 se entregó inicialmente sin desplegar. Por instrucción posterior explícita del PO, se desplegó el 2026-10-18 (Panamá) en 8081 desde `f14f328`/código `3afd6c6`: API/web recreadas y saludables, sin cambiar secretos ni hacer merge. Ver evidencia en [contexto operativo](docs/PROJECT_CONTEXT.md). Las imágenes pueden validarse sin iniciar servicios mediante `docker compose -p t035-validation build`; cualquier siguiente despliegue requiere autorización nueva.
 
 ## Licencia y cumplimiento
 
-La licencia del código aún no está decidida. Antes de una publicación abierta o monetización se deben revisar las políticas vigentes de Riot, registrar el producto cuando corresponda y agregar los avisos legales requeridos. La monetización es una posibilidad futura —publicidad u otra estrategia—, no una condición para el MVP privado.
+La licencia aún está pendiente. Una publicación pública o monetización requiere las validaciones de registro, políticas Riot, privacidad, seguridad y go/no-go documentadas en el proyecto.

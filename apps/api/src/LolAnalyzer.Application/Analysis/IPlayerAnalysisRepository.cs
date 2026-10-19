@@ -20,6 +20,10 @@ public interface IPlayerAnalysisRepository
         string puuid,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<PlayerEncounterView>?> GetKnownPlayersAsync(
+        string puuid,
+        CancellationToken cancellationToken);
+
     Task<PagedPlayerMatches?> GetMatchesAsync(
         string puuid,
         int page,

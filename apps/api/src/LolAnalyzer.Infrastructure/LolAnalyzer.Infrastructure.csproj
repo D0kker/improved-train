@@ -4,9 +4,6 @@
     <ProjectReference Include="../LolAnalyzer.Domain/LolAnalyzer.Domain.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
-    <PackageReference Include="StackExchange.Redis" />
+    <Compile Remove="Persistence/**/*.cs;Migrations/**/*.cs;Health/**/*.cs;Caching/RedisCacheService.cs;Caching/StackExchangeRedisCacheStore.cs;Caching/IRedisCacheStore.cs" />
   </ItemGroup>
 </Project>

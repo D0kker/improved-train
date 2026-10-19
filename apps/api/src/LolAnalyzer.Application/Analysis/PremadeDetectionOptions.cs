@@ -16,6 +16,10 @@ public sealed class PremadeDetectionOptions
 
     public RelationshipConfidence LikelyMinimumConfidence { get; init; } = RelationshipConfidence.High;
 
+    public int RecentOwnerMatchCount { get; init; } = 5;
+
+    public int DistinctSameTeamDatesForLikely { get; init; } = 2;
+
     public void Validate()
     {
         ValidatePositive(PossibleMinimumMatchesTogether, nameof(PossibleMinimumMatchesTogether));
@@ -24,6 +28,8 @@ public sealed class PremadeDetectionOptions
         ValidateRatio(LikelyMinimumSameTeamRatio, nameof(LikelyMinimumSameTeamRatio));
         ValidateConfidence(PossibleMinimumConfidence, nameof(PossibleMinimumConfidence));
         ValidateConfidence(LikelyMinimumConfidence, nameof(LikelyMinimumConfidence));
+        ValidatePositive(RecentOwnerMatchCount, nameof(RecentOwnerMatchCount));
+        ValidatePositive(DistinctSameTeamDatesForLikely, nameof(DistinctSameTeamDatesForLikely));
 
         if (LikelyMinimumMatchesTogether < PossibleMinimumMatchesTogether
             || LikelyMinimumSameTeamRatio < PossibleMinimumSameTeamRatio

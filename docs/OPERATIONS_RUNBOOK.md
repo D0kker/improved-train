@@ -1,13 +1,13 @@
 # Runbook operativo privado
 
-Última verificación: 2026-08-31
+Última verificación: 2026-10-17
 
 Este runbook cubre el stack privado Docker Compose. No autoriza una publicación en Internet.
 
 ## Salud y métricas
 
-- `docker compose ps` debe mostrar web, API, worker, PostgreSQL y Redis saludables.
-- API y worker exponen internamente `/health`, `/health/ready` y `/metrics`; solo la web publica el puerto `38080`.
+- `docker compose ps` debe mostrar web, API, worker y PostgreSQL saludables en el modo mínimo; Redis se añade solo con el perfil `redis`.
+- API y worker exponen internamente `/health`, `/health/ready` y `/metrics`; la instancia local actual publica la web en el puerto `8081`.
 - Liveness no consulta Riot. Readiness comprueba PostgreSQL y Redis.
 - `/metrics` entrega agregados por proceso y los instrumentos nativos usan el meter `LolAnalyzer.Operations`.
 - Los logs HTTP incluyen correlación, método, estado y duración. No incluyen path, query string, PUUID, Riot ID, payload ni `RIOT_API_KEY`.

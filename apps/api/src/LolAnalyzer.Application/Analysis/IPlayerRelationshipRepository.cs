@@ -2,12 +2,8 @@ namespace LolAnalyzer.Application.Analysis;
 
 public interface IPlayerRelationshipRepository
 {
-    Task<IReadOnlyList<RelationshipMatchSnapshot>> LoadMatchesAsync(
-        int batchSize,
-        CancellationToken cancellationToken);
-
-    Task ReplaceRelationshipsAsync(
-        IReadOnlyCollection<PlayerRelationshipAggregate> relationships,
+    Task<IPlayerRelationshipUpdateScope> BeginIncrementalUpdateAsync(
+        IReadOnlyCollection<string> changedRiotMatchIds,
         int batchSize,
         CancellationToken cancellationToken);
 
@@ -22,4 +18,16 @@ public interface IPlayerRelationshipRepository
     Task<MatchPremadeGroupInput?> LoadMatchPremadeGroupInputAsync(
         string riotMatchId,
         CancellationToken cancellationToken);
+}
+
+public interface IPlayerRelationshipUpdateScope : IAsyncDisposable
+{
+    IncrementalRelationshipAnalysisInput Input { get; }
+
+    Task UpsertRelationshipsAsync(
+        IReadOnlyCollection<PlayerRelationshipAggregate> relationships,
+        int batchSize,
+        CancellationToken cancellationToken);
+
+    Task CommitAsync(CancellationToken cancellationToken);
 }

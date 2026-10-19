@@ -1,13 +1,40 @@
+using System.Globalization;
 using LolAnalyzer.Application.Analysis;
 using LolAnalyzer.Application.Caching;
 using LolAnalyzer.Application.Observability;
 using LolAnalyzer.Infrastructure.Caching;
+using LolAnalyzer.Infrastructure.Riot;
 using Xunit;
 
 namespace LolAnalyzer.UnitTests;
 
 public sealed class CacheServiceTests
 {
+    [Theory]
+    [InlineData("memory", false)]
+    [InlineData("MEMORY", false)]
+    [InlineData("redis", true)]
+    [InlineData("REDIS", true)]
+    public void CacheProviderIsExplicitAndCaseInsensitive(string provider, bool usesRedis)
+    {
+        var options = new CacheOptions { Provider = provider };
+
+        options.Validate();
+
+        Assert.Equal(usesRedis, options.UsesRedis);
+    }
+
+    [Fact]
+    public void UnknownCacheProviderFailsFast()
+    {
+        var options = new CacheOptions { Provider = "distributed-magic" };
+
+        var exception = Assert.Throws<InvalidOperationException>(options.Validate);
+
+        Assert.Contains("memory", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("redis", exception.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task PlayerSummaryQueryUsesCacheUntilPlayerTagIsInvalidated()
     {
@@ -63,6 +90,48 @@ public sealed class CacheServiceTests
         Assert.Null(result);
     }
 
+    [Fact]
+    public async Task RiotResponseCacheSharesConcurrentMatchDownload()
+    {
+        var cache = new RiotResponseCache(new MemoryCacheService(TimeProvider.System));
+        var calls = 0;
+
+        var tasks = Enumerable.Range(0, 10)
+            .Select(_ => cache.GetOrCreateAsync(
+                "riot-match:test",
+                TimeSpan.FromMinutes(1),
+                "riot-match-details",
+                async cancellationToken =>
+                {
+                    Interlocked.Increment(ref calls);
+                    await Task.Delay(10, cancellationToken);
+                    return "match";
+                },
+                TestContext.Current.CancellationToken))
+            .ToArray();
+
+        var values = await Task.WhenAll(tasks);
+
+        Assert.All(values, value => Assert.Equal("match", value));
+        Assert.Equal(1, calls);
+    }
+
+    [Fact]
+    public async Task MemoryCacheExpiresAndBoundsEntries()
+    {
+        var time = new FixedTimeProvider(DateTimeOffset.Parse(
+            "2026-10-18T12:00:00Z",
+            CultureInfo.InvariantCulture));
+        var cache = new MemoryCacheService(time);
+
+        await cache.SetAsync("expiring", "value", TimeSpan.FromMinutes(1), "test", TestContext.Current.CancellationToken);
+        Assert.Equal("value", await cache.GetAsync<string>("expiring", TestContext.Current.CancellationToken));
+
+        time.Advance(TimeSpan.FromMinutes(2));
+
+        Assert.Null(await cache.GetAsync<string>("expiring", TestContext.Current.CancellationToken));
+    }
+
     private sealed class FailingRedisCacheStore : IRedisCacheStore
     {
         public Task<string?> GetAsync(string key, CancellationToken cancellationToken) =>
@@ -96,6 +165,15 @@ public sealed class CacheServiceTests
         public Task RemoveTagAsync(string tag, CancellationToken cancellationToken) => Task.CompletedTask;
     }
 
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        private DateTimeOffset current = now;
+
+        public override DateTimeOffset GetUtcNow() => current;
+
+        public void Advance(TimeSpan duration) => current = current.Add(duration);
+    }
+
     private sealed class CountingPlayerAnalysisRepository : IPlayerAnalysisRepository
     {
         public int SummaryReads { get; private set; }
@@ -125,6 +203,11 @@ public sealed class CacheServiceTests
             throw new NotSupportedException();
 
         public Task<IReadOnlyList<PlayerEncounterView>?> GetRepeatedPlayersAsync(
+            string puuid,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<PlayerEncounterView>?> GetKnownPlayersAsync(
             string puuid,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
