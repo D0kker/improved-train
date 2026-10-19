@@ -6,7 +6,7 @@ Fecha de revisión: 2026-10-19. Este informe describe `release/echo-staging`; **
 
 La rama de staging partía de `feature/t04-2-ux-corrections` (`2eb547e`) con T03.5/T04.1/T04.2 previos a T04.3. Se integró T03.6 en worktree aislado con merge explícito, resolviendo cuatro conflictos frontend. El merge commit es `5f7838a`; el snapshot de código integrado es `e7b2ca5` y los commits posteriores solo actualizan documentación. T03.6 también quedó integrado en T03.5 (`eed0129`), con árbol idéntico al head T03.6. T04.3 no forma parte de staging.
 
-CI de GitHub aprobó el SHA integrado `e7b2ca50f828935a70aa871dcff3588edaa877cf` y la revisión documental `4b71afb34e987f787520bb52b37a173a67294d0e`: 33 pruebas frontend, lint, type-check, build Next; restore/build/test/format .NET; `docker compose config` y build de imágenes API/web. Runs: `39210831898` y `39211717495` (el run intermedio `39211432378` también pasó). Las actualizaciones entre esos SHA son solo de documentación. En .NET pasaron 105 unitarias y 21 de integración; se omitieron 2 y 1 respectivamente. `npm ci` local terminó en `ENOSPC`; CI ejecutó `npm ci` correctamente.
+CI de GitHub aprobó el snapshot integrado `e7b2ca50f828935a70aa871dcff3588edaa877cf` y posteriores commits documentales (`cc3c9e4`, `4b71afb`, `60558d6`). El run `39212134400` sobre `60558d6` aprobó 33 pruebas frontend, lint, type-check, build Next; restore/build/test/format .NET; `docker compose config` y build de imágenes API/web. Los runs anteriores `39210831898`, `39211432378` y `39211717495` también pasaron. En .NET pasaron 105 unitarias y 21 de integración; se omitieron 2 y 1 respectivamente. `npm ci` local terminó en `ENOSPC`; CI ejecutó `npm ci` correctamente.
 
 El audit de dependencias de producción informó 1 vulnerabilidad crítica y 2 altas. La revisión de fuentes no encontró uso de los vectores `next/og`/`ImageResponse` ni `images.remotePatterns` a los que aplican los avisos críticos revisados. Se acepta para un despliegue de prueba privado y controlado, pero el riesgo no queda eliminado: actualizar Next/sharp/source-map-js y repetir el audit es condición previa a exposición pública.
 
@@ -24,9 +24,9 @@ El audit de dependencias de producción informó 1 vulnerabilidad crítica y 2 a
 | #88 | Merged | `feature/t04-2-ux-corrections` ← `feature/t04-3-design-system` | Posterior al SHA de staging; **T04.3 está excluida** de RELEASE-01. |
 | #89 | Open, Draft, clean | `main` ← `release/echo-staging` | Revisión del release. Checks completos exitosos sobre `e7b2ca5`; no hacer merge automáticamente. |
 
-Refs finales: `origin/feature/t03-5-stateless-api`=`eed0129`, `origin/feature/t04-1-ux-audit`=`537daf9`, `origin/feature/t04-2-ux-corrections`=`002cbb4`, `origin/release/echo-staging`=`4b71afb`, `origin/feature/t03-6-resource-protection`=`217ec8e`. El commit T04.3 (`60ede46`, `a7cec40`, `002cbb4`) no está en staging. PR #89 es `OPEN/DRAFT/CLEAN`; PR #87 quedó merged con el push de la integración.
+Refs de código validadas: `origin/feature/t03-5-stateless-api`=`eed0129`, `origin/feature/t04-1-ux-audit`=`537daf9`, T04.2 previo a T04.3=`2eb547e`, T03.6=`217ec8e`; integración de código=`e7b2ca5`. Se publicaron luego solo commits documentales; el último consultado fue `60558d6`. T04.3 (`60ede46`, `a7cec40`, `002cbb4`) está excluida. PR #89 es `OPEN/DRAFT/CLEAN`; PR #87 está merged.
 
-Los checks verdes del árbol integrado son los runs `39210831898` (`e7b2ca5`) y `39211717495` (`4b71afb`): `web`, `dotnet`, `containers` todos `SUCCESS`. El workflow ejecutó las pruebas integradas y build de contenedores; no se utilizaron claves Riot.
+Los checks verdes del árbol integrado incluyen el run `39212134400` sobre `60558d6`: `web`, `dotnet`, `containers` todos `SUCCESS`. El workflow ejecutó las pruebas integradas y build de contenedores; no se utilizaron claves Riot.
 
 ## 3. Historial y commits candidatos
 

@@ -8,9 +8,9 @@ PROJECT ECHO analiza partidas terminadas de League of Legends para mostrar encue
 
 ## Checkout actual: RELEASE-01 publicado en staging (sin desplegar)
 
-- Rama de integración: `release/echo-staging`, worktree aislado `/tmp/improved-train-release-echo-staging`; merge T03.6 `5f7838a`, documentación `e7b2ca5`. Cuatro conflictos frontend resueltos; no quedan conflictos. Informe: [RELEASE-01](releases/ECHO_STAGING_01.md).
+- Rama de integración: `release/echo-staging`, worktree aislado `/tmp/improved-train-release-echo-staging`; merge T03.6 `5f7838a`, snapshot de código `e7b2ca5`, con documentación de release posterior. Cuatro conflictos frontend resueltos; no quedan conflictos. Informe: [RELEASE-01](releases/ECHO_STAGING_01.md).
 - Refs verificadas 2026-10-19: T03.5=`eed0129`; T04.2 avanzó a `002cbb4` por merge posterior T04.3, explícitamente excluido de staging. PR #86 y #87 están merged; PR #89 está OPEN/Draft hacia `main`.
-- CI del SHA `e7b2ca50f828935a70aa871dcff3588edaa877cf` aprobó `web`, `dotnet` y `containers`. Staging está lista para pruebas controladas, pero no se desplegó ni se hizo merge a `main`.
+- CI del SHA de staging validado más reciente `60558d6` aprobó `web`, `dotnet` y `containers`. Staging está lista para pruebas controladas, pero no se desplegó ni se hizo merge a `main`.
 - Audit npm detectó 1 crítica y 2 altas en Next/sharp/source-map-js. El análisis no halló uso de los vectores concretos revisados; actualizar y re-auditar antes de exposición pública.
 
 - Rama histórica de T03.6: `feature/t03-6-resource-protection`; PR #86 se integró en T03.5 (`eed0129`) y después en staging mediante PR #87/merge `5f7838a`. La base incluye T01/T02/T03/T03.5.
