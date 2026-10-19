@@ -172,7 +172,10 @@ export interface MatchFamiliarity {
     | "NoPriorHistory"
     | "NoEvaluableParticipants"
     | "OwnerNotPresent"
-    | "PartialParticipants";
+    | "PartialParticipants"
+    | "PartialHistory"
+    | "InsufficientHistory"
+    | "AnalysisError";
   knownPlayerDetails: MatchKnownPlayer[];
 }
 
@@ -199,6 +202,80 @@ export interface MatchDetail {
   teams: MatchTeam[];
   premadeGroups: MatchPremadeGroup[];
   familiarity: MatchFamiliarity | null;
+}
+
+export interface AnalysisCoverage {
+  status: "complete" | "partial" | "insufficient" | "error";
+  participants: number;
+  matchIdsObtained: number;
+  uniqueMatchIds: number;
+  matchesRecovered: number;
+  players: {
+    puuid: string;
+    requested: number;
+    matchIds: number;
+    eligibleMatches: number;
+    limited: boolean;
+  }[];
+  failures: { stage: string; code: string; puuid?: string; matchId?: string }[];
+}
+
+export interface PlayerSearchResult {
+  player: PlayerLookup;
+  summary: PlayerSummary;
+  matches: MatchesResponse;
+  encounters: PlayerEncounter[];
+  coverage: AnalysisCoverage;
+}
+
+export interface MatchAnalysisResult {
+  match: MatchDetail;
+  owner: PlayerLookup;
+  summary: PlayerSummary;
+  encounters: PlayerEncounter[];
+  relationships: {
+    firstPuuid: string;
+    secondPuuid: string;
+    matchesTogether: number;
+    allyMatches: number;
+    enemyMatches: number;
+    score: number;
+    confidence: string;
+  }[];
+  coverage: AnalysisCoverage;
+}
+
+export function playerSearchPath(gameName: string, tagLine: string): string {
+  return `${playerLookupPath(gameName, tagLine)}/analysis`;
+}
+
+export function recentMatchesPath(
+  puuid: string,
+  start = 0,
+  platformRegion?: string,
+): string {
+  const path = `${apiPath("players", puuid, "recent-matches")}?count=5&start=${start}`;
+  return platformRegion
+    ? `${path}&platformRegion=${encodeURIComponent(platformRegion)}`
+    : path;
+}
+
+export function matchAnalyzePath(matchId: string): string {
+  return apiPath("matches", matchId, "analyze");
+}
+
+export function analyzeSelectedMatch(
+  matchId: string,
+  ownerPuuid: string,
+  platformRegion?: string,
+  signal?: AbortSignal,
+): Promise<MatchAnalysisResult> {
+  return fetchJson<MatchAnalysisResult>(matchAnalyzePath(matchId), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ownerPuuid, platformRegion }),
+    signal,
+  });
 }
 
 export interface MatchSyncResult {

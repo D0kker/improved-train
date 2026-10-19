@@ -2,6 +2,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/LolAnalyzer.Application/LolAnalyzer.Application.csproj" />
     <ProjectReference Include="../../src/LolAnalyzer.Infrastructure/LolAnalyzer.Infrastructure.csproj" />
+    <ProjectReference Include="../LolAnalyzer.Legacy/LolAnalyzer.Legacy.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

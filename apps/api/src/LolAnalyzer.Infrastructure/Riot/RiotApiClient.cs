@@ -17,6 +17,20 @@ public sealed class RiotApiClient(
     IRiotResponseCache responseCache,
     CacheOptions cacheOptions) : IRiotApiClient
 {
+    public IRiotApiClient ForPlatform(string platformRegion) => new RiotApiClient(
+        httpClient,
+        new RiotOptions
+        {
+            ApiKey = options.ApiKey,
+            PlatformRegion = platformRegion.Trim().ToLowerInvariant(),
+            RegionalRouting = RiotRouting.Regional(platformRegion),
+            RequestTimeoutSeconds = options.RequestTimeoutSeconds,
+            RequestConcurrency = options.RequestConcurrency,
+            MaxRetryAttempts = options.MaxRetryAttempts,
+            BaseRetryDelayMilliseconds = options.BaseRetryDelayMilliseconds,
+            MaxRetryDelaySeconds = options.MaxRetryDelaySeconds,
+        }, rateLimiter, timeProvider, metrics, responseCache, cacheOptions);
+
     public Task<RiotAccount?> GetAccountByRiotIdAsync(
         string gameName,
         string tagLine,
@@ -26,7 +40,7 @@ public sealed class RiotApiClient(
         ArgumentException.ThrowIfNullOrWhiteSpace(tagLine);
 
         return responseCache.GetOrCreateAsync(
-            RiotCacheKeys.Account(gameName, tagLine),
+            $"{options.RegionalRouting}:{RiotCacheKeys.Account(gameName, tagLine)}",
             TimeSpan.FromSeconds(cacheOptions.PlayerIdentityTtlSeconds),
             "riot-identity",
             token => FetchAccountByRiotIdAsync(gameName, tagLine, token),
@@ -75,7 +89,7 @@ public sealed class RiotApiClient(
         ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 100);
 
         var cached = await responseCache.GetOrCreateAsync(
-            RiotCacheKeys.MatchIds(puuid, start, count),
+            $"{options.RegionalRouting}:{RiotCacheKeys.MatchIds(puuid, start, count)}",
             TimeSpan.FromSeconds(cacheOptions.RecentMatchIdsTtlSeconds),
             "riot-match-ids",
             token => FetchMatchIdsAsync(puuid, start, count, token),
@@ -83,13 +97,30 @@ public sealed class RiotApiClient(
         return cached ?? [];
     }
 
+    public async Task<IReadOnlyList<string>> GetMatchIdsBeforeAsync(
+        string puuid, int count, long endTime, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(puuid);
+        ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 100);
+        ArgumentOutOfRangeException.ThrowIfNegative(endTime);
+        var cached = await responseCache.GetOrCreateAsync(
+            $"{options.RegionalRouting}:{RiotCacheKeys.MatchIds(puuid, 0, count)}:before:{endTime}",
+            TimeSpan.FromSeconds(cacheOptions.RecentMatchIdsTtlSeconds),
+            "riot-match-ids",
+            token => FetchMatchIdsAsync(puuid, 0, count, token, endTime), cancellationToken).ConfigureAwait(false);
+        return cached ?? [];
+    }
+
     private async Task<List<string>?> FetchMatchIdsAsync(
         string puuid,
         int start,
         int count,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        long? endTime = null)
     {
         var path = $"lol/match/v5/matches/by-puuid/{Uri.EscapeDataString(puuid)}/ids?start={start}&count={count}";
+        if (endTime.HasValue) path += $"&endTime={endTime.Value}";
         using var response = await SendGetAsync(path, "match_ids", cancellationToken).ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
@@ -107,7 +138,7 @@ public sealed class RiotApiClient(
         ArgumentException.ThrowIfNullOrWhiteSpace(riotMatchId);
 
         return responseCache.GetOrCreateAsync(
-            RiotCacheKeys.Match(riotMatchId),
+            $"{options.RegionalRouting}:{RiotCacheKeys.Match(riotMatchId)}",
             TimeSpan.FromSeconds(cacheOptions.MatchDetailsTtlSeconds),
             "riot-match-details",
             token => FetchMatchAsync(riotMatchId, token),
@@ -289,14 +320,12 @@ public sealed class RiotApiClient(
             HttpResponseMessage response;
             using (await rateLimiter.AcquireAsync(cancellationToken).ConfigureAwait(false))
             {
-                var requestUri = baseUri is null
-                    ? path
-                    : new Uri(baseUri, path).AbsoluteUri;
+                var requestUri = new Uri(baseUri ?? options.GetRegionalBaseUri(), path).AbsoluteUri;
                 using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
                 request.Headers.TryAddWithoutValidation("X-Riot-Token", options.ApiKey);
                 response = await httpClient.SendAsync(
                     request,
-                    HttpCompletionOption.ResponseHeadersRead,
+                    HttpCompletionOption.ResponseContentRead,
                     cancellationToken).ConfigureAwait(false);
             }
 
@@ -354,7 +383,7 @@ public sealed class RiotApiClient(
             .Select(ParseParticipant)
             .ToArray();
 
-        if (participants.Length == 0 || participants.Select(participant => participant.Puuid).Distinct(StringComparer.Ordinal).Count() != participants.Length)
+        if (participants.Length is 0 or > 10 || participants.Select(participant => participant.Puuid).Distinct(StringComparer.Ordinal).Count() != participants.Length)
         {
             throw new JsonException("Match response has invalid participants.");
         }

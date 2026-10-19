@@ -3,6 +3,9 @@ import test from "node:test";
 
 import {
   apiPath,
+  analyzeSelectedMatch,
+  playerSearchPath,
+  recentMatchesPath,
   fetchJson,
   matchDetailPath,
   playerActiveGamePath,
@@ -71,6 +74,47 @@ test("empty successful responses are treated as null JSON", async () => {
       await fetchJson<null>("/api/v1/players/test/active-game"),
       null,
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("stateless search and recent-match paths preserve the five-match window", () => {
+  assert.equal(
+    playerSearchPath("Ana Uno", "LA/N"),
+    "/api/v1/players/by-riot-id/Ana%20Uno/LA%2FN/analysis",
+  );
+  assert.equal(
+    recentMatchesPath("owner/puuid", 5, "EUW1"),
+    "/api/v1/players/owner%2Fpuuid/recent-matches?count=5&start=5&platformRegion=EUW1",
+  );
+});
+
+test("selected-match analysis is one independent HTTP request with owner and cancellation", async () => {
+  const originalFetch = globalThis.fetch;
+  const controller = new AbortController();
+  const result = {
+    match: { riotMatchId: "LA1_123" },
+    coverage: { status: "partial" },
+  };
+  let calls = 0;
+  globalThis.fetch = async (path, init) => {
+    calls++;
+    assert.equal(path, "/api/v1/matches/LA1_123/analyze");
+    assert.equal(init?.method, "POST");
+    assert.deepEqual(JSON.parse(String(init?.body)), {
+      ownerPuuid: "owner",
+      platformRegion: "LA1",
+    });
+    assert.equal(init?.signal, controller.signal);
+    return Response.json(result);
+  };
+  try {
+    assert.deepEqual(
+      await analyzeSelectedMatch("LA1_123", "owner", "LA1", controller.signal),
+      result,
+    );
+    assert.equal(calls, 1);
   } finally {
     globalThis.fetch = originalFetch;
   }

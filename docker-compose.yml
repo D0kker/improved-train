@@ -1,19 +1,6 @@
 name: lol-network-analyzer
 
 services:
-  redis:
-    image: redis:8-alpine
-    profiles: ["redis"]
-    command: ["redis-server", "--appendonly", "yes"]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 12
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-
   api:
     build:
       context: .
@@ -21,14 +8,15 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      Redis__Host: redis
-      Redis__Port: 6379
-      CACHE_PROVIDER: ${CACHE_PROVIDER:-memory}
+      Cache__Enabled: ${CACHE_ENABLED:-true}
       Cache__RecentMatchIdsTtlSeconds: ${CACHE_RECENT_MATCH_IDS_TTL_SECONDS:-120}
       Cache__MatchDetailsTtlSeconds: ${CACHE_MATCH_DETAILS_TTL_SECONDS:-3600}
       Cache__PlayerIdentityTtlSeconds: ${CACHE_PLAYER_IDENTITY_TTL_SECONDS:-1800}
       Cache__AnalysisResultTtlSeconds: ${CACHE_ANALYSIS_RESULT_TTL_SECONDS:-900}
       Cache__MaxMemoryEntries: ${CACHE_MAX_MEMORY_ENTRIES:-4096}
+      Cache__MaxMemoryBytes: ${CACHE_MAX_MEMORY_BYTES:-67108864}
+      OnDemandAnalysis__RequestTimeoutSeconds: ${ANALYSIS_REQUEST_TIMEOUT_SECONDS:-180}
+      OnDemandAnalysis__RequestConcurrency: ${ANALYSIS_REQUEST_CONCURRENCY:-3}
       RIOT_API_KEY: ${RIOT_API_KEY:-}
       RIOT_PLATFORM_REGION: ${RIOT_PLATFORM_REGION:-la1}
       RIOT_REGIONAL_ROUTING: ${RIOT_REGIONAL_ROUTING:-americas}
@@ -37,9 +25,8 @@ services:
       RIOT_MAX_RETRY_ATTEMPTS: ${RIOT_MAX_RETRY_ATTEMPTS:-2}
       RIOT_BASE_RETRY_DELAY_MILLISECONDS: ${RIOT_BASE_RETRY_DELAY_MILLISECONDS:-250}
       RIOT_MAX_RETRY_DELAY_SECONDS: ${RIOT_MAX_RETRY_DELAY_SECONDS:-120}
-      CACHE_PLAYER_SUMMARY_TTL_SECONDS: ${CACHE_PLAYER_SUMMARY_TTL_SECONDS:-300}
-      API_CONCURRENCY_LIMIT: ${API_CONCURRENCY_LIMIT:-32}
-      API_QUEUE_LIMIT: ${API_QUEUE_LIMIT:-32}
+      API_CONCURRENCY_LIMIT: ${API_CONCURRENCY_LIMIT:-8}
+      API_QUEUE_LIMIT: ${API_QUEUE_LIMIT:-16}
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/health/ready"]
       interval: 10s
@@ -67,6 +54,3 @@ services:
     ports:
       - "${WEB_PORT:-38080}:3000"
     restart: unless-stopped
-
-volumes:
-  redis_data:

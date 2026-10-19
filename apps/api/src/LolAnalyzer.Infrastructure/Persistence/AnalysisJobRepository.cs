@@ -53,26 +53,26 @@ public sealed class AnalysisJobRepository(LolAnalyzerDbContext dbContext) : IAna
         await StateGate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-        var job = await dbContext.AnalysisJobs
-            .Where(candidate => candidate.Status == AnalysisJobStatus.Queued
-                || (candidate.Status == AnalysisJobStatus.Running && candidate.UpdatedAt < staleBefore))
-            .OrderBy(candidate => candidate.Status == AnalysisJobStatus.Running ? 0 : 1)
-            .ThenBy(candidate => candidate.CreatedAt)
-            .ThenBy(candidate => candidate.Id)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
+            var job = await dbContext.AnalysisJobs
+                .Where(candidate => candidate.Status == AnalysisJobStatus.Queued
+                    || (candidate.Status == AnalysisJobStatus.Running && candidate.UpdatedAt < staleBefore))
+                .OrderBy(candidate => candidate.Status == AnalysisJobStatus.Running ? 0 : 1)
+                .ThenBy(candidate => candidate.CreatedAt)
+                .ThenBy(candidate => candidate.Id)
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
 
-        if (job is null)
-        {
-            return null;
-        }
+            if (job is null)
+            {
+                return null;
+            }
 
-        job.Status = AnalysisJobStatus.Running;
-        job.StartedAt ??= now;
-        job.UpdatedAt = now;
-        job.ErrorCode = null;
-        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return job;
+            job.Status = AnalysisJobStatus.Running;
+            job.StartedAt ??= now;
+            job.UpdatedAt = now;
+            job.ErrorCode = null;
+            await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return job;
         }
         finally
         {

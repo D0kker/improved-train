@@ -1,88 +1,25 @@
-# Arquitectura
+# Arquitectura actual — T03.5
 
-Última actualización: 2026-09-22
-
-> Estado: Sprints 1–6 implementados. ECHO-1 enfoca el producto en encounters y familiaridad histórica.
-
-## Contexto
-
-LoL Network Analyzer es una aplicación de análisis histórico, no una herramienta para revelar información de partidas activas. Recibe un Riot ID visible, resuelve su PUUID y procesa partidas finalizadas para construir encuentros y relaciones reutilizables.
-
-## Vista de contenedores implementada
+La implementación del checkout es una API stateless. [El informe T03.5](T03_5_STATELESS_ARCHITECTURE.md) detalla contratos, pruebas, mediciones y límites. [El contexto archivado](archive/PROJECT_CONTEXT_THROUGH_T03.md) conserva la evolución anterior.
 
 ```mermaid
 flowchart LR
-  Browser[Browser] -->|38080| Web[Next.js web]
-  Web --> API[.NET API /api/v1]
-  API --> Jobs[Background jobs]
-  Jobs --> Worker[Ingestion worker]
-  API --> Postgres[(PostgreSQL)]
-  Worker --> Postgres
-  API -. opcional .-> Redis[(Redis cache)]
-  Worker -. opcional .-> Redis
-  API --> Riot[Riot API]
-  Worker --> Riot
+  Browser --> Web[Next.js]
+  Web --> API[ASP.NET Core API]
+  API --> Service[Servicios por solicitud]
+  Service --> Pure[Calculadores T03 / objetos locales]
+  Service --> Client[RiotApiClient]
+  Client -. opcional .-> Cache[Cache de respuestas acotada]
+  Client --> Limits[Single-flight / rate limiter]
+  Limits --> Riot[Riot API]
 ```
 
-Solo Next.js se publica al host. API, worker, PostgreSQL y Redis permanecen en la red privada. El endpoint síncrono de Sprint 2 continúa acotado a 20 partidas durante la transición. Sprint 6 persiste solicitudes de hasta 200 partidas en PostgreSQL mediante `analysis_jobs`; API crea/consulta/cancela y el worker reclama con bloqueo no bloqueante, pagina, actualiza progreso y recupera leases vencidos. Redis no es la fuente de verdad durable.
+La búsqueda recupera cinco partidas y termina al devolverlas. El análisis recupera por sí mismo el objetivo y las ventanas históricas de sus participantes: cinco del owner, tres por cada otro jugador. Solo la unión de partidas elegibles de la solicitud alimenta estadísticas, encuentros, relaciones y familiaridad; nunca un agregado precalculado de otro usuario.
 
-Cada proceso que llama a Riot usa un único `IRiotRateLimiter` para el routing regional configurado: limita concurrencia, comparte el cooldown indicado por `Retry-After` y permite cancelación. La ingesta masiva vive en el worker; esta primera versión no afirma coordinación distribuida entre réplicas y deberá evolucionar antes de escalar horizontalmente.
+No hay DbContext, base de datos, Redis ni jobs registrados en la API. Los servicios antiguos de persistencia se compilan en un proyecto de regresiones separado y no son dependencias del artefacto API. El worker histórico no aparece en Compose.
 
-`ICacheService` mantiene PostgreSQL como fuente de verdad. `CACHE_PROVIDER=memory` ejecuta el MVP sin Redis; `CACHE_PROVIDER=redis` usa Redis con TTL e índice de tags y conserva memoria local como fallback. El resumen del jugador es el primer contrato cacheado; completar un job o terminar la sincronización síncrona invalida el tag hash del owner. Un miss o payload inválido vuelve a PostgreSQL y nunca modifica datos persistidos.
+La caché de respuestas Riot puede vaciarse, expirar, desactivarse o fallar sin alterar la capacidad funcional de los dos flujos. Single-flight y un limitador de solicitudes compartido por proceso reducen trabajo duplicado y respetan 429/Retry-After. Se limita el número de partidas, participantes, solicitudes, tamaño de cuerpos, memoria cacheada y tiempo de ejecución.
 
-Las relaciones dejan de reconstruir y reemplazar el universo completo. Cada sincronización identifica las partidas nuevas y sus jugadores afectados; el analizador vuelve a calcular determinísticamente solo las parejas canónicas involucradas y el repositorio realiza upsert dentro de PostgreSQL. Reprocesar la misma partida no duplica relaciones.
+Solo la web se expone al host. Los datos de análisis viven en objetos C# locales y la respuesta HTTP; las credenciales permanecen únicamente en el runtime backend. PUUID es la identidad y los scores son heurísticos, no probabilidades ni verificaciones de premade.
 
-## Monorepo implementado
-
-```text
-apps/
-  web/                       Next.js, TypeScript, Tailwind
-  api/
-    src/
-      LolAnalyzer.Api/
-      LolAnalyzer.Application/
-      LolAnalyzer.Domain/
-      LolAnalyzer.Infrastructure/
-    tests/
-      LolAnalyzer.UnitTests/
-      LolAnalyzer.IntegrationTests/
-workers/
-  ingestion-worker/
-infrastructure/
-  docker/
-  aws/                       reservado; sin recursos obligatorios en MVP
-docs/
-scripts/
-docker-compose.yml
-```
-
-## Flujo de datos
-
-1. El usuario introduce `GameName#TagLine` y una región de plataforma.
-2. API busca primero el Riot ID en PostgreSQL; solo un ID ausente se resuelve mediante ACCOUNT-V1 usando el routing regional correcto.
-3. La operación acotada obtiene IDs de MATCH-V5 con concurrencia configurable entre 1 y 5.
-4. Cada match se busca por ID en PostgreSQL antes de llamar a Riot.
-5. Los faltantes se guardan como JSONB y se normalizan en jugadores, partidas y participantes.
-6. `RepeatedPlayerAnalyzer` reconstruye de forma transaccional la pareja dirigida owner/other en `player_encounters`.
-7. El frontend consulta summary, encounters, historial y detalle solo mediante `/api/v1` y conserva resultados locales si falla una actualización Riot.
-8. Sprint 4 reconstruye `player_relationships` globalmente, clasifica evidencia como `possible premade`/`likely premade` y la expone mediante `/api/v1/players/{puuid}/relationships`; la UI muestra factores y lenguaje prudente.
-9. Sprint 5 expone una red ego acotada y la representa con SVG nativo más tabla equivalente; el detalle combina grupos visibles y familiaridad estrictamente anterior usando el owner transportado desde el historial.
-10. Abrir un perfil conocido es lectura local; sincronizar hasta 20 partidas exige una acción explícita.
-11. `/known-players` devuelve encounters con una o más apariciones; `/encounters` conserva el significado de recurrentes con dos o más.
-12. El detalle de partida calcula familiaridad y estadísticas de cada conocido usando solo partidas estrictamente anteriores.
-
-## Dependencias e invariantes
-
-- PostgreSQL es fuente de verdad; Redis es opcional y solo acelera lecturas.
-- `players.puuid` y `matches.riot_match_id` son únicos.
-- `player_encounters` usa pareja dirigida `(owner_player_id, other_player_id)` y prohíbe autorrelaciones.
-- `player_relationships` usa pareja canónica `player_a_id < player_b_id`, conserva la suma same/opposite y limita el score a 0–100.
-- Los niveles de relación son etiquetas heurísticas explicables, nunca probabilidades ni confirmaciones de duo.
-- Las llamadas a Riot usan cliente abstraído, timeout, cancelación, backoff y control de `429`.
-- Logs estructurados nunca incluyen la Riot API key, cuerpos sensibles ni identificadores innecesarios.
-- CI usa HTTP simulado y no consume Riot.
-- Imágenes objetivo: `linux/arm64` y `linux/amd64`.
-
-## Despliegue previsto
-
-El runtime privado actual es Docker Compose, con volúmenes persistentes y health checks de web, API, worker y PostgreSQL. Redis añade su health check únicamente en modo `redis`. PostgreSQL 18 monta su volumen en `/var/lib/postgresql`; las aplicaciones corren no-root. Cloudflare Tunnel/Nginx, publicación web y cloud se incorporarán solo cuando el alcance correspondiente sea aprobado y validado.
+Los servicios actualmente publicados en 8081 todavía corresponden a T03. Cambiar el código/configuración de Compose no equivale a desplegar T03.5; esa acción queda expresamente fuera de esta tarea.

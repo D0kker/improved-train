@@ -6,6 +6,7 @@
     <Project Path="apps/api/src/LolAnalyzer.Infrastructure/LolAnalyzer.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="apps/api/tests/LolAnalyzer.Legacy/LolAnalyzer.Legacy.csproj" />
     <Project Path="apps/api/tests/LolAnalyzer.IntegrationTests/LolAnalyzer.IntegrationTests.csproj" />
     <Project Path="apps/api/tests/LolAnalyzer.UnitTests/LolAnalyzer.UnitTests.csproj" />
   </Folder>

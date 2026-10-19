@@ -5,6 +5,7 @@ COPY apps/api/src/LolAnalyzer.Domain/LolAnalyzer.Domain.csproj apps/api/src/LolA
 COPY apps/api/src/LolAnalyzer.Application/LolAnalyzer.Application.csproj apps/api/src/LolAnalyzer.Application/
 COPY apps/api/src/LolAnalyzer.Infrastructure/LolAnalyzer.Infrastructure.csproj apps/api/src/LolAnalyzer.Infrastructure/
 COPY workers/ingestion-worker/LolAnalyzer.IngestionWorker.csproj workers/ingestion-worker/
+COPY apps/api/tests/LolAnalyzer.Legacy/LolAnalyzer.Legacy.csproj apps/api/tests/LolAnalyzer.Legacy/
 RUN dotnet restore workers/ingestion-worker/LolAnalyzer.IngestionWorker.csproj
 COPY apps/api/src apps/api/src
 COPY workers/ingestion-worker workers/ingestion-worker

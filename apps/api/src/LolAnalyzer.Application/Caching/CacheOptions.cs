@@ -22,6 +22,10 @@ public sealed class CacheOptions
 
     public int MaxMemoryEntries { get; set; } = 4096;
 
+    public bool Enabled { get; set; } = true;
+
+    public long MaxMemoryBytes { get; set; } = 64 * 1024 * 1024;
+
     public bool UsesRedis => string.Equals(Provider, RedisProvider, StringComparison.OrdinalIgnoreCase);
 
     public void Validate()
@@ -49,5 +53,8 @@ public sealed class CacheOptions
         {
             throw new InvalidOperationException("MaxMemoryEntries must be between 128 and 100000.");
         }
+
+        if (MaxMemoryBytes is < 1048576 or > 1073741824)
+            throw new InvalidOperationException("Cache byte limit must be between 1 MiB and 1 GiB.");
     }
 }

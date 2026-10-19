@@ -1,5 +1,7 @@
 # T03 — Estadísticas, encuentros y familiaridad
 
+> Informe histórico de T03. Su corpus InMemory describe el runtime anterior, no un requisito del código T03.5. Los calculadores y definiciones se conservan sobre conjuntos locales por solicitud; ver [arquitectura stateless](T03_5_STATELESS_ARCHITECTURE.md) y D-042.
+
 Fecha: 2026-10-18. Base revisada: `feature/echo-product-focus`, commit `648a74a` (incluye T01 y T02). El encargo recibido termina en «6. Validar»; este informe cubre los requisitos recibidos hasta ese punto.
 
 ## Rutas principales verificadas

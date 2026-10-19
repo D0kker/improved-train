@@ -6,12 +6,11 @@ import {
   ApiError,
   apiPath,
   fetchJson,
-  playerSyncPath,
+  analyzeSelectedMatch,
   type MatchDetail,
   type MatchKnownPlayer,
   type MatchPremadeGroup,
   type MatchParticipant,
-  type MatchSyncResult,
 } from "@/src/api";
 import { formatDate, formatDuration, queueLabel } from "@/src/format";
 import {
@@ -22,19 +21,16 @@ import {
 } from "@/src/premade-groups";
 import { ChampionIcon } from "@/src/champion-icon";
 import { PlayerProfileLink } from "@/src/player-profile-link";
-import {
-  familiarityMessage,
-  historyAnalysisStatus,
-  latestMatchSyncPlan,
-  type HistoryAnalysisStatus,
-} from "@/src/echo";
+import { familiarityMessage, type HistoryAnalysisStatus } from "@/src/echo";
 
 export function MatchDetailView({
   matchId,
   ownerPuuid,
+  platformRegion,
 }: {
   matchId: string;
   ownerPuuid?: string;
+  platformRegion?: string;
 }) {
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,71 +40,64 @@ export function MatchDetailView({
   const [historyStatus, setHistoryStatus] =
     useState<HistoryAnalysisStatus>("insufficient");
 
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    setWarning(null);
-    setHistoryStatus("insufficient");
-    try {
-      const path = ownerPuuid
-        ? `${apiPath("matches", matchId)}?ownerPuuid=${encodeURIComponent(ownerPuuid)}`
-        : apiPath("matches", matchId);
-      let loadedMatch = await fetchJson<MatchDetail>(path);
-      if (ownerPuuid) {
-        const syncPlan = latestMatchSyncPlan(loadedMatch, ownerPuuid);
-        setIsRefreshingHistory(syncPlan.length > 0);
-        const syncResults = await Promise.allSettled(
-          syncPlan.map((target) =>
-            fetchJson<MatchSyncResult>(
-              playerSyncPath(
-                target.puuid,
-                target.count,
-                loadedMatch.riotMatchId,
-              ),
-              {
-                method: "POST",
-              },
-            ),
-          ),
-        );
-        const analysisStatus = historyAnalysisStatus(syncResults);
-        setHistoryStatus(analysisStatus);
-        const failedTargets = syncResults.filter(
-          (result) => result.status === "rejected",
-        ).length;
-        setIsRefreshingHistory(false);
-        if (analysisStatus === "partial" || analysisStatus === "error") {
-          setWarning(
-            "No se pudo actualizar todo el historial; mostramos la evidencia local disponible.",
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      setIsLoading(true);
+      setError(null);
+      setWarning(null);
+      setHistoryStatus("insufficient");
+      try {
+        if (ownerPuuid) {
+          setIsRefreshingHistory(true);
+          const result = await analyzeSelectedMatch(
+            matchId,
+            ownerPuuid,
+            platformRegion,
+            signal,
           );
-        }
-        if (failedTargets < syncPlan.length) {
-          try {
-            loadedMatch = await fetchJson<MatchDetail>(path);
-          } catch {
-            setHistoryStatus("partial");
+          if (signal?.aborted) return;
+          setMatch(result.match);
+          setHistoryStatus(result.coverage.status);
+          if (result.coverage.status !== "complete")
             setWarning(
-              "No se pudo actualizar el resultado del análisis; mostramos la evidencia cargada inicialmente.",
+              result.coverage.status === "error"
+                ? "No se pudo recuperar el historial; la evidencia es insuficiente."
+                : "Análisis limitado: faltan partidas elegibles o algunas consultas fallaron. Puede haber más coincidencias.",
             );
-          }
+        } else {
+          const loaded = await fetchJson<MatchDetail>(
+            apiPath("matches", matchId) +
+              (platformRegion
+                ? `?platformRegion=${encodeURIComponent(platformRegion)}`
+                : ""),
+            { signal },
+          );
+          if (!signal?.aborted) setMatch(loaded);
+        }
+      } catch (requestError) {
+        if (signal?.aborted) return;
+        setError(
+          requestError instanceof ApiError || requestError instanceof Error
+            ? requestError.message
+            : "No pudimos cargar esta partida.",
+        );
+      } finally {
+        if (!signal?.aborted) {
+          setIsRefreshingHistory(false);
+          setIsLoading(false);
         }
       }
-      setMatch(loadedMatch);
-    } catch (requestError) {
-      setError(
-        requestError instanceof ApiError || requestError instanceof Error
-          ? requestError.message
-          : "No pudimos cargar esta partida.",
-      );
-    } finally {
-      setIsRefreshingHistory(false);
-      setIsLoading(false);
-    }
-  }, [matchId, ownerPuuid]);
+    },
+    [matchId, ownerPuuid, platformRegion],
+  );
 
   useEffect(() => {
-    const request = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(request);
+    const controller = new AbortController();
+    const request = window.setTimeout(() => void load(controller.signal), 0);
+    return () => {
+      window.clearTimeout(request);
+      controller.abort();
+    };
   }, [load]);
 
   return (

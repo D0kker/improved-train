@@ -149,6 +149,10 @@ export function familiarityMessage(
       "No hay participantes visibles suficientes para calcular familiaridad.",
     OwnerNotPresent: "El jugador de referencia no aparece en esta partida.",
     PartialParticipants: `Análisis parcial: ${familiarity.knownPlayers} coincidencias entre ${familiarity.evaluablePlayers} jugadores identificables; faltan identidades.`,
+    PartialHistory: `Análisis parcial: ${familiarity.knownPlayers} coincidencias detectadas; el historial está limitado.`,
+    InsufficientHistory:
+      "Información insuficiente para completar la familiaridad del lobby.",
+    AnalysisError: "Error de análisis: no se pudo completar el historial.",
   };
 
   return messages[familiarity.status];

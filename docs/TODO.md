@@ -4,6 +4,19 @@
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
+## T03.5 — API stateless
+
+- [x] Verificar rama base con T01/T02/T03 y aislar implementación en `feature/t03-5-stateless-api`.
+- [x] Implementar búsqueda autocontenida de cinco partidas y análisis directo sin búsqueda previa.
+- [x] Conservar cinco históricas del owner y tres por otro participante, con objetivo/futuro excluidos y deduplicación.
+- [x] Eliminar dependencias EF/Redis/jobs del runtime; preservar regresiones y benchmark en proyecto Legacy.
+- [x] Acotar caché/concurrencia/payloads, cancelar operaciones y transportar cobertura parcial explícita.
+- [x] Cerrar validación final y registrar pruebas/benchmark en `T03_5_STATELESS_ARCHITECTURE.md` (94 unitarias, 15 integración, 16 frontend; builds/formato/imágenes correctos).
+- [x] Preparar publicación de rama feature y PR a main, sin merge ni deploy; evidencia Git final en el PR y el historial de la rama.
+- [ ] Revisar contratos y timeout del hosting antes de autorizar un despliegue separado.
+
+Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redis, corpus compartido, jobs y despliegues anteriores no describen requisitos del runtime T03.5. Ver D-042 y el informe `T03_5_STATELESS_ARCHITECTURE.md`.
+
 ## ECHO-1 — enfoque del producto
 
 - [x] Separar jugadores conocidos (`>= 1`) de recurrentes (`>= 2`) sin recrear `PlayerEncounter`.

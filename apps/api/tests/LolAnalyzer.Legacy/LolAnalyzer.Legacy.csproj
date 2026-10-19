@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Historical T01-T03 persistence is retained only for regression tests and
+       reproducible benchmarks. The stateless API does not reference this project. -->
+  <ItemGroup>
+    <ProjectReference Include="../../src/LolAnalyzer.Infrastructure/LolAnalyzer.Infrastructure.csproj" />
+    <Compile Include="../../src/LolAnalyzer.Infrastructure/Persistence/**/*.cs" />
+    <Compile Include="../../src/LolAnalyzer.Infrastructure/Migrations/**/*.cs" />
+    <Compile Include="../../src/LolAnalyzer.Infrastructure/Health/**/*.cs" />
+    <Compile Include="../../src/LolAnalyzer.Infrastructure/Caching/RedisCacheService.cs" />
+    <Compile Include="../../src/LolAnalyzer.Infrastructure/Caching/StackExchangeRedisCacheStore.cs" />
+    <Compile Include="../../src/LolAnalyzer.Infrastructure/Caching/IRedisCacheStore.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" />
+    <PackageReference Include="StackExchange.Redis" />
+  </ItemGroup>
+</Project>

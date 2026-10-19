@@ -1,5 +1,7 @@
 # Decisiones del proyecto
 
+Vigente para el runtime del checkout: **D-042 — stateless, sin base de datos ni jobs**. Las decisiones anteriores se conservan como historia; no deben interpretarse como requisitos de persistencia actuales. Los servicios activos siguen en T03 hasta un despliegue autorizado por separado.
+
 ## D-001 — Foundation documental antes del código
 
 - Fecha: 2026-08-29
@@ -326,3 +328,13 @@
 - Decisión: el resumen describe todas las partidas disponibles del owner en InMemory; cinco es el tamaño inicial de consulta. Únicos se deduplica por PUUID y participaciones por (Match ID, PUUID). Familiaridad y grupos de un lobby usan solo evidencia anterior al objetivo. Las vistas distinguen cobertura parcial, insuficiente y error del cero evaluable.
 - Razón: los historiales de participantes se solapan y pueden ampliar el corpus del owner; contar filas, reutilizar agregados globales como evidencia previa o ignorar errores parciales produciría cifras engañosas.
 - Consecuencias: se conserva el contrato previo con un contador adicional de participaciones y un estado de roster parcial; el porcentaje definitivo solo se presenta con cobertura evaluable. El GET local no certifica cobertura de Riot. Una ventana aislada por consulta necesitaría un contrato posterior explícito.
+
+## D-042 — Procesamiento stateless por solicitud, sin base de datos
+
+- Fecha: 2026-10-18
+- Estado: aceptada para el código T03.5; no desplegada
+- Decisión: búsqueda y análisis seleccionado obtienen todos sus datos desde Riot o caché opcional y calculan sobre objetos locales. La API no registra EF Core, repositorios, jobs, Channel, BackgroundService ni Redis. Los históricos se limitan a cinco del owner y tres por otro participante, excluyendo el objetivo y partidas posteriores con `endTime` y validación local de fechas.
+- Razón: el MVP no necesita conservar historiales ni resultados funcionales entre solicitudes. Un proceso sin datos previos debe poder analizar directamente una partida. La arquitectura anterior exigía sincronización/corpus previo y coordinaba estado que el frontend actual no necesita.
+- Consecuencias: reemplaza para el runtime las decisiones previas de persistencia (incluyendo D-021–D-026), D-040 sobre jobs y el corpus global de D-041; conserva sus definiciones estadísticas y degradación de cobertura. EF/Redis/repositorios históricos se compilan exclusivamente en el proyecto Legacy para pruebas y benchmark; el worker queda fuera del runtime/Compose. Los endpoints stateful retirados responden 410 y el frontend usa contratos autocontenidos. No existe progreso persistido ni reanudación de jobs. Caché acotada y single-flight solo optimizan llamadas, nunca constituyen un almacén funcional.
+- Límites: presupuesto HTTP configurable (180 s por defecto), proxy Next 210 s y cancelación hasta Riot. Benchmarks simulados no certifican duración bajo cuota real; un presupuesto agotado devuelve 504 y requiere reintento explícito. La cuota agregada entre instancias sigue pendiente de diseño antes de escalar.
+- Evidencia y contratos: `docs/T03_5_STATELESS_ARCHITECTURE.md`. No autoriza despliegue, reinicio, cambios de secretos ni merge automático.

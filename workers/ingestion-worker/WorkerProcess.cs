@@ -1,6 +1,7 @@
 using System.Net;
 using System.Diagnostics;
 using LolAnalyzer.Application.Jobs;
+using LolAnalyzer.Application.Riot;
 using LolAnalyzer.Application.Observability;
 using LolAnalyzer.Infrastructure.Riot;
 
