@@ -11,7 +11,7 @@ T03.6 está publicado en `feature/t03-6-resource-protection`; RELEASE-01 lo inte
 ## RELEASE-01 — consolidación de PROJECT ECHO (BLOCKED; validación pendiente)
 
 - [x] Verificar refs; confirmar T03.5/T04.1/T04.2 en la base de staging y excluir el merge posterior T04.3. PR #86 integrado en T03.5; estado de #87 necesita refresco GitHub.
-- [x] Iniciar merge explícito T03.6 → staging en worktree aislado y resolver los cuatro conflictos frontend preservando las dos ramas funcionales.
+- [x] Resolver cuatro conflictos frontend y crear commit local de merge `5f7838a`, preservando T03.6/T04.2 y excluyendo T04.3.
 - [x] Validar frontend: 33 pruebas, lint, type-check y build; validar Compose y `git diff --check`.
 - [x] Auditar dependencias de producción; registrar avisos y no aplicar upgrades fuera del alcance.
 - [x] Documentar estado, conflictos, validaciones, riesgos y siguiente paso en `docs/releases/ECHO_STAGING_01.md`.

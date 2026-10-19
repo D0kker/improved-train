@@ -4,13 +4,13 @@ Fecha de revisión: 2026-10-19. Este informe describe el árbol de integración 
 
 ## 1. Resumen ejecutivo
 
-La rama remota de staging parte de `feature/t04-2-ux-corrections` (`2eb547e`) y contiene T03.5/T04.1/T04.2 previos a T04.3. En un worktree aislado se integró mediante merge explícito `origin/feature/t03-6-resource-protection` (`217ec8e`). Se resolvieron manualmente cuatro conflictos de frontend preservando UX/paginación T04.2 y cancelación/timeout T03.6. El índice no contiene conflictos sin resolver. T03.6 fue después integrado en `feature/t03-5-stateless-api` (`eed0129`) y ambos árboles fuente son idénticos; staging conserva el mismo contenido T03.6 mediante el merge explícito, sin incorporar T04.3.
+La rama remota de staging parte de `feature/t04-2-ux-corrections` (`2eb547e`) y contiene T03.5/T04.1/T04.2 previos a T04.3. En un worktree aislado se integró mediante merge explícito `origin/feature/t03-6-resource-protection` (`217ec8e`), resuelto manualmente en cuatro conflictos frontend, y se creó el commit local `5f7838a`. T03.6 fue después integrado en `feature/t03-5-stateless-api` (`eed0129`) y ambos árboles fuente son idénticos; staging conserva el mismo contenido T03.6 mediante el merge explícito, sin incorporar T04.3.
 
 El frontend integrado pasó 33 pruebas, ESLint, TypeScript y build. `docker compose config --quiet` y `git diff --check` pasaron. Las validaciones .NET no se pudieron ejecutar: no hay SDK .NET en el host y el acceso al socket Docker fue denegado. `npm ci` tampoco terminó porque el filesystem se quedó sin espacio. Las pruebas frontend se ejecutaron con dependencias ya instaladas del worktree T04.2, sin modificar ese worktree. No hay CI observado para el commit integrado.
 
 El audit de dependencias de producción informó 1 vulnerabilidad crítica y 2 altas. La versión fijada de Next es 16.3.3; se recomienda actualizar a una versión parcheada y repetir el audit antes de cualquier despliegue público. El informe no autoriza ni implementa esa actualización.
 
-**Estado: BLOCKED para release/despliegue controlado.** El merge local está preparado, pero falta validación backend y CI del árbol integrado. Esta sesión no ha publicado el merge, creado PR a `main`, cerrado PR #87 ni desplegado.
+**Estado: BLOCKED para release/despliegue controlado.** El merge `5f7838a` solo existe localmente. Falta validación backend y CI del árbol integrado; no se publicó la rama, no se creó PR a `main`, no se cerró PR #87 ni se desplegó.
 
 ## 2. Estado de PR y ramas al 2026-10-19
 
@@ -29,7 +29,7 @@ Los checks verdes reportados anteriormente pertenecen al head T03.6 (`217ec8e`),
 
 ## 3. Historial y commits candidatos
 
-Staging conserva su línea de base en `2eb547e` y la etiqueta de respaldo `backup/release-echo-staging-20261019`. El merge conserva el historial T03.6: `f7428c6` (protección), `323ac1c` (CI), `56502f1`, `20ffa33`, `1fa7150` y `217ec8e`. El commit de integración de staging todavía **no existe**; `MERGE_HEAD` apunta a `217ec8e`.
+Staging conserva su línea de base en `2eb547e` y la etiqueta de respaldo `backup/release-echo-staging-20261019`. El merge conserva el historial T03.6: `f7428c6` (protección), `323ac1c` (CI), `56502f1`, `20ffa33`, `1fa7150` y `217ec8e`. El commit candidato local es `5f7838a`; no está publicado.
 
 No se incorporaron commits de T04.3. No se modificaron las ramas fuente ni `main`.
 
@@ -105,7 +105,7 @@ Solo cuando las validaciones obligatorias se hayan ejecutado con éxito:
 1. Confirmar rama `release/echo-staging`, `git status`, `git diff --check`, secretos y diff completo.
 2. Ejecutar restore/build/test/format .NET en runner autorizado; ejecutar `npm ci`, test/lint/type-check/build y `docker compose config --quiet` en entorno con espacio suficiente.
 3. Ejecutar CI sobre el merge commit publicado.
-4. Crear el commit de merge en la rama staging, publicar por SSH y verificar CI.
+4. Publicar por SSH el commit local `5f7838a` cuando el runner autorizado permita completar las validaciones; verificar CI sobre ese SHA exacto.
 5. Tras CI satisfactorio, publicar el merge de staging y verificar que PR #87 no aporta cambios exclusivos antes de cerrarlo.
 6. Crear PR draft de revisión `release/echo-staging` → `main` si no existe equivalente. No hacer merge ni desplegar sin instrucción explícita.
 
