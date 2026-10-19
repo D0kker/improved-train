@@ -21,6 +21,7 @@ T03.6 se implementa por separado en `feature/t03-6-resource-protection`; ver `T0
 - [x] Publicar commit `f7428c6` en `feature/t03-6-resource-protection` por remoto SSH, sin merge ni deploy.
 - [x] Abrir [PR #86](https://github.com/D0kker/improved-train/pull/86) hacia `feature/t03-5-stateless-api` sin merge ni deploy.
 - [x] Verificar y registrar CI de `web`, `dotnet` y `containers` del run 39205716202.
+- [x] Integrar `origin/feature/t03-5-stateless-api` (`56502f1`) mediante merge `1fa7150`; resolver el conflicto documental de `TODO.md`, validar y publicar. PR #86 quedó `CLEAN`/`MERGEABLE`; sin merge del PR.
 
 ## T04.1 — auditoría UX/UI (solo documentación)
 
