@@ -35,6 +35,8 @@ import {
   dataDragonVersion,
 } from "../src/data-dragon.ts";
 import { browserSecurityHeaders } from "../src/security-headers.ts";
+import { canContinueRecentMatches, coverageDescription, coverageTitle, isCurrentPlayerRequest, nextRecentMatchesStart } from "../src/coverage.ts";
+import { platformRegionLabel } from "../src/platform-region.ts";
 import {
   familiarityMessage,
   historyAnalysisStatus,
@@ -53,6 +55,10 @@ test("API paths remain same-origin and encode user-controlled segments", () => {
     "/match/LA1_123%2F456?ownerPuuid=owner%2Fpuuid",
   );
   assert.equal(
+    matchDetailPath("LA1_123", "owner", "la1", { gameName: "Ana Uno", tagLine: "LAN" }),
+    "/match/LA1_123?ownerPuuid=owner&platformRegion=la1&returnGameName=Ana+Uno&returnTagLine=LAN",
+  );
+  assert.equal(
     playerProfilePath("Ana Uno", "LA/N"),
     "/player/Ana%20Uno/LA%2FN",
   );
@@ -64,6 +70,7 @@ test("API paths remain same-origin and encode user-controlled segments", () => {
     playerActiveGamePath("owner/puuid"),
     "/api/v1/players/owner%2Fpuuid/active-game",
   );
+  assert.equal(playerActiveGamePath("owner", "la1"), "/api/v1/players/owner/active-game?platformRegion=la1");
 });
 
 test("empty successful responses are treated as null JSON", async () => {
@@ -83,6 +90,10 @@ test("stateless search and recent-match paths preserve the five-match window", (
   assert.equal(
     playerSearchPath("Ana Uno", "LA/N"),
     "/api/v1/players/by-riot-id/Ana%20Uno/LA%2FN/analysis",
+  );
+  assert.equal(
+    playerSearchPath("Ana Uno", "LAN", "la1"),
+    "/api/v1/players/by-riot-id/Ana%20Uno/LAN/analysis?platformRegion=la1",
   );
   assert.equal(
     recentMatchesPath("owner/puuid", 5, "EUW1"),
@@ -106,7 +117,9 @@ test("selected-match analysis is one independent HTTP request with owner and can
       ownerPuuid: "owner",
       platformRegion: "LA1",
     });
-    assert.equal(init?.signal, controller.signal);
+    assert.equal(init?.signal?.aborted, false);
+    controller.abort();
+    assert.equal(init?.signal?.aborted, true);
     return Response.json(result);
   };
   try {
@@ -408,4 +421,58 @@ test("browser security policy blocks framing and external connections", () => {
   assert.match(headers["Content-Security-Policy"], /connect-src 'self'/);
   assert.equal(headers["X-Content-Type-Options"], "nosniff");
   assert.equal(headers["X-Frame-Options"], "DENY");
+});
+
+test("coverage states distinguish complete, partial, insufficient and failed queries", () => {
+  const statuses = ["complete", "partial", "insufficient", "error"] as const;
+  assert.deepEqual(statuses.map(coverageTitle), [
+    "Consulta completa", "Consulta parcial", "Información insuficiente", "No se pudo completar el análisis",
+  ]);
+  assert.match(coverageDescription("partial"), /no pudieron recuperarse/);
+  assert.match(coverageDescription("insufficient"), /No existen suficientes partidas elegibles/);
+  assert.match(coverageDescription("error"), /No fue posible completar/);
+});
+
+test("additional history advances by requested windows and retries incomplete windows", () => {
+  const coverage = (status: "complete" | "partial" | "insufficient", matchIdsObtained: number) => ({
+    status,
+    matchIdsObtained,
+    participants: 10,
+    uniqueMatchIds: matchIdsObtained,
+    matchesRecovered: matchIdsObtained,
+    players: [],
+    failures: [],
+  });
+  const complete = coverage("complete", 5);
+  const partial = coverage("partial", 3);
+  const insufficient = coverage("insufficient", 2);
+  assert.equal(canContinueRecentMatches(complete), true);
+  assert.equal(nextRecentMatchesStart(5, complete), 10);
+  assert.equal(canContinueRecentMatches(partial), true);
+  assert.equal(nextRecentMatchesStart(5, partial), 5);
+  assert.equal(canContinueRecentMatches(insufficient), false);
+});
+
+test("region labels show configured platform explicitly without Riot ID inference", () => {
+  assert.equal(platformRegionLabel("la1"), "Latinoamérica Norte (LAN) · LA1");
+  assert.equal(platformRegionLabel(undefined), "Región no disponible");
+});
+
+test("only the current, non-aborted player request may update active-game data", () => {
+  assert.equal(isCurrentPlayerRequest("player-a", "player-a", false), true);
+  assert.equal(isCurrentPlayerRequest("player-b", "player-a", false), false);
+  assert.equal(isCurrentPlayerRequest("player-a", "player-a", true), false);
+});
+
+test("API errors use actionable safe copy rather than backend details", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => Response.json({ title: "InternalException", detail: "secret stack" }, { status: 404 });
+  try {
+    await assert.rejects(
+      fetchJson("/api/v1/players/by-riot-id/ana/LAN/analysis"),
+      (error: unknown) => error instanceof Error && error.message.includes("No encontramos ese Riot ID") && !error.message.includes("secret"),
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

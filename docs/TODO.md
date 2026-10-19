@@ -1,8 +1,55 @@
 # Roadmap
 
-Última actualización: 2026-10-18
+Última actualización: 2026-10-19
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
+
+## Estado actual
+
+T03.6 está integrado en `release/echo-staging`; PR #89 está Draft hacia main. El runtime continúa en T03.5 hasta nueva autorización.
+
+## RELEASE-01 — consolidación de PROJECT ECHO (READY para pruebas controladas; no desplegado)
+
+- [x] Verificar refs y PR #83–#89; confirmar T03.5/T04.1/T04.2 en staging, excluir T04.3 y confirmar #86/#87 merged.
+- [x] Resolver cuatro conflictos frontend y crear commit local de merge `5f7838a`, preservando T03.6/T04.2 y excluyendo T04.3.
+- [x] Validar frontend: 33 pruebas, lint, type-check y build; validar Compose y `git diff --check`.
+- [x] Auditar dependencias de producción; registrar avisos y no aplicar upgrades fuera del alcance.
+- [x] Documentar estado, conflictos, validaciones, riesgos y siguiente paso en `docs/releases/ECHO_STAGING_01.md`.
+- [x] Ejecutar en CI `npm ci`, test, lint, type-check y build sobre el SHA de staging. `npm ci` local fue bloqueado por ENOSPC.
+- [x] Ejecutar en CI restore/build/test/format .NET, Docker Compose config y build de imágenes. Host local sin SDK y socket Docker denegado; no se eludieron controles.
+- [ ] Resolver el hallazgo de dependencias npm parcheando versiones aprobadas y repetir audit/tests/build antes de despliegue público.
+- [x] Validar árbol integrado; run 39212134400 aprobó `web`, `dotnet`, `containers` en `60558d6`.
+- [x] Publicar merge/documentación de staging; PR #87 quedó merged y PR draft #89 quedó abierto hacia main.
+- [ ] Parchear/re-auditar dependencias antes de exposición pública. Despliegue de prueba controlado requiere autorización independiente del PO.
+
+## T03.6 — protección de recursos (validación completada; integrado a staging)
+
+- [x] Auditar código/runtime, PR #83/CI y ramas; crear feature desde `41ac5ee`.
+- [x] Conservar flujos independientes, estadísticas, cinco/tres y exclusión temporal sin persistencia.
+- [x] Añadir espera acotada, cuota de conexión con cardinalidad limitada y rechazo controlado.
+- [x] Conservar single-flight/caché; reforzar cuotas Riot, cancelación y observabilidad.
+- [x] Comparación aislada reproducible: 40 escenarios T03.5/T03.6, análisis simulado, concurrencia1–50; datos guardados en `docs/benchmarks/T03_6_LOAD_RESULTS.json`.
+- [x] Validar frontend (21 pruebas, lint, types y build), Compose, runner y diff.
+- [x] Validar restore/build Release (0 warnings/0 errores), 105 unitarias,21 integración y `dotnet format --verify-no-changes` en SDK10 ARM64 aislado; timeout Riot→503 y presupuesto global→504 pasan.
+- [x] Ejecutar perfil CPU opt-in: cuatro bloques agregados,100 iteraciones por bloque; resultados en `T03_6_RESOURCE_PROTECTION.md`.
+- [x] Publicar commit `f7428c6` en `feature/t03-6-resource-protection` por remoto SSH, sin merge ni deploy.
+- [x] Abrir [PR #86](https://github.com/D0kker/improved-train/pull/86) hacia `feature/t03-5-stateless-api`.
+- [x] Verificar y registrar CI de `web`, `dotnet` y `containers` del run 39205716202.
+- [x] Integrar `origin/feature/t03-5-stateless-api` (`56502f1`) mediante merge `1fa7150`; después #86 se fusionó y el resultado se integró en staging.
+
+## T04.1 — auditoría UX/UI (solo documentación)
+
+- [x] Aislar desde T03.5 `41ac5ee` en `feature/t04-1-ux-audit`, preservando la sesión paralela T03.6.
+- [x] Inventariar las cuatro páginas reales y componentes/estados desde código; distinguir hallazgos confirmados, recomendaciones y validación visual pendiente.
+- [x] Documentar copy, distribución, navegación, responsive, accesibilidad, componentes, Cyber Arcade, idiomas y feedback en [T04_1_UX_UI_AUDIT.md](T04_1_UX_UI_AUDIT.md), con prioridades y aceptación por pantalla.
+- [ ] Seleccionar con el PO una mejora pequeña del informe para una historia posterior. No se implementó UI, i18n ni feedback; no se ejecutó evaluación en navegador ni se desplegó.
+
+## T04.2 — correcciones UX prioritarias de PROJECT ECHO
+
+- [x] Implementar copy compatible con consultas stateless, región visible, enlaces de retorno explícitos, estados de cobertura/error separados, resumen de cinco partidas iniciales y accesibilidad básica; cambios publicados en la rama `feature/t04-2-ux-corrections` tras las validaciones de cierre.
+- [x] Probar con mocks las ventanas completas, parciales, repetidas, fallo temporal y agotamiento; reintenta el mismo offset ante cobertura incompleta para no saltar detalles. Un fallo de detalle permanente no permite avanzar sin riesgo de pérdida; documentado en `T04_2_UX_CORRECTIONS.md`, requiere propuesta coordinada de API.
+- [x] Validar interacciones DOM con JSDOM/Testing Library: foco del primer campo inválido, ARIA, teclado, skip link, landmark, paginación y render independiente de partida activa. Contraste, lectores de pantalla y responsive visual quedan pendientes de browser real.
+- [x] Cerrar build con `npm ci` y Node 24.18.0 / Next 16.3.3; causa raíz documentada: sandbox bloquea el proceso hijo TypeScript (`EPERM`), mientras el build fuera de esa restricción pasa. `npm test` 28/28, lint, type-check y `docker compose config --quiet` pasan; evidencia en `T04_2_UX_CORRECTIONS.md`.
 
 ## T03.5 — API stateless
 

@@ -23,11 +23,12 @@ public sealed class StatelessBenchmarkSuite;
 public sealed class StatelessBenchmarkTests(ITestOutputHelper output)
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-    [Fact]
+    public static bool IsBenchmarkEnabled => Environment.GetEnvironmentVariable("RUN_STATELESS_BENCHMARK") == "1";
+
+    [Fact(Skip = "Opt-in T03.5 comparison only: RUN_STATELESS_BENCHMARK=1", SkipUnless = nameof(IsBenchmarkEnabled))]
     public async Task CompareLegacyT03AndStatelessPipelinesWithSimulatedRiot()
     {
         // Opt-in avoids turning a performance experiment into an ordinary CI assertion.
-        if (Environment.GetEnvironmentVariable("RUN_STATELESS_BENCHMARK") != "1") return;
         const int samples = 12;
         var rows = new List<Measurement>();
         foreach (var scenario in new[] { "search", "selected-match" })
