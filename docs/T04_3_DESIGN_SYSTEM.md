@@ -93,3 +93,7 @@ Fuentes: [advisory crítico de Next ImageResponse](https://github.com/vercel/nex
 6. Resolver el riesgo pendiente de `braces` cuando exista versión compatible; no degradar ESLint/Next para eliminar el aviso.
 
 El siguiente sprint puede trabajar una sola pantalla reutilizando esta capa. No está implementado el rediseño de pantallas, modo alterno, i18n, feedback, autenticación o funcionalidades de análisis.
+
+## 11. Publicación
+
+La rama `feature/t04-3-design-system` se publicó con el commit inicial `60ede464a07afeaaeae076964eac2ed819a61bba`. El [PR #88](https://github.com/D0kker/improved-train/pull/88) está abierto hacia `feature/t04-2-ux-corrections`, sin merge. En la consulta de CI para ese commit, GitHub no devolvió workflow runs ni status checks. No hubo despliegue ni reinicio de servicios.

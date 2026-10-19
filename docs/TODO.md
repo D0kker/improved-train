@@ -12,7 +12,7 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Reemplazar valores de color dispersos de `globals.css` por tokens, manteniendo distribución y flujos de las cuatro páginas.
 - [x] Probar variantes, teclado, disabled/loading, contenido traducible largo, estados, accesibilidad DOM y gate de producción con Testing Library/JSDOM.
 - [ ] Validar visualmente viewports, contraste/foco con browser y tecnologías asistivas; no hubo browser en el entorno y no se afirma certificación WCAG.
-- [ ] Publicar T04.3 en PR a `feature/t04-2-ux-corrections` después de ejecutar instalación limpia y validaciones finales.
+- [x] Publicar `feature/t04-3-design-system` y abrir [PR #88](https://github.com/D0kker/improved-train/pull/88) a `feature/t04-2-ux-corrections`; sin merge ni despliegue.
 - [ ] Revaluar cinco alertas high de `braces` en el árbol de lint cuando exista una versión compatible; sin degradar Next 16/ESLint.
 - Evidencia: `docs/T04_3_DESIGN_SYSTEM.md`. No se han rediseñado Home, dashboard, detalle ni partida activa; se realizan como tareas pequeñas posteriores.
 
