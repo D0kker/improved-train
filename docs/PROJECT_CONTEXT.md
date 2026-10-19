@@ -43,6 +43,14 @@ El PO autorizó explícitamente desplegar T03.5 después de la entrega sin despl
 
 ## Próximo paso
 
+### T04.1 — auditoría UX/UI documental
+
+- Auditoría independiente desde T03.5 `41ac5ee` en `feature/t04-1-ux-audit`, mediante worktree aislado; no incorpora T03.6 ni modifica su sesión.
+- Informe: [T04_1_UX_UI_AUDIT.md](T04_1_UX_UI_AUDIT.md). Inventaría cuatro páginas reales, distingue código no montado y propuestas futuras, y prioriza copy stateless, cobertura, paginación, navegación y validación responsive/accesible.
+- Incluye dirección Cyber Arcade, preparación es/en/pt-BR y propuesta de feedback sin implementarlas. Son recomendaciones pendientes de selección del PO, no decisiones arquitectónicas aceptadas.
+- Evidencia estática: no hubo navegador disponible, pruebas visuales ni llamadas a Riot. Solo cambia documentación; no despliega ni reinicia servicios. La siguiente implementación debe elegirse por pantalla y coordinar gestión de solicitudes con T03.6 cuando corresponda.
+- Publicación de la auditoría mediante PR de `feature/t04-1-ux-audit` hacia `feature/t03-5-stateless-api`; no hacia main. El estado operativo de T03.5 registrado arriba no cambia.
+
 Revisar el PR T03.5 y validar los flujos reales de jugador/partida mediante uso autorizado. El proxy Next local conserva 210 s frente al presupuesto API de 180 s; no se ha hecho prueba de carga contra Riot ni validado otro borde/hosting. Varias instancias siguen necesitando controlar la cuota agregada de la clave; no se implementó coordinación distribuida. Cualquier siguiente despliegue requiere nueva instrucción explícita del PO.
 
 ## Historia y decisiones
