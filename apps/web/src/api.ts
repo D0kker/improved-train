@@ -245,8 +245,15 @@ export interface MatchAnalysisResult {
   coverage: AnalysisCoverage;
 }
 
-export function playerSearchPath(gameName: string, tagLine: string): string {
-  return `${playerLookupPath(gameName, tagLine)}/analysis`;
+export function playerSearchPath(
+  gameName: string,
+  tagLine: string,
+  platformRegion?: string,
+): string {
+  const path = `${playerLookupPath(gameName, tagLine)}/analysis`;
+  return platformRegion
+    ? `${path}?platformRegion=${encodeURIComponent(platformRegion)}`
+    : path;
 }
 
 export function recentMatchesPath(
@@ -306,19 +313,43 @@ export function playerLookupPath(gameName: string, tagLine: string): string {
   return apiPath("players", "by-riot-id", gameName, tagLine);
 }
 
-export function playerProfilePath(gameName: string, tagLine: string): string {
-  return `/player/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
-}
-
-export function playerActiveGamePath(puuid: string): string {
-  return apiPath("players", puuid, "active-game");
-}
-
-export function matchDetailPath(matchId: string, ownerPuuid?: string): string {
-  const path = `/match/${encodeURIComponent(matchId)}`;
-  return ownerPuuid
-    ? `${path}?ownerPuuid=${encodeURIComponent(ownerPuuid)}`
+export function playerProfilePath(
+  gameName: string,
+  tagLine: string,
+  platformRegion?: string,
+): string {
+  const path = `/player/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
+  return platformRegion
+    ? `${path}?platformRegion=${encodeURIComponent(platformRegion)}`
     : path;
+}
+
+export function playerActiveGamePath(
+  puuid: string,
+  platformRegion?: string,
+): string {
+  const path = apiPath("players", puuid, "active-game");
+  return platformRegion
+    ? `${path}?platformRegion=${encodeURIComponent(platformRegion)}`
+    : path;
+}
+
+export function matchDetailPath(
+  matchId: string,
+  ownerPuuid?: string,
+  platformRegion?: string,
+  returnProfile?: { gameName: string; tagLine: string },
+): string {
+  const path = `/match/${encodeURIComponent(matchId)}`;
+  const query = new URLSearchParams();
+  if (ownerPuuid) query.set("ownerPuuid", ownerPuuid);
+  if (platformRegion) query.set("platformRegion", platformRegion);
+  if (ownerPuuid && returnProfile?.gameName && returnProfile.tagLine) {
+    query.set("returnGameName", returnProfile.gameName);
+    query.set("returnTagLine", returnProfile.tagLine);
+  }
+  const search = query.toString();
+  return search ? `${path}?${search}` : path;
 }
 
 export function playerSyncPath(
@@ -371,30 +402,31 @@ export async function fetchJson<T>(
   });
 
   if (!response.ok) {
-    throw new ApiError(await errorMessage(response), response.status);
+    throw new ApiError(await errorMessage(response, path), response.status);
   }
 
   const body = await response.text();
   return (body.trim() ? JSON.parse(body) : null) as T;
 }
 
-async function errorMessage(response: Response): Promise<string> {
-  const fallback =
-    response.status === 404
-      ? "No encontramos esos datos."
-      : "No pudimos completar la solicitud.";
-
-  try {
-    const body = (await response.json()) as {
-      detail?: unknown;
-      title?: unknown;
-      message?: unknown;
-    };
-    const candidate = body.detail ?? body.message ?? body.title;
-    return typeof candidate === "string" && candidate.trim()
-      ? candidate
-      : fallback;
-  } catch {
-    return fallback;
+async function errorMessage(response: Response, path: string): Promise<string> {
+  const isPlayerLookup = path.includes("/players/by-riot-id/");
+  const isMatchLookup = path.includes("/matches/") || path.startsWith("/match/");
+  switch (response.status) {
+    case 400:
+      return "No pudimos procesar la solicitud. Revisa los datos e inténtalo de nuevo.";
+    case 404:
+      if (isPlayerLookup) return "No encontramos ese Riot ID en la región seleccionada.";
+      if (isMatchLookup) return "No encontramos la partida solicitada.";
+      return "No encontramos la información solicitada.";
+    case 429:
+      return "La consulta está limitada temporalmente. Espera un momento y vuelve a intentarlo.";
+    case 502:
+    case 503:
+      return "El servicio de Riot no está disponible en este momento.";
+    case 504:
+      return "La consulta tardó demasiado. Puedes volver a intentarlo.";
+    default:
+      return "Ocurrió un error inesperado. Inténtalo de nuevo.";
   }
 }
