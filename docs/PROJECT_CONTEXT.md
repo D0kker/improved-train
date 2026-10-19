@@ -1,6 +1,13 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-10-18
+Última actualización: 2026-10-19
+
+## Continuidad actual T04.3
+
+- T04.3 parte de `feature/t04-2-ux-corrections` (`2eb547e5c677b2f77baf99d6fc92134d2df82c39`) en un worktree aislado; su rama es `feature/t04-3-design-system`.
+- Se añadieron tokens semánticos, componentes presentacionales y galería `/design-system`, sin modificar contratos, llamadas de API ni distribución funcional de las cuatro rutas. La galería queda oculta en producción salvo `ENABLE_DESIGN_SYSTEM_GALLERY=true` en runtime.
+- Ver detalle y validación en [T04.3](T04_3_DESIGN_SYSTEM.md). La prueba visual en navegador permanece pendiente porque no hay browser de pruebas disponible. El triage npm dejó 5 avisos high únicamente en el árbol de lint; Next 16 se actualizó a 16.4.2, sin degradaciones ni `--force`.
+- Publicación/PR y validaciones finales deben actualizarse aquí solo después de completar realmente cada paso. No desplegar ni reiniciar servicios para T04.3.
 
 ## Propósito
 
