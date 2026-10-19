@@ -8,7 +8,7 @@ PROJECT ECHO analiza partidas terminadas de League of Legends para mostrar encue
 
 ## Checkout actual: T03.6 protección de recursos (sin desplegar)
 
-- Rama de trabajo: `feature/t03-6-resource-protection`, creada desde el último T03.5 `41ac5ee`. PR #83 sigue abierto y main no contiene T03.5; el PR de T03.6 debe apuntar a `feature/t03-5-stateless-api`. La base incluye T01/T02/T03/T03.5; CI web/dotnet/containers de esa base terminó en success.
+- Rama de trabajo: `feature/t03-6-resource-protection`, basada en el último T03.5 `41ac5ee`. PR #83 sigue abierto y main no contiene T03.5; PR #86 de T03.6 apunta a `feature/t03-5-stateless-api`. La base incluye T01/T02/T03/T03.5; CI web/dotnet/containers de la base terminó en success.
 - T03.6 conserva los dos flujos y sus ventanas. Añade una admisión FIFO única (8 activos/16 cola), espera de cola5s, cuota por IP de conexión20 tokens/20por minuto y máximo1024 clientes; detrás de Next los usuarios comparten la IP/cuota del proxy. No se confía en XFF ni Forwarded.
 - El mismo limiter singleton Riot incorpora ventanas configurables y headers app/método, además de concurrencia3, Retry-After y backoff. Estado solo local al proceso, sin coordinación entre réplicas. Las cuotas del proveedor simulado se elevan solo en benchmarks aislados, no en runtime.
 - Métricas ampliadas: admisión, rechazos, espera, cancelación, stages, caché, CPU/working set/GC. Caché conserva cotas4096/64MiB estimados, evita array UTF-8 explícito al estimar y single-flight revalida caché tras un miss tardío. No se cachean resultados funcionales.
@@ -26,7 +26,7 @@ PROJECT ECHO analiza partidas terminadas de League of Legends para mostrar encue
 - `apps/api/tests/LolAnalyzer.Legacy` compila los repositorios/EF/Redis históricos exclusivamente para regresiones y benchmarks. El worker antiguo sigue como código de referencia, fuera de Compose y de la cadena de dependencias de la API; no debe activarse como parte del runtime stateless.
 - El artefacto API se prueba expresamente para excluir dependencias EF Core y StackExchange.Redis.
 - Detalles, contratos, pruebas, métricas reproducibles, riesgos y límites: [T03.5](T03_5_STATELESS_ARCHITECTURE.md).
-- Auditoría, validaciones, perfil CPU, 40 escenarios de carga aislada y límites de T03.6: [protección de recursos](T03_6_RESOURCE_PROTECTION.md). El árbol actual pasó restore/build (0 warnings/0 errores), 105 unitarias,21 integración y formato .NET en SDK10 ARM64 aislado; perfil CPU pasó1/1. Se estabilizó un test de cuota cuyo timer de30ms falló bajo carga y pasó en la ejecución completa determinista. CI/PR aún pendientes: GitHub API no conecta desde esta sesión. T03.6 sigue sin commit/push/PR, deploy ni reinicio. El runtime de abajo sigue en T03.5.
+- Auditoría, validaciones, perfil CPU, 40 escenarios de carga aislada y límites de T03.6: [protección de recursos](T03_6_RESOURCE_PROTECTION.md). Build Release pasó sin warnings/errores; 105 unitarias y21 integración aprobadas, formato y perfil opt-in aprobados. El test de cuota quedó determinista. CI GitHub del commit `323ac1c` pasó web/dotnet/containers. Rama publicada y [PR #86](https://github.com/D0kker/improved-train/pull/86) abierto hacia `feature/t03-5-stateless-api`; sin merge ni despliegue. El runtime de abajo sigue en T03.5.
 
 ## Estado operativo separado del código
 
