@@ -4,6 +4,13 @@
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
+## T04.1 — auditoría UX/UI (solo documentación)
+
+- [x] Aislar desde T03.5 `41ac5ee` en `feature/t04-1-ux-audit`, preservando la sesión paralela T03.6.
+- [x] Inventariar las cuatro páginas reales y componentes/estados desde código; distinguir hallazgos confirmados, recomendaciones y validación visual pendiente.
+- [x] Documentar copy, distribución, navegación, responsive, accesibilidad, componentes, Cyber Arcade, idiomas y feedback en [T04_1_UX_UI_AUDIT.md](T04_1_UX_UI_AUDIT.md), con prioridades y aceptación por pantalla.
+- [ ] Seleccionar con el PO una mejora pequeña del informe para una historia posterior. No se implementó UI, i18n ni feedback; no se ejecutó evaluación en navegador ni se desplegó.
+
 ## T03.5 — API stateless
 
 - [x] Verificar rama base con T01/T02/T03 y aislar implementación en `feature/t03-5-stateless-api`.
