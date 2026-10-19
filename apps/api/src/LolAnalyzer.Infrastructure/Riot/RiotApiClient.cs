@@ -1,4 +1,5 @@
 using System.Net;
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -26,6 +27,10 @@ public sealed class RiotApiClient(
             RegionalRouting = RiotRouting.Regional(platformRegion),
             RequestTimeoutSeconds = options.RequestTimeoutSeconds,
             RequestConcurrency = options.RequestConcurrency,
+            ShortWindowRequests = options.ShortWindowRequests,
+            ShortWindowSeconds = options.ShortWindowSeconds,
+            LongWindowRequests = options.LongWindowRequests,
+            LongWindowSeconds = options.LongWindowSeconds,
             MaxRetryAttempts = options.MaxRetryAttempts,
             BaseRetryDelayMilliseconds = options.BaseRetryDelayMilliseconds,
             MaxRetryDelaySeconds = options.MaxRetryDelaySeconds,
@@ -130,6 +135,7 @@ public sealed class RiotApiClient(
 
         var matchIds = await response.Content.ReadFromJsonAsync<List<string>>(
             cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (matchIds?.Count > count) throw new RiotApiException(HttpStatusCode.BadGateway);
         return matchIds ?? [];
     }
 
@@ -162,6 +168,7 @@ public sealed class RiotApiClient(
         }
 
         var rawJson = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        var started = Stopwatch.GetTimestamp();
         try
         {
             return ParseMatch(rawJson);
@@ -169,6 +176,10 @@ public sealed class RiotApiClient(
         catch (JsonException)
         {
             throw new RiotApiException(HttpStatusCode.BadGateway);
+        }
+        finally
+        {
+            metrics.RecordStage("riot.parse", Stopwatch.GetElapsedTime(started));
         }
     }
 
@@ -229,7 +240,7 @@ public sealed class RiotApiClient(
 
         var payload = await activeResponse.Content.ReadFromJsonAsync<ActiveGameResponse>(
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (payload is null || payload.GameId <= 0 || payload.GameStartTime <= 0)
+        if (payload is null || payload.GameId <= 0 || payload.GameStartTime <= 0 || payload.Participants?.Count > 10)
         {
             throw new RiotApiException(HttpStatusCode.BadGateway);
         }
@@ -315,38 +326,62 @@ public sealed class RiotApiClient(
             throw new InvalidOperationException("RIOT_API_KEY must be configured at runtime before calling Riot.");
         }
 
-        for (var attempt = 0; ; attempt++)
+        var uri = new Uri(baseUri ?? options.GetRegionalBaseUri(), path);
+        try
         {
-            HttpResponseMessage response;
-            using (await rateLimiter.AcquireAsync(cancellationToken).ConfigureAwait(false))
+            for (var attempt = 0; ; attempt++)
             {
-                var requestUri = new Uri(baseUri ?? options.GetRegionalBaseUri(), path).AbsoluteUri;
-                using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
-                request.Headers.TryAddWithoutValidation("X-Riot-Token", options.ApiKey);
-                response = await httpClient.SendAsync(
-                    request,
-                    HttpCompletionOption.ResponseContentRead,
-                    cancellationToken).ConfigureAwait(false);
+                HttpResponseMessage response;
+                TimeSpan retryAfter = default;
+                using (await rateLimiter.AcquireAsync(uri.Host, endpoint, cancellationToken).ConfigureAwait(false))
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+                    request.Headers.TryAddWithoutValidation("X-Riot-Token", options.ApiKey);
+                    var started = Stopwatch.GetTimestamp();
+                    try
+                    {
+                        response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (Exception error) when (error is HttpRequestException or OperationCanceledException)
+                    {
+                        metrics.RecordRiotRequest(endpoint, 0);
+                        throw;
+                    }
+                    finally
+                    {
+                        metrics.RecordStage("riot.http", Stopwatch.GetElapsedTime(started));
+                    }
+                    metrics.RecordRiotRequest(endpoint, (int)response.StatusCode);
+                    try
+                    {
+                        rateLimiter.ObserveLimits(uri.Host, endpoint,
+                            Header(response, "X-App-Rate-Limit"), Header(response, "X-App-Rate-Limit-Count"),
+                            Header(response, "X-Method-Rate-Limit"), Header(response, "X-Method-Rate-Limit-Count"));
+                        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                        {
+                            retryAfter = GetRetryDelay(response, attempt);
+                            // Publish cooldown before releasing the concurrency permit.
+                            rateLimiter.RegisterRetryAfter(retryAfter);
+                        }
+                    }
+                    catch { response.Dispose(); throw; }
+                }
+
+                if (response.StatusCode != HttpStatusCode.TooManyRequests
+                    || attempt >= options.MaxRetryAttempts || retryAfter > TimeSpan.FromSeconds(options.MaxRetryDelaySeconds)) return response;
+                metrics.RecordRiotRetry();
+                response.Dispose();
             }
-
-            metrics.RecordRiotRequest(endpoint, (int)response.StatusCode);
-
-            if (response.StatusCode != HttpStatusCode.TooManyRequests)
-            {
-                return response;
-            }
-
-            var retryAfter = GetRetryDelay(response, attempt);
-            rateLimiter.RegisterRetryAfter(retryAfter);
-
-            if (attempt >= options.MaxRetryAttempts || retryAfter > TimeSpan.FromSeconds(options.MaxRetryDelaySeconds))
-            {
-                return response;
-            }
-
-            response.Dispose();
+        }
+        catch (OperationCanceledException)
+        {
+            metrics.RecordRiotCancellation();
+            throw;
         }
     }
+
+    private static string? Header(HttpResponseMessage response, string name) =>
+        response.Headers.TryGetValues(name, out var values) ? string.Join(',', values) : null;
 
     private TimeSpan GetRetryDelay(HttpResponseMessage response, int attempt)
     {

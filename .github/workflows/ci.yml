@@ -2,9 +2,9 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [main, feature/t03-6-resource-protection]
   pull_request:
-    branches: [main]
+    branches: [main, feature/t03-5-stateless-api]
 
 permissions:
   contents: read
@@ -45,5 +45,5 @@ jobs:
     needs: [web, dotnet]
     steps:
       - uses: actions/checkout@v4
-      - run: docker compose config
+      - run: docker compose config --quiet
       - run: docker compose build

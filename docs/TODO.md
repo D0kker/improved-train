@@ -1,8 +1,27 @@
 # Roadmap
 
-Última actualización: 2026-10-18
+Última actualización: 2026-10-19
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
+
+## Estado actual
+
+T03.6 se implementa por separado en `feature/t03-6-resource-protection`; ver `T03_6_RESOURCE_PROTECTION.md`. El runtime continúa en T03.5 hasta nueva autorización.
+
+## T03.6 — protección de recursos (validación completada; PR abierto)
+
+- [x] Auditar código/runtime, PR #83/CI y ramas; crear feature desde `41ac5ee`.
+- [x] Conservar flujos independientes, estadísticas, cinco/tres y exclusión temporal sin persistencia.
+- [x] Añadir espera acotada, cuota de conexión con cardinalidad limitada y rechazo controlado.
+- [x] Conservar single-flight/caché; reforzar cuotas Riot, cancelación y observabilidad.
+- [x] Comparación aislada reproducible: 40 escenarios T03.5/T03.6, análisis simulado, concurrencia1–50; datos guardados en `docs/benchmarks/T03_6_LOAD_RESULTS.json`.
+- [x] Validar frontend (21 pruebas, lint, types y build), Compose, runner y diff.
+- [x] Validar restore/build Release (0 warnings/0 errores), 105 unitarias,21 integración y `dotnet format --verify-no-changes` en SDK10 ARM64 aislado; timeout Riot→503 y presupuesto global→504 pasan.
+- [x] Ejecutar perfil CPU opt-in: cuatro bloques agregados,100 iteraciones por bloque; resultados en `T03_6_RESOURCE_PROTECTION.md`.
+- [x] Publicar commit `f7428c6` en `feature/t03-6-resource-protection` por remoto SSH, sin merge ni deploy.
+- [x] Abrir [PR #86](https://github.com/D0kker/improved-train/pull/86) hacia `feature/t03-5-stateless-api` sin merge ni deploy.
+- [x] Verificar y registrar CI de `web`, `dotnet` y `containers` del run 39205716202.
+- [x] Integrar `origin/feature/t03-5-stateless-api` (`56502f1`) mediante merge `1fa7150`; resolver el conflicto documental de `TODO.md`, validar y publicar. PR #86 quedó `CLEAN`/`MERGEABLE`; sin merge del PR.
 
 ## T04.1 — auditoría UX/UI (solo documentación)
 

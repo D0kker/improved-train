@@ -11,45 +11,58 @@ import {
 } from "@/src/api";
 import { formatDate, formatDuration, queueLabel } from "@/src/format";
 import { PlayerProfileLink } from "@/src/player-profile-link";
+import { useRequestLifetime } from "@/src/use-request-lifetime";
 
 export function LiveMatchView({ ownerPuuid }: { ownerPuuid?: string }) {
+  const beginRequest = useRequestLifetime();
   const [game, setGame] = useState<ActiveGame | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    if (!ownerPuuid) {
-      setError("No se indicó el jugador observado.");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    try {
-      const activeGame = await fetchJson<ActiveGame | null>(
-        playerActiveGamePath(ownerPuuid),
-      );
-      if (!activeGame) {
-        setError("La partida en curso ya no está disponible.");
-        setGame(null);
-      } else {
-        setGame(activeGame);
+  const load = useCallback(
+    async (parentSignal?: AbortSignal) => {
+      const signal = beginRequest(parentSignal);
+      if (!ownerPuuid) {
+        setError("No se indicó el jugador observado.");
+        setLoading(false);
+        return;
       }
-    } catch (requestError) {
-      setError(
-        requestError instanceof ApiError || requestError instanceof Error
-          ? requestError.message
-          : "No pudimos cargar la partida en curso.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [ownerPuuid]);
+
+      setLoading(true);
+      setError(null);
+      try {
+        const activeGame = await fetchJson<ActiveGame | null>(
+          playerActiveGamePath(ownerPuuid),
+          { signal },
+        );
+        if (signal.aborted) return;
+        if (!activeGame) {
+          setError("La partida en curso ya no está disponible.");
+          setGame(null);
+        } else {
+          setGame(activeGame);
+        }
+      } catch (requestError) {
+        if (signal.aborted) return;
+        setError(
+          requestError instanceof ApiError || requestError instanceof Error
+            ? requestError.message
+            : "No pudimos cargar la partida en curso.",
+        );
+      } finally {
+        if (!signal.aborted) setLoading(false);
+      }
+    },
+    [ownerPuuid, beginRequest],
+  );
 
   useEffect(() => {
-    const request = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(request);
+    const controller = new AbortController();
+    const request = window.setTimeout(() => void load(controller.signal), 0);
+    return () => {
+      window.clearTimeout(request);
+      controller.abort();
+    };
   }, [load]);
 
   const teams = game

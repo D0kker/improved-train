@@ -27,6 +27,15 @@ services:
       RIOT_MAX_RETRY_DELAY_SECONDS: ${RIOT_MAX_RETRY_DELAY_SECONDS:-120}
       API_CONCURRENCY_LIMIT: ${API_CONCURRENCY_LIMIT:-8}
       API_QUEUE_LIMIT: ${API_QUEUE_LIMIT:-16}
+      ResourceProtection__QueueWaitMilliseconds: ${API_QUEUE_WAIT_MILLISECONDS:-5000}
+      ResourceProtection__ClientBurst: ${API_CLIENT_BURST:-20}
+      ResourceProtection__ClientRequestsPerMinute: ${API_CLIENT_REQUESTS_PER_MINUTE:-20}
+      ResourceProtection__MaxTrackedClients: ${API_MAX_TRACKED_CLIENTS:-1024}
+      ResourceProtection__ClientIdleSeconds: ${API_CLIENT_IDLE_SECONDS:-180}
+      Riot__ShortWindowRequests: ${RIOT_SHORT_WINDOW_REQUESTS:-20}
+      Riot__ShortWindowSeconds: ${RIOT_SHORT_WINDOW_SECONDS:-1}
+      Riot__LongWindowRequests: ${RIOT_LONG_WINDOW_REQUESTS:-100}
+      Riot__LongWindowSeconds: ${RIOT_LONG_WINDOW_SECONDS:-120}
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/health/ready"]
       interval: 10s

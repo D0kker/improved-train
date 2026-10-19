@@ -14,6 +14,14 @@ public sealed class RiotOptions
 
     public int RequestConcurrency { get; set; } = 3;
 
+    public int ShortWindowRequests { get; set; } = 20;
+
+    public int ShortWindowSeconds { get; set; } = 1;
+
+    public int LongWindowRequests { get; set; } = 100;
+
+    public int LongWindowSeconds { get; set; } = 120;
+
     public int MaxRetryAttempts { get; set; } = 2;
 
     public int BaseRetryDelayMilliseconds { get; set; } = 250;
@@ -22,6 +30,11 @@ public sealed class RiotOptions
 
     public void Validate()
     {
+        if (ShortWindowRequests is < 1 or > 10000 || LongWindowRequests is < 1 or > 10000
+            || ShortWindowSeconds is < 1 or > 3600 || LongWindowSeconds is < 1 or > 3600)
+        {
+            throw new InvalidOperationException("Riot quota windows require 1–10000 requests and 1–3600 seconds.");
+        }
         if (RequestTimeoutSeconds <= 0)
         {
             throw new InvalidOperationException("Riot request timeout must be positive.");

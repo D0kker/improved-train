@@ -20,6 +20,8 @@ La API no requiere base de datos ni conserva resultados funcionales entre solici
 
 Consulta [arquitectura y mediciones T03.5](docs/T03_5_STATELESS_ARCHITECTURE.md), [contexto actual](docs/PROJECT_CONTEXT.md), [decisiones](docs/DECISIONS.md) y [roadmap](docs/TODO.md).
 
+La rama `feature/t03-6-resource-protection` añade [protección de recursos y carga simulada](docs/T03_6_RESOURCE_PROTECTION.md); no está desplegada. El servicio de8081 sigue en T03.5.
+
 ## Validación local
 
 ```bash
