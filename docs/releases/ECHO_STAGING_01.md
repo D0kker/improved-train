@@ -4,9 +4,9 @@ Fecha de revisión: 2026-10-19. Este informe describe `release/echo-staging`; **
 
 ## 1. Resumen ejecutivo
 
-La rama de staging partía de `feature/t04-2-ux-corrections` (`2eb547e`) con T03.5/T04.1/T04.2 previos a T04.3. Se integró T03.6 en worktree aislado con merge explícito, resolviendo cuatro conflictos frontend. El merge commit es `5f7838a`; la documentación final está en `e7b2ca5`. T03.6 también quedó integrado en T03.5 (`eed0129`), con árbol idéntico al head T03.6. T04.3 no forma parte de staging.
+La rama de staging partía de `feature/t04-2-ux-corrections` (`2eb547e`) con T03.5/T04.1/T04.2 previos a T04.3. Se integró T03.6 en worktree aislado con merge explícito, resolviendo cuatro conflictos frontend. El merge commit es `5f7838a`; el snapshot de código integrado es `e7b2ca5` y los commits posteriores solo actualizan documentación. T03.6 también quedó integrado en T03.5 (`eed0129`), con árbol idéntico al head T03.6. T04.3 no forma parte de staging.
 
-CI de GitHub aprobó el SHA integrado `e7b2ca50f828935a70aa871dcff3588edaa877cf`: 33 pruebas frontend, lint, type-check, build Next; restore/build/test/format .NET; `docker compose config` y build de imágenes API/web. El run fue `39210831898`. En .NET pasaron 105 unitarias y 21 de integración; se omitieron 2 y 1 respectivamente. La validación local no pudo ejecutar el SDK ni `docker build` por restricciones del entorno; `npm ci` local terminó en `ENOSPC`, mientras que CI ejecutó `npm ci` correctamente. Los bloqueos locales quedan suplidos por CI sobre el SHA exacto.
+CI de GitHub aprobó el SHA integrado `e7b2ca50f828935a70aa871dcff3588edaa877cf`: 33 pruebas frontend, lint, type-check, build Next; restore/build/test/format .NET; `docker compose config` y build de imágenes API/web. El run fue `39210831898`. Un segundo run `39211432378` también aprobó el commit de documentación `cc3c9e4`; los cambios entre ambos SHA son solo documentación. En .NET pasaron 105 unitarias y 21 de integración; se omitieron 2 y 1 respectivamente. `npm ci` local terminó en `ENOSPC`; CI ejecutó `npm ci` correctamente. Los bloqueos locales quedan suplidos por los runners sobre los SHA revisados.
 
 El audit de dependencias de producción informó 1 vulnerabilidad crítica y 2 altas. La revisión de fuentes no encontró uso de los vectores `next/og`/`ImageResponse` ni `images.remotePatterns` a los que aplican los avisos críticos revisados. Se acepta para un despliegue de prueba privado y controlado, pero el riesgo no queda eliminado: actualizar Next/sharp/source-map-js y repetir el audit es condición previa a exposición pública.
 
@@ -26,7 +26,7 @@ El audit de dependencias de producción informó 1 vulnerabilidad crítica y 2 a
 
 Refs finales: `origin/feature/t03-5-stateless-api`=`eed0129`, `origin/feature/t04-1-ux-audit`=`537daf9`, `origin/feature/t04-2-ux-corrections`=`002cbb4`, `origin/release/echo-staging`=`e7b2ca5`, `origin/feature/t03-6-resource-protection`=`217ec8e`. El commit T04.3 (`60ede46`, `a7cec40`, `002cbb4`) no está en staging. PR #89 es `OPEN/DRAFT/CLEAN`; PR #87 quedó merged con el push de la integración.
 
-Los checks verdes del árbol integrado son el run `39210831898` sobre `e7b2ca5`: `web`, `dotnet`, `containers` todos `SUCCESS`. El workflow ejecutó el set de pruebas integrado y build de contenedores; no se utilizaron claves Riot.
+Los checks verdes del árbol integrado son los runs `39210831898` (`e7b2ca5`) y `39211432378` (`cc3c9e4`): `web`, `dotnet`, `containers` todos `SUCCESS`. El workflow ejecutó las pruebas integradas y build de contenedores; no se utilizaron claves Riot.
 
 ## 3. Historial y commits candidatos
 
@@ -100,7 +100,7 @@ No se ejecutó `npm audit fix` ni se actualizó ninguna dependencia. Recomendaci
 
 ## 10. Configuración y procedimiento para despliegue controlado (no ejecutado)
 
-Commit candidato: `e7b2ca50f828935a70aa871dcff3588edaa877cf`; API y web se construyen desde esa revisión. Compose genera imágenes `lol-network-analyzer-api` y `lol-network-analyzer-web` (tags locales implícitos; no hay digest/tag inmutable publicado). CI validó build Linux x64; validar ARM64 por separado antes de promover arquitectura multi-arch.
+Commit de código candidato: `e7b2ca50f828935a70aa871dcff3588edaa877cf`; los commits siguientes solo actualizan documentación. API y web se construyen desde ese snapshot. Compose genera imágenes `lol-network-analyzer-api` y `lol-network-analyzer-web` (tags locales implícitos; no hay digest/tag inmutable publicado). CI validó build Linux x64; validar ARM64 por separado antes de promover arquitectura multi-arch.
 
 Variables de runtime: `RIOT_API_KEY` (secreto requerido para llamadas reales; no incluirlo en Git ni imprimirlo), `RIOT_PLATFORM_REGION` (default `la1`), `RIOT_REGIONAL_ROUTING` (default `americas`), `WEB_PORT` (usar `8081` para el entorno local autorizado), `DATA_DRAGON_VERSION`; límites/TTL tienen defaults en `docker-compose.yml`. API escucha `8080` solo en red Compose; web publica `3000` en `${WEB_PORT}` y proxya a `http://api:8080`. Compose solo define API y web, sin base de datos.
 
