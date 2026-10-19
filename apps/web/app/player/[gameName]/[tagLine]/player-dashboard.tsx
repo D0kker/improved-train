@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiError,
   fetchJson,
   playerActiveGamePath,
   type ActiveGame,
+  type AnalysisCoverage,
   type MatchDetail,
   type MatchesResponse,
   type PlayerLookup,
@@ -19,10 +20,15 @@ import {
 import { formatDate, formatDuration, queueLabel } from "@/src/format";
 import { familiarityMessage, type HistoryAnalysisStatus } from "@/src/echo";
 import { ChampionIcon } from "@/src/champion-icon";
+import { platformRegionLabel } from "@/src/platform-region";
+import { canContinueRecentMatches, isCurrentPlayerRequest, nextRecentMatchesStart } from "@/src/coverage";
+import { CoverageSummary } from "@/src/coverage-summary";
+import { SiteHeader } from "@/src/site-header";
 
 interface PlayerDashboardProps {
   gameName: string;
   tagLine: string;
+  platformRegion?: string;
 }
 
 interface DashboardData {
@@ -32,6 +38,7 @@ interface DashboardData {
   latestMatch: MatchDetail | null;
   activeGame: ActiveGame | null;
   historyStatus: HistoryAnalysisStatus;
+  coverage: AnalysisCoverage;
 }
 
 type LoadingStep = "lookup" | "sync" | "results";
@@ -41,139 +48,187 @@ const loadingCopy: Record<LoadingStep, string> = {
   results: "Construyendo el resumen…",
 };
 
-export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
+export function PlayerDashboard({ gameName, tagLine, platformRegion }: PlayerDashboardProps) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [step, setStep] = useState<LoadingStep>("lookup");
   const [error, setError] = useState<string | null>(null);
-  const [warning, setWarning] = useState<string | null>(null);
+  const [activeGameError, setActiveGameError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingActiveGame, setIsLoadingActiveGame] = useState(false);
+  const [isStale, setIsStale] = useState(false);
   const [isLoadingMoreMatches, setIsLoadingMoreMatches] = useState(false);
   const [hasMoreMatches, setHasMoreMatches] = useState(false);
+  const [nextMatchStart, setNextMatchStart] = useState<number | null>(null);
+  const [retryingMatchWindow, setRetryingMatchWindow] = useState(false);
+  const [additionalCoverage, setAdditionalCoverage] = useState<AnalysisCoverage | null>(null);
+  const [additionalError, setAdditionalError] = useState<string | null>(null);
+  const [hasLoadedAdditionalMatches, setHasLoadedAdditionalMatches] = useState(false);
+  const requestController = useRef<AbortController | null>(null);
+  const historyController = useRef<AbortController | null>(null);
+  const historyRequestInFlight = useRef(false);
 
   const load = useCallback(
-    async (signal?: AbortSignal) => {
+    async () => {
+      requestController.current?.abort();
+      historyController.current?.abort();
+      historyRequestInFlight.current = false;
+      const controller = new AbortController();
+      requestController.current = controller;
+      const { signal } = controller;
       setIsLoading(true);
       setError(null);
-      setWarning(null);
+      setActiveGameError(null);
+      setIsLoadingActiveGame(false);
       setStep("sync");
+      setIsLoadingMoreMatches(false);
+      setAdditionalError(null);
+      setAdditionalCoverage(null);
+      setHasLoadedAdditionalMatches(false);
       try {
         const result = await fetchJson<PlayerSearchResult>(
-          playerSearchPath(gameName, tagLine),
+          playerSearchPath(gameName, tagLine, platformRegion),
           { signal },
         );
-        let activeGame: ActiveGame | null = null;
-        try {
-          activeGame = await fetchJson<ActiveGame | null>(
-            playerActiveGamePath(result.player.puuid),
-            { signal },
-          );
-        } catch {
-          if (signal?.aborted) return;
-          setWarning("No se pudo comprobar si hay una partida en curso.");
-        }
         if (signal?.aborted) return;
         setData({
           ...result,
           latestMatch: null,
-          activeGame,
+          activeGame: null,
           historyStatus: result.coverage.status,
         });
-        setHasMoreMatches(result.matches.items.length === 5);
-        if (result.coverage.status !== "complete")
-          setWarning(
-            result.coverage.status === "error"
-              ? "No se pudieron recuperar las partidas. Puedes reintentar."
-              : "Se muestran las partidas recuperadas; la cobertura del historial es limitada.",
-          );
+        setIsStale(false);
+        const hasMore = canContinueRecentMatches(result.coverage);
+        setHasMoreMatches(hasMore);
+        setRetryingMatchWindow(
+          hasMore && (result.coverage.status === "partial" || result.coverage.status === "error"),
+        );
+        setNextMatchStart(
+          hasMore
+            ? result.coverage.status === "partial" || result.coverage.status === "error"
+              ? 0
+              : 5
+            : null,
+        );
+
+        setIsLoadingActiveGame(true);
+        void fetchJson<ActiveGame | null>(
+          playerActiveGamePath(result.player.puuid, result.player.platformRegion),
+          { signal },
+        )
+          .then((activeGame) => {
+            if (signal.aborted) return;
+            setData((current) =>
+              current && isCurrentPlayerRequest(current.player.puuid, result.player.puuid, signal.aborted)
+                ? { ...current, activeGame }
+                : current,
+            );
+          })
+          .catch((activeGameRequestError: unknown) => {
+            if (!signal.aborted) {
+              setActiveGameError(
+                messageFor(activeGameRequestError, "No se pudo comprobar si hay una partida en curso."),
+              );
+            }
+          })
+          .finally(() => {
+            if (!signal.aborted) setIsLoadingActiveGame(false);
+          });
       } catch (requestError) {
         if (signal?.aborted) return;
+        setIsStale(true);
         setError(messageFor(requestError, "No pudimos cargar este jugador."));
       } finally {
         if (!signal?.aborted) setIsLoading(false);
       }
     },
-    [gameName, tagLine],
+    [gameName, platformRegion, tagLine],
   );
 
   useEffect(() => {
-    const controller = new AbortController();
-    const request = window.setTimeout(() => void load(controller.signal), 0);
+    let isCurrentEffect = true;
+    queueMicrotask(() => {
+      if (isCurrentEffect) void load();
+    });
     return () => {
-      window.clearTimeout(request);
-      controller.abort();
+      isCurrentEffect = false;
+      requestController.current?.abort();
+      historyController.current?.abort();
     };
   }, [load]);
 
   const loadMoreMatches = useCallback(async () => {
-    if (!data || isLoadingMoreMatches || !hasMoreMatches) return;
+    if (!data || !hasMoreMatches || nextMatchStart === null || historyRequestInFlight.current) return;
+    historyRequestInFlight.current = true;
+    const controller = new AbortController();
+    historyController.current?.abort();
+    historyController.current = controller;
+    const requestedStart = nextMatchStart;
     setIsLoadingMoreMatches(true);
+    setAdditionalError(null);
     try {
       const result = await fetchJson<PlayerSearchResult>(
         recentMatchesPath(
           data.player.puuid,
-          data.matches.items.length,
+          requestedStart,
           data.player.platformRegion,
         ),
+        { signal: controller.signal },
       );
-      setHasMoreMatches(result.matches.items.length === 5);
-      setData((current) =>
-        current
-          ? {
-              ...current,
-              matches: {
-                ...result.matches,
-                items: [
-                  ...new Map(
-                    [...current.matches.items, ...result.matches.items].map(
-                      (match) => [match.riotMatchId, match],
-                    ),
-                  ).values(),
-                ],
-                totalCount:
-                  current.matches.items.length + result.matches.items.length,
-              },
-            }
-          : current,
+      if (controller.signal.aborted) return;
+      const retryingInitial = requestedStart === 0;
+      setAdditionalCoverage(retryingInitial ? null : result.coverage);
+      setRetryingMatchWindow(
+        result.coverage.status === "partial" || result.coverage.status === "error",
       );
-      if (
-        result.coverage.status === "partial" ||
-        result.coverage.status === "error"
-      ) {
-        setWarning("No se pudo completar la siguiente consulta del historial.");
-        setHasMoreMatches(true);
-      }
+      setNextMatchStart(
+        nextRecentMatchesStart(requestedStart, result.coverage),
+      );
+      setHasMoreMatches(canContinueRecentMatches(result.coverage));
+      if (!retryingInitial) setHasLoadedAdditionalMatches(true);
+      setData((current) => {
+        if (!current || current.player.puuid !== data.player.puuid) return current;
+        const currentItems = retryingInitial ? current.matches.items.slice(5) : current.matches.items;
+        const items = [
+          ...new Map(
+            [...(retryingInitial ? result.matches.items : currentItems), ...(retryingInitial ? currentItems : result.matches.items)]
+              .map((match) => [match.riotMatchId, match]),
+          ).values(),
+        ];
+        return {
+          ...current,
+          ...(retryingInitial
+            ? { summary: result.summary, encounters: result.encounters, coverage: result.coverage, historyStatus: result.coverage.status }
+            : {}),
+          matches: { ...current.matches, items, totalCount: items.length },
+        };
+      });
     } catch (requestError) {
-      setWarning(
-        messageFor(requestError, "No se pudieron cargar más partidas."),
-      );
+      if (!controller.signal.aborted) {
+        setAdditionalError(messageFor(requestError, "No se pudieron cargar más partidas."));
+        setRetryingMatchWindow(true);
+      }
     } finally {
-      setIsLoadingMoreMatches(false);
+      if (!controller.signal.aborted) setIsLoadingMoreMatches(false);
+      if (historyController.current === controller) {
+        historyRequestInFlight.current = false;
+      }
     }
-  }, [data, isLoadingMoreMatches, hasMoreMatches]);
+  }, [data, hasMoreMatches, nextMatchStart]);
 
   return (
-    <main className="dashboard-shell">
-      <header className="topbar">
-        <Link className="wordmark" href="/">
-          <span className="wordmark-icon">E</span>
-          <span>PROJECT ECHO</span>
-        </Link>
-        <Link className="text-link" href="/">
-          Nueva búsqueda
-        </Link>
-      </header>
+    <main className="dashboard-shell" id="main-content" tabIndex={-1}>
+      <SiteHeader actionLabel="Nueva búsqueda" />
 
       <div className="dashboard-content">
         <section className="player-heading">
           <div>
-            <p className="eyebrow">Who have you played with before?</p>
+            <p className="eyebrow">Perfil del jugador</p>
             <h1>
               {data?.summary.gameName || gameName}
               <span>#{data?.summary.tagLine || tagLine}</span>
             </h1>
             <p className="muted-copy">
-              Encuentros observados únicamente en partidas terminadas y
-              almacenadas por el analizador.
+              Consulta de partidas terminadas. Los análisis no se guardan como historial permanente.
             </p>
           </div>
           <div className="profile-actions">
@@ -188,10 +243,11 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
             {data ? (
               <p className="profile-freshness">
                 {data.summary.matchesAnalyzed > 0
-                  ? `Fecha de la última partida: ${formatDate(data.summary.dataUpdatedAt)}`
+                  ? `${isStale ? "Consulta anterior. " : ""}Partida más reciente: ${formatDate(data.summary.dataUpdatedAt)}`
                   : "Sin partidas recuperadas"}
               </p>
             ) : null}
+            {data ? <p className="profile-region">Región: {platformRegionLabel(data.player.platformRegion || platformRegion)}</p> : null}
           </div>
         </section>
 
@@ -199,11 +255,12 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
         {error ? (
           <section className="message-panel error-panel" role="alert">
             <div>
-              <p className="eyebrow">No se pudo completar el análisis</p>
+              <p className="eyebrow">{isStale && data ? "No se pudo actualizar" : "No se pudo completar la consulta"}</p>
               <h2>{error}</h2>
               <p>
-                Verifica el Riot ID o intenta de nuevo. No se muestran trazas
-                internas ni credenciales.
+                {isStale && data
+                  ? "Se conserva la consulta anterior. La fecha mostrada corresponde a la partida más reciente, no al momento de esta actualización."
+                  : "Revisa el Riot ID y la región seleccionada; puedes volver a intentarlo."}
               </p>
             </div>
             <button className="secondary-button" onClick={() => void load()}>
@@ -214,29 +271,46 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
 
         {data ? (
           <>
-            {warning ? (
-              <p className="warning-banner" role="status">
-                {warning}
-              </p>
-            ) : null}
+            <CoverageSummary coverage={data.coverage} title="Consulta inicial · cinco partidas" />
             <SummaryCards summary={data.summary} />
-            {data.activeGame ? (
-              <ActiveGameBanner
-                game={data.activeGame}
-                ownerPuuid={data.player.puuid}
-              />
-            ) : null}
+            <ActiveGameStatus
+              game={data.activeGame}
+              error={activeGameError}
+              isLoading={isLoadingActiveGame}
+              ownerPuuid={data.player.puuid}
+              platformRegion={data.player.platformRegion}
+              onRetry={() => {
+                const controller = requestController.current;
+                if (!controller || controller.signal.aborted) return;
+                setActiveGameError(null);
+                setIsLoadingActiveGame(true);
+                void fetchJson<ActiveGame | null>(playerActiveGamePath(data.player.puuid, data.player.platformRegion), { signal: controller.signal })
+                  .then((game) => setData((current) => current?.player.puuid === data.player.puuid ? { ...current, activeGame: game } : current))
+                  .catch((activeError: unknown) => {
+                    if (!controller.signal.aborted) setActiveGameError(messageFor(activeError, "No se pudo comprobar si hay una partida en curso."));
+                  })
+                  .finally(() => { if (!controller.signal.aborted) setIsLoadingActiveGame(false); });
+              }}
+            />
+            {additionalCoverage ? <CoverageSummary coverage={additionalCoverage} title="Último bloque de cinco consultado" /> : null}
+            {additionalError ? <p className="warning-banner" role="status">{additionalError} Puedes volver a intentar este mismo bloque.</p> : null}
+            {hasLoadedAdditionalMatches ? <p className="history-scope-note" role="status">Las partidas adicionales amplían el historial mostrado, pero no modifican este resumen.</p> : null}
             <LatestMatch
               match={data.matches.items[0] ?? null}
               matchDetail={data.latestMatch}
               ownerPuuid={data.player.puuid}
               historyStatus={data.historyStatus}
+              platformRegion={data.player.platformRegion}
+              returnProfile={{ gameName: data.player.gameName, tagLine: data.player.tagLine }}
             />
             <MatchHistory
               matches={data.matches}
               ownerPuuid={data.player.puuid}
               isLoadingMore={isLoadingMoreMatches}
               hasMore={hasMoreMatches}
+              retryingWindow={retryingMatchWindow}
+              platformRegion={data.player.platformRegion}
+              returnProfile={{ gameName: data.player.gameName, tagLine: data.player.tagLine }}
               onLoadMore={loadMoreMatches}
             />
           </>
@@ -246,15 +320,44 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
   );
 }
 
-function ActiveGameBanner({
+function ActiveGameStatus({
   game,
+  error,
+  isLoading,
   ownerPuuid,
+  platformRegion,
+  onRetry,
 }: {
-  game: ActiveGame;
+  game: ActiveGame | null;
+  error: string | null;
+  isLoading: boolean;
   ownerPuuid: string;
+  platformRegion?: string;
+  onRetry: () => void;
 }) {
+  if (!game) {
+    return (
+      <section className="active-game-status" aria-live="polite">
+        <div>
+          <p className="eyebrow">Partida en curso</p>
+          <p className="muted-copy">
+            {isLoading
+              ? "Comprobando si hay una partida en curso…"
+              : error ?? "No se detectó una partida en curso en la última consulta."}
+          </p>
+        </div>
+        {error ? (
+          <button className="secondary-button" disabled={isLoading} onClick={onRetry} type="button">
+            Volver a comprobar
+          </button>
+        ) : null}
+      </section>
+    );
+  }
+
   return (
-    <section className="active-game-banner" aria-live="polite">
+    <>
+      <section className="active-game-banner" aria-live="polite">
       <div>
         <p className="eyebrow">Partida en curso</p>
         <p className="muted-copy">
@@ -265,12 +368,21 @@ function ActiveGameBanner({
         <strong>{formatDuration(game.gameLengthSeconds)} transcurridos</strong>
         <Link
           className="primary-button"
-          href={`/match/live?ownerPuuid=${encodeURIComponent(ownerPuuid)}`}
+          href={`/match/live?ownerPuuid=${encodeURIComponent(ownerPuuid)}${platformRegion ? `&platformRegion=${encodeURIComponent(platformRegion)}` : ""}`}
         >
           Ver partida en curso →
         </Link>
       </div>
-    </section>
+      </section>
+      {error ? (
+        <p className="warning-banner" role="status">
+          No se pudo actualizar la comprobación. Se conserva el resultado anterior.
+          <button className="inline-retry" disabled={isLoading} onClick={onRetry} type="button">
+            Volver a comprobar
+          </button>
+        </p>
+      ) : null}
+    </>
   );
 }
 
@@ -307,12 +419,12 @@ function SummaryCards({ summary }: { summary: PlayerSummary }) {
     <section aria-labelledby="summary-title">
       <div className="section-title-row">
         <div>
-          <p className="eyebrow">ECHO overview</p>
+          <p className="eyebrow">Resumen de las cinco partidas iniciales</p>
           <h2 id="summary-title">Tu historial de encuentros</h2>
         </div>
       </div>
       <p className="section-note">
-        Tus últimas 5 partidas recuperadas. Cada jugador se cuenta una sola vez,
+        Esta consulta incluye hasta cinco partidas iniciales. Cada jugador se cuenta una sola vez,
         sin incluirte; recurrentes: aparecen en al menos dos partidas.
         {summary.otherPlayerParticipations !== undefined
           ? ` ${summary.otherPlayerParticipations} participaciones de otros jugadores (incluye repeticiones).`
@@ -335,11 +447,15 @@ function LatestMatch({
   matchDetail,
   ownerPuuid,
   historyStatus,
+  platformRegion,
+  returnProfile,
 }: {
   match: MatchesResponse["items"][number] | null;
   matchDetail: MatchDetail | null;
   ownerPuuid: string;
   historyStatus: HistoryAnalysisStatus;
+  platformRegion?: string;
+  returnProfile: { gameName: string; tagLine: string };
 }) {
   if (!match) {
     return (
@@ -347,7 +463,7 @@ function LatestMatch({
         <div className="section-title-row">
           <div>
             <p className="eyebrow">Última partida</p>
-            <h2 id="last-match-title">Todavía no hay partidas analizadas</h2>
+        <h2 id="last-match-title">Todavía no hay partidas recuperadas</h2>
           </div>
         </div>
       </section>
@@ -365,7 +481,7 @@ function LatestMatch({
       </div>
       <Link
         className="latest-match-card"
-        href={matchDetailPath(match.riotMatchId, ownerPuuid)}
+        href={matchDetailPath(match.riotMatchId, ownerPuuid, platformRegion, returnProfile)}
       >
         <div>
           <span className="latest-match-id">{match.riotMatchId}</span>
@@ -402,12 +518,18 @@ function MatchHistory({
   ownerPuuid,
   isLoadingMore,
   hasMore,
+  retryingWindow,
+  platformRegion,
+  returnProfile,
   onLoadMore,
 }: {
   matches: MatchesResponse;
   ownerPuuid: string;
   isLoadingMore: boolean;
   hasMore: boolean;
+  retryingWindow: boolean;
+  platformRegion?: string;
+  returnProfile: { gameName: string; tagLine: string };
   onLoadMore: () => void;
 }) {
   return (
@@ -424,15 +546,15 @@ function MatchHistory({
 
       {matches.items.length === 0 ? (
         <EmptyState
-          title="No hay partidas disponibles"
-          copy="Actualiza el historial cuando la API de Riot esté disponible."
+          title="No se recuperaron partidas"
+          copy="Revisa el estado de la consulta y vuelve a intentarlo si fue parcial o no pudo completarse."
         />
       ) : (
         <div className="match-list">
           {matches.items.map((match) => (
             <Link
               className={`match-card ${match.win ? "win" : "loss"}`}
-              href={matchDetailPath(match.riotMatchId, ownerPuuid)}
+              href={matchDetailPath(match.riotMatchId, ownerPuuid, platformRegion, returnProfile)}
               key={match.riotMatchId}
             >
               <span className="result-badge">
@@ -465,7 +587,7 @@ function MatchHistory({
           ))}
         </div>
       )}
-      {matches.items.length > 0 && hasMore ? (
+      {hasMore ? (
         <div className="section-actions">
           <button
             className="secondary-button"
@@ -473,7 +595,9 @@ function MatchHistory({
             onClick={onLoadMore}
             type="button"
           >
-            {isLoadingMore ? "Cargando partidas…" : "Cargar 5 partidas más"}
+            {isLoadingMore
+              ? retryingWindow ? "Reintentando este bloque…" : "Cargando partidas…"
+              : retryingWindow ? "Reintentar este bloque de cinco" : "Cargar cinco partidas más"}
           </button>
         </div>
       ) : null}
@@ -494,8 +618,5 @@ function EmptyState({ title, copy }: { title: string; copy: string }) {
 }
 
 function messageFor(error: unknown, fallback: string): string {
-  if (error instanceof ApiError || error instanceof Error) {
-    return error.message;
-  }
-  return fallback;
+  return error instanceof ApiError ? error.message : fallback;
 }

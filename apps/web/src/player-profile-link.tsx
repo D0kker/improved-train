@@ -5,10 +5,12 @@ import { playerProfilePath } from "./api";
 export function PlayerProfileLink({
   compact = false,
   gameName,
+  platformRegion,
   tagLine,
 }: {
   compact?: boolean;
   gameName?: string;
+  platformRegion?: string;
   tagLine?: string;
 }) {
   if (!gameName || !tagLine) {
@@ -26,7 +28,7 @@ export function PlayerProfileLink({
   return (
     <Link
       className={`player-link${compact ? " compact" : ""}`}
-      href={playerProfilePath(gameName, tagLine)}
+      href={playerProfilePath(gameName, tagLine, platformRegion)}
       aria-label={`Ver resumen de ${riotId}`}
     >
       {compact ? (

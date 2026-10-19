@@ -11,6 +11,13 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Documentar copy, distribución, navegación, responsive, accesibilidad, componentes, Cyber Arcade, idiomas y feedback en [T04_1_UX_UI_AUDIT.md](T04_1_UX_UI_AUDIT.md), con prioridades y aceptación por pantalla.
 - [ ] Seleccionar con el PO una mejora pequeña del informe para una historia posterior. No se implementó UI, i18n ni feedback; no se ejecutó evaluación en navegador ni se desplegó.
 
+## T04.2 — correcciones UX prioritarias de PROJECT ECHO
+
+- [ ] Implementar copy compatible con consultas stateless, región visible, enlaces de retorno explícitos, estados de cobertura/error separados, resumen de cinco partidas iniciales y accesibilidad básica; cambios en revisión de rama `feature/t04-2-ux-corrections`.
+- [ ] Validar ventana adicional ante detalles fallidos con un mock de extremo a extremo; el frontend reintenta el mismo offset para respuestas parcial/error, pero el endpoint no entrega cursor opaco.
+- [ ] Validar con DOM/navegador foco del primer campo inválido, atributos ARIA, navegación por teclado y render responsive; no hay emulador DOM en el lockfile y no se pudo descargar uno.
+- [ ] Resolver la validación de build: Next 16.3.3 falla al consumir `tsc --showConfig` con Node 24.18.0; lint y type-check pasan. No declarar el sprint completo ni hallazgos completos antes de la evidencia.
+
 ## T03.5 — API stateless
 
 - [x] Verificar rama base con T01/T02/T03 y aislar implementación en `feature/t03-5-stateless-api`.

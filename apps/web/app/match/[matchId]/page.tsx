@@ -2,7 +2,12 @@ import { MatchDetailView } from "./match-detail-view";
 
 interface MatchPageProps {
   params: Promise<{ matchId: string }>;
-  searchParams: Promise<{ ownerPuuid?: string; platformRegion?: string }>;
+  searchParams: Promise<{
+    ownerPuuid?: string;
+    platformRegion?: string;
+    returnGameName?: string;
+    returnTagLine?: string;
+  }>;
 }
 
 export default async function MatchPage({
@@ -10,12 +15,13 @@ export default async function MatchPage({
   searchParams,
 }: MatchPageProps) {
   const { matchId } = await params;
-  const { ownerPuuid, platformRegion } = await searchParams;
+  const { ownerPuuid, platformRegion, returnGameName, returnTagLine } = await searchParams;
   return (
     <MatchDetailView
       matchId={matchId}
       ownerPuuid={ownerPuuid}
       platformRegion={platformRegion}
+      returnProfile={returnGameName && returnTagLine ? { gameName: returnGameName, tagLine: returnTagLine } : undefined}
     />
   );
 }
