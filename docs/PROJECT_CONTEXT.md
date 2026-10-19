@@ -32,7 +32,7 @@ El servicio existente en 8081 sigue ejecutando T03 (`1f54650`). T03.5 no se ha d
 - Se ejecutan pruebas con Riot simulado; jamás consumir cuotas reales en CI.
 - Fixtures cubren el análisis directo sin búsqueda previa, dos análisis aislados, cinco/tres por participante, temporalidad, deduplicación, caché vacía/expirada/desactivada, fallos parciales, 429, cancelación y límites de memoria/payload.
 - Benchmark opt-in `RUN_STATELESS_BENCHMARK=1`: baseline EF InMemory T03 y flujo stateless, 12 muestras después de calentamiento, con Riot simulado. Sus cifras no representan producción.
-- Publicar la rama y abrir PR a `main`, sin merge ni deploy. Consultar el informe T03.5 para los resultados finales.
+- Código publicado en `3afd6c611cabd1ccc0d42333cf6a09e4f36c9e34`; [PR #83](https://github.com/D0kker/improved-train/pull/83) abierto hacia `main`, sin merge ni deploy. Incluye los ancestros de la rama de referencia todavía ausentes de main. El commit posterior solo registra esta evidencia documental. Consultar el informe T03.5 para los resultados finales.
 
 ## Próximo paso
 

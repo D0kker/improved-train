@@ -143,6 +143,8 @@ Validación final local en ARM64 (`aarch64`), SDK .NET 10 y Node/Next existentes
 
 La prueba opt-in de benchmark no mide en la suite ordinaria; se ejecuta además explícitamente con su variable habilitada (sección 13). Una validación intermedia detectó que el test de timeout no sustituía las opciones capturadas al inicio; se corrigió la resolución de opciones por solicitud y se verificó un 504 controlado con presupuesto de cinco segundos. No quedan fallos conocidos en estas validaciones. No se ha validado ejecución nativa AMD64 ni tráfico de producción.
 
+Publicación: commit de código `3afd6c611cabd1ccc0d42333cf6a09e4f36c9e34`, [PR #83 hacia main](https://github.com/D0kker/improved-train/pull/83). La rama conserva los ancestros T01/T02/T03 de la referencia que main aún no contiene. La evidencia de publicación se registra en un commit documental posterior. CI remoto debe revisarse en el PR; sus resultados no se sustituyen por las comprobaciones locales descritas aquí. No se realizó merge ni despliegue.
+
 Cobertura añadida: búsqueda con cinco/menos disponibles, análisis directo frío con diez participantes, presupuestos cinco/tres, 32 históricos sin solapamiento, objetivo/futuro excluidos, deduplicación, dos análisis independientes/determinismo, caché fría/caliente/expirada/desactivada/averiada, single-flight concurrente y cancelación, parcialidad, 429/Retry-After, límites de caché/cuerpo, routing y presupuesto HTTP.
 
 ## 13. Benchmark reproducible
