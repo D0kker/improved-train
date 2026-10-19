@@ -13,7 +13,8 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Acotar caché/concurrencia/payloads, cancelar operaciones y transportar cobertura parcial explícita.
 - [x] Cerrar validación final y registrar pruebas/benchmark en `T03_5_STATELESS_ARCHITECTURE.md` (94 unitarias, 15 integración, 16 frontend; builds/formato/imágenes correctos).
 - [x] Publicar rama feature y abrir [PR #83](https://github.com/D0kker/improved-train/pull/83) a main, sin merge ni deploy; código en `3afd6c6` y evidencia documental posterior en el historial de la rama.
-- [ ] Revisar contratos y timeout del hosting antes de autorizar un despliegue separado.
+- [x] Desplegar T03.5 por autorización separada del PO: API/web saludables en 8081, imágenes verificadas, clave preservada y smoke HTTP sin consumo Riot; evidencia en `PROJECT_CONTEXT.md`.
+- [ ] Validar análisis real y comportamiento bajo cuota/carga autorizada; revisar timeout/cuota agregada antes de otro hosting o varias instancias.
 
 Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redis, corpus compartido, jobs y despliegues anteriores no describen requisitos del runtime T03.5. Ver D-042 y el informe `T03_5_STATELESS_ARCHITECTURE.md`.
 

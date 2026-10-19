@@ -2,6 +2,8 @@
 
 Fecha: 2026-10-18. Rama: `feature/t03-5-stateless-api`. Base comprobada: `feature/echo-product-focus`, `4d4580f`, con T01, T02 y T03. Este informe describe el código de la rama, no un despliegue. Los contenedores existentes no se reiniciaron.
 
+> Actualización operacional posterior: el PO autorizó expresamente desplegar después de la entrega inicial. T03.5 quedó publicada en 8081 el 2026-10-18 19:29 Panamá (2026-10-19 00:29 UTC), desde `f14f328`/código `3afd6c6`, con API/web saludables y smoke HTTP correcto, sin modificar secretos ni hacer merge. Evidencia en [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md). Las afirmaciones de «sin despliegue» del resto del informe corresponden a la entrega inicial de la refactorización, no al estado operativo actualizado. No se verificó un análisis real contra Riot durante el despliegue.
+
 ## 1. Arquitectura anterior
 
 La API usaba EF Core InMemory, repositorios, ingesta y relaciones incrementales compartidas por proceso. Las lecturas necesitaban un historial previamente sincronizado. T02 resolvió la incompatibilidad de transacciones SQL con InMemory y procesaba AnalysisJobs en la API mediante Channel y BackgroundService; el worker independiente no compartía ese almacén. T03 distinguió participaciones, PUUID únicos, recurrentes y cobertura.

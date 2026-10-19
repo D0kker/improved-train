@@ -44,7 +44,7 @@ Compose define únicamente API y web. La configuración ignorada `.env` conserva
 WEB_PORT=8081 docker compose up -d --build
 ```
 
-**T03.5 no se despliega como parte de esta tarea.** La instancia ya publicada en 8081 continúa en T03. No se reiniciaron servicios ni se modificaron secretos. Las imágenes pueden validarse sin iniciar servicios mediante `docker compose -p t035-validation build`.
+La refactorización T03.5 se entregó inicialmente sin desplegar. Por instrucción posterior explícita del PO, se desplegó el 2026-10-18 (Panamá) en 8081 desde `f14f328`/código `3afd6c6`: API/web recreadas y saludables, sin cambiar secretos ni hacer merge. Ver evidencia en [contexto operativo](docs/PROJECT_CONTEXT.md). Las imágenes pueden validarse sin iniciar servicios mediante `docker compose -p t035-validation build`; cualquier siguiente despliegue requiere autorización nueva.
 
 ## Licencia y cumplimiento
 

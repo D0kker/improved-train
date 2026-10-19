@@ -332,7 +332,7 @@ Vigente para el runtime del checkout: **D-042 — stateless, sin base de datos n
 ## D-042 — Procesamiento stateless por solicitud, sin base de datos
 
 - Fecha: 2026-10-18
-- Estado: aceptada para el código T03.5; no desplegada
+- Estado: aceptada para T03.5; desplegada localmente por autorización posterior explícita del PO el 2026-10-18 (Panamá), con evidencia en `docs/PROJECT_CONTEXT.md`
 - Decisión: búsqueda y análisis seleccionado obtienen todos sus datos desde Riot o caché opcional y calculan sobre objetos locales. La API no registra EF Core, repositorios, jobs, Channel, BackgroundService ni Redis. Los históricos se limitan a cinco del owner y tres por otro participante, excluyendo el objetivo y partidas posteriores con `endTime` y validación local de fechas.
 - Razón: el MVP no necesita conservar historiales ni resultados funcionales entre solicitudes. Un proceso sin datos previos debe poder analizar directamente una partida. La arquitectura anterior exigía sincronización/corpus previo y coordinaba estado que el frontend actual no necesita.
 - Consecuencias: reemplaza para el runtime las decisiones previas de persistencia (incluyendo D-021–D-026), D-040 sobre jobs y el corpus global de D-041; conserva sus definiciones estadísticas y degradación de cobertura. EF/Redis/repositorios históricos se compilan exclusivamente en el proyecto Legacy para pruebas y benchmark; el worker queda fuera del runtime/Compose. Los endpoints stateful retirados responden 410 y el frontend usa contratos autocontenidos. No existe progreso persistido ni reanudación de jobs. Caché acotada y single-flight solo optimizan llamadas, nunca constituyen un almacén funcional.

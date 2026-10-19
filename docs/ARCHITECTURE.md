@@ -22,4 +22,4 @@ La caché de respuestas Riot puede vaciarse, expirar, desactivarse o fallar sin 
 
 Solo la web se expone al host. Los datos de análisis viven en objetos C# locales y la respuesta HTTP; las credenciales permanecen únicamente en el runtime backend. PUUID es la identidad y los scores son heurísticos, no probabilidades ni verificaciones de premade.
 
-Los servicios actualmente publicados en 8081 todavía corresponden a T03. Cambiar el código/configuración de Compose no equivale a desplegar T03.5; esa acción queda expresamente fuera de esta tarea.
+T03.5 se desplegó en 8081 por instrucción posterior explícita del PO el 2026-10-18 (Panamá), desde `f14f328`/código `3afd6c6`. API y web fueron recreadas y verificadas saludables, sin cambiar secretos ni hacer merge. La evidencia operacional y sus límites están en `PROJECT_CONTEXT.md`; la refactorización inicial sí se entregó sin desplegar.

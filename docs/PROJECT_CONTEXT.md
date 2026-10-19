@@ -25,18 +25,25 @@ PROJECT ECHO analiza partidas terminadas de League of Legends para mostrar encue
 
 ## Estado operativo separado del código
 
-El servicio existente en 8081 sigue ejecutando T03 (`1f54650`). T03.5 no se ha desplegado y no autoriza reiniciar servicios. Cualquier despliegue futuro requiere instrucción explícita del PO. No se modificaron secretos.
+El PO autorizó explícitamente desplegar T03.5 después de la entrega sin despliegue. El 2026-10-18 a las 19:29 (Panamá; 2026-10-19 00:29 UTC) se construyeron y recrearon únicamente API/web desde `f14f328` (código `3afd6c6`), manteniendo el puerto 8081 y la misma clave Riot de runtime. No hubo merge del PR ni cambios de secretos.
+
+- API: imagen `sha256:2eb828149a7afe2a43b07eeef6903bc334597581c32c0bac65b439124d2e62dc`, arranque `2026-10-19T00:29:47.350757351Z`, healthy.
+- Web: imagen `sha256:471b29ea96b01f618d73f6d0612b186e4cc7f83b23cfbf3cfd85493e726396e7`, arranque `2026-10-19T00:29:53.71342093Z`, healthy; imágenes en ejecución coinciden con las construidas.
+- `/` 200, `/api/health` 200/healthy y readiness de API saludable. Proxy frontend→API confirmado: endpoint retirado de jobs 410 y POST analyze con owner ausente 400, sin llamadas a Riot.
+- El artefacto en ejecución no contiene dependencias EF Core ni StackExchange.Redis. Compose advirtió de un contenedor Redis heredado huérfano; no se eliminó ni se tocaron recursos ajenos a API/web.
+- Comando: `WEB_PORT=8081 docker compose build api web` seguido de `WEB_PORT=8081 docker compose up -d --no-build --wait --wait-timeout 180 api web`; configuración validada previamente sin imprimir secretos.
+- Estas comprobaciones no certifican validez actual de la clave ante Riot ni un análisis completo con datos reales; no se consumió cuota en los smoke tests.
 
 ## Validación y publicación
 
 - Se ejecutan pruebas con Riot simulado; jamás consumir cuotas reales en CI.
 - Fixtures cubren el análisis directo sin búsqueda previa, dos análisis aislados, cinco/tres por participante, temporalidad, deduplicación, caché vacía/expirada/desactivada, fallos parciales, 429, cancelación y límites de memoria/payload.
 - Benchmark opt-in `RUN_STATELESS_BENCHMARK=1`: baseline EF InMemory T03 y flujo stateless, 12 muestras después de calentamiento, con Riot simulado. Sus cifras no representan producción.
-- Código publicado en `3afd6c611cabd1ccc0d42333cf6a09e4f36c9e34`; [PR #83](https://github.com/D0kker/improved-train/pull/83) abierto hacia `main`, sin merge ni deploy. Incluye los ancestros de la rama de referencia todavía ausentes de main. El commit posterior solo registra esta evidencia documental. Consultar el informe T03.5 para los resultados finales.
+- Código publicado en `3afd6c611cabd1ccc0d42333cf6a09e4f36c9e34`; [PR #83](https://github.com/D0kker/improved-train/pull/83) abierto hacia `main`, sin merge. La entrega inicial no desplegó; el despliegue posterior autorizado se registra arriba. Los checks web/dotnet/containers de `f14f328` terminaron en success antes de desplegar. Incluye los ancestros de la rama de referencia todavía ausentes de main. Consultar el informe T03.5 para los resultados finales.
 
 ## Próximo paso
 
-Revisar el PR T03.5 y los contratos de migración. Antes de desplegar, evaluar el límite de tiempo del proxy/borde real y la cuota Riot con carga real autorizada. Varias instancias siguen necesitando controlar la cuota agregada de la clave; no se implementó coordinación distribuida.
+Revisar el PR T03.5 y validar los flujos reales de jugador/partida mediante uso autorizado. El proxy Next local conserva 210 s frente al presupuesto API de 180 s; no se ha hecho prueba de carga contra Riot ni validado otro borde/hosting. Varias instancias siguen necesitando controlar la cuota agregada de la clave; no se implementó coordinación distribuida. Cualquier siguiente despliegue requiere nueva instrucción explícita del PO.
 
 ## Historia y decisiones
 
