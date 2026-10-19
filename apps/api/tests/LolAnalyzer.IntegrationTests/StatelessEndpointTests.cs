@@ -129,6 +129,16 @@ public sealed class StatelessEndpointTests
     }
 
     [Fact]
+    public async Task RiotRequestTimeoutIsDistinguishedFromTheGlobalAnalysisBudget()
+    {
+        await using var factory = new StatelessApiFactory(riotTimeout: true);
+        using var client = factory.CreateClient();
+        using var response = await client.GetAsync("/api/v1/players/by-riot-id/Test/TEST/analysis", TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Contains("Riot API request timed out", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task OversizedRequestsAreRejectedWithoutCallingRiot()
     {
         await using var factory = new StatelessApiFactory();
@@ -148,7 +158,7 @@ public sealed class StatelessEndpointTests
     }
 }
 
-public sealed class StatelessApiFactory(int timeoutSeconds = 180) : WebApplicationFactory<Program>
+public sealed class StatelessApiFactory(int timeoutSeconds = 180, bool riotTimeout = false) : WebApplicationFactory<Program>
 {
     public StatelessFixture Riot { get; } = new();
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -165,7 +175,17 @@ public sealed class StatelessApiFactory(int timeoutSeconds = 180) : WebApplicati
             services.RemoveAll<OnDemandAnalysisOptions>();
             services.AddSingleton(new OnDemandAnalysisOptions { RequestTimeoutSeconds = timeoutSeconds });
             services.RemoveAll<IRiotApiClient>();
-            services.AddSingleton<IRiotApiClient>(Riot);
+            services.AddSingleton<IRiotApiClient>(riotTimeout ? new TimedOutRiotApiClient() : Riot);
         });
+    }
+
+    private sealed class TimedOutRiotApiClient : IRiotApiClient
+    {
+        public Task<RiotAccount?> GetAccountByRiotIdAsync(string gameName, string tagLine, CancellationToken cancellationToken) =>
+            Task.FromException<RiotAccount?>(new OperationCanceledException("Simulated upstream timeout."));
+        public Task<IReadOnlyList<string>> GetMatchIdsAsync(string puuid, int start, int count, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<string>>([]);
+        public Task<RiotMatchData?> GetMatchAsync(string riotMatchId, CancellationToken cancellationToken) =>
+            Task.FromResult<RiotMatchData?>(null);
     }
 }

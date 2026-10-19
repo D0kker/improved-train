@@ -362,20 +362,40 @@ export async function fetchJson<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...init?.headers,
-    },
-  });
+  // API budget 180s < browser 200s < Next proxy 210s. No automatic retries.
+  const timeout = new AbortController();
+  const timer = setTimeout(
+    () =>
+      timeout.abort(
+        new DOMException(
+          "La solicitud excedió el tiempo disponible.",
+          "TimeoutError",
+        ),
+      ),
+    200_000,
+  );
+  const signal = init?.signal
+    ? AbortSignal.any([init.signal, timeout.signal])
+    : timeout.signal;
+  try {
+    const response = await fetch(path, {
+      ...init,
+      signal,
+      headers: {
+        Accept: "application/json",
+        ...init?.headers,
+      },
+    });
 
-  if (!response.ok) {
-    throw new ApiError(await errorMessage(response), response.status);
+    if (!response.ok) {
+      throw new ApiError(await errorMessage(response), response.status);
+    }
+
+    const body = await response.text();
+    return (body.trim() ? JSON.parse(body) : null) as T;
+  } finally {
+    clearTimeout(timer);
   }
-
-  const body = await response.text();
-  return (body.trim() ? JSON.parse(body) : null) as T;
 }
 
 async function errorMessage(response: Response): Promise<string> {

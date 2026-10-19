@@ -63,8 +63,9 @@ public sealed class RequestAnalysisCalculator(
 
     public MatchAnalysisResult Analyze(
         RiotMatchData target, string ownerPuuid, string platformRegion,
-        IReadOnlyCollection<RiotMatchData> history, AnalysisCoverage coverage)
+        IReadOnlyCollection<RiotMatchData> history, AnalysisCoverage coverage, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var owner = target.Participants.Single(player => player.Puuid == ownerPuuid);
         var identity = new PlayerIdentity(ownerPuuid, owner.GameName ?? "", owner.TagLine ?? "", platformRegion);
         var historical = history.Where(match => match.RiotMatchId != target.RiotMatchId)
@@ -89,6 +90,7 @@ public sealed class RequestAnalysisCalculator(
         var groups = new List<MatchPremadeGroup>();
         foreach (var team in participants.Values.Select(player => player.TeamId).Distinct().Order())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var pairs = relations.Where(pair => participants[pair.PlayerAId].TeamId == team && participants[pair.PlayerBId].TeamId == team)
                 .Select(pair =>
                 {
@@ -127,6 +129,7 @@ public sealed class RequestAnalysisCalculator(
                 }, familiar.KnownPlayerDetails),
             PremadeGroups = groups,
         };
+        cancellationToken.ThrowIfCancellationRequested();
         return new MatchAnalysisResult(detail, identity, Summary(identity, historical), Encounters(ownerPuuid, historical), publicPairs, coverage);
     }
 }

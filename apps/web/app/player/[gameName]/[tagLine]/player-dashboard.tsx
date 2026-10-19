@@ -19,6 +19,7 @@ import {
 import { formatDate, formatDuration, queueLabel } from "@/src/format";
 import { familiarityMessage, type HistoryAnalysisStatus } from "@/src/echo";
 import { ChampionIcon } from "@/src/champion-icon";
+import { useRequestLifetime } from "@/src/use-request-lifetime";
 
 interface PlayerDashboardProps {
   gameName: string;
@@ -42,6 +43,8 @@ const loadingCopy: Record<LoadingStep, string> = {
 };
 
 export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
+  const beginSearch = useRequestLifetime();
+  const beginPage = useRequestLifetime();
   const [data, setData] = useState<DashboardData | null>(null);
   const [step, setStep] = useState<LoadingStep>("lookup");
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +55,9 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
+      signal = beginSearch(signal);
+      beginPage();
+      setIsLoadingMoreMatches(false);
       setIsLoading(true);
       setError(null);
       setWarning(null);
@@ -92,7 +98,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
         if (!signal?.aborted) setIsLoading(false);
       }
     },
-    [gameName, tagLine],
+    [gameName, tagLine, beginSearch, beginPage],
   );
 
   useEffect(() => {
@@ -106,6 +112,7 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
 
   const loadMoreMatches = useCallback(async () => {
     if (!data || isLoadingMoreMatches || !hasMoreMatches) return;
+    const signal = beginPage();
     setIsLoadingMoreMatches(true);
     try {
       const result = await fetchJson<PlayerSearchResult>(
@@ -114,7 +121,9 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
           data.matches.items.length,
           data.player.platformRegion,
         ),
+        { signal },
       );
+      if (signal.aborted) return;
       setHasMoreMatches(result.matches.items.length === 5);
       setData((current) =>
         current
@@ -143,13 +152,14 @@ export function PlayerDashboard({ gameName, tagLine }: PlayerDashboardProps) {
         setHasMoreMatches(true);
       }
     } catch (requestError) {
+      if (signal.aborted) return;
       setWarning(
         messageFor(requestError, "No se pudieron cargar más partidas."),
       );
     } finally {
-      setIsLoadingMoreMatches(false);
+      if (!signal.aborted) setIsLoadingMoreMatches(false);
     }
-  }, [data, isLoadingMoreMatches, hasMoreMatches]);
+  }, [data, isLoadingMoreMatches, hasMoreMatches, beginPage]);
 
   return (
     <main className="dashboard-shell">

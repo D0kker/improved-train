@@ -1,5 +1,7 @@
 "use client";
 
+import { useRequestLifetime } from "@/src/use-request-lifetime";
+
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -32,6 +34,7 @@ export function MatchDetailView({
   ownerPuuid?: string;
   platformRegion?: string;
 }) {
+  const beginRequest = useRequestLifetime();
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
@@ -42,6 +45,7 @@ export function MatchDetailView({
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
+      signal = beginRequest(signal);
       setIsLoading(true);
       setError(null);
       setWarning(null);
@@ -88,7 +92,7 @@ export function MatchDetailView({
         }
       }
     },
-    [matchId, ownerPuuid, platformRegion],
+    [matchId, ownerPuuid, platformRegion, beginRequest],
   );
 
   useEffect(() => {

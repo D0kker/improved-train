@@ -1,14 +1,18 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-10-18
+Última actualización: 2026-10-19
 
 ## Propósito
 
 PROJECT ECHO analiza partidas terminadas de League of Legends para mostrar encuentros, familiaridad e inferencias prudentes de posibles premades. PUUID es la identidad interna; Riot ID es mutable. Nunca revelar identidades ocultas ni presentar una inferencia como relación verificada.
 
-## Checkout actual: T03.5 stateless
+## Checkout actual: T03.6 protección de recursos (sin desplegar)
 
-- Rama de trabajo: `feature/t03-5-stateless-api`, creada desde `feature/echo-product-focus` en `4d4580f`. Incluye T01, T02 y T03; no asumir que `main` los contiene.
+- Rama de trabajo: `feature/t03-6-resource-protection`, creada desde el último T03.5 `41ac5ee`. PR #83 sigue abierto y main no contiene T03.5; el PR de T03.6 debe apuntar a `feature/t03-5-stateless-api`. La base incluye T01/T02/T03/T03.5; CI web/dotnet/containers de esa base terminó en success.
+- T03.6 conserva los dos flujos y sus ventanas. Añade una admisión FIFO única (8 activos/16 cola), espera de cola5s, cuota por IP de conexión20 tokens/20por minuto y máximo1024 clientes; detrás de Next los usuarios comparten la IP/cuota del proxy. No se confía en XFF ni Forwarded.
+- El mismo limiter singleton Riot incorpora ventanas configurables y headers app/método, además de concurrencia3, Retry-After y backoff. Estado solo local al proceso, sin coordinación entre réplicas. Las cuotas del proveedor simulado se elevan solo en benchmarks aislados, no en runtime.
+- Métricas ampliadas: admisión, rechazos, espera, cancelación, stages, caché, CPU/working set/GC. Caché conserva cotas4096/64MiB estimados, evita array UTF-8 explícito al estimar y single-flight revalida caché tras un miss tardío. No se cachean resultados funcionales.
+- Timeout API validado5–180s incluyendo cola/retries; navegador200s y Next210s. Acciones manuales, paginación y navegación propagan cancelación y no hacen retry automático.
 - Frontend Next.js 16/React 19/TypeScript; API ASP.NET Core .NET 10. Clean Architecture ligera con calculadores puros reutilizados de T03.
 - El runtime de la API ya no registra DbContext, repositorios, Redis, AnalysisJobs, Channel ni BackgroundService. No requiere base de datos.
 - Búsqueda: `GET /api/v1/players/by-riot-id/{gameName}/{tagLine}/analysis` resuelve Riot ID y devuelve cinco partidas, resumen y cobertura en una respuesta.
@@ -22,6 +26,7 @@ PROJECT ECHO analiza partidas terminadas de League of Legends para mostrar encue
 - `apps/api/tests/LolAnalyzer.Legacy` compila los repositorios/EF/Redis históricos exclusivamente para regresiones y benchmarks. El worker antiguo sigue como código de referencia, fuera de Compose y de la cadena de dependencias de la API; no debe activarse como parte del runtime stateless.
 - El artefacto API se prueba expresamente para excluir dependencias EF Core y StackExchange.Redis.
 - Detalles, contratos, pruebas, métricas reproducibles, riesgos y límites: [T03.5](T03_5_STATELESS_ARCHITECTURE.md).
+- Auditoría, validaciones, perfil CPU, 40 escenarios de carga aislada y límites de T03.6: [protección de recursos](T03_6_RESOURCE_PROTECTION.md). El árbol actual pasó restore/build (0 warnings/0 errores), 105 unitarias,21 integración y formato .NET en SDK10 ARM64 aislado; perfil CPU pasó1/1. Se estabilizó un test de cuota cuyo timer de30ms falló bajo carga y pasó en la ejecución completa determinista. CI/PR aún pendientes: GitHub API no conecta desde esta sesión. T03.6 sigue sin commit/push/PR, deploy ni reinicio. El runtime de abajo sigue en T03.5.
 
 ## Estado operativo separado del código
 

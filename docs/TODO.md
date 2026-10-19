@@ -1,10 +1,26 @@
 # Roadmap
 
-Última actualización: 2026-10-18
+Última actualización: 2026-10-19
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
-## T03.5 — API stateless
+## Estado actual
+
+T03.6 se implementa por separado en `feature/t03-6-resource-protection`; ver `T03_6_RESOURCE_PROTECTION.md`. El runtime continúa en T03.5 hasta nueva autorización.
+
+## T03.6 — protección de recursos (validación final pendiente)
+
+- [x] Auditar código/runtime, PR #83/CI y ramas; crear feature desde `41ac5ee`.
+- [x] Conservar flujos independientes, estadísticas, cinco/tres y exclusión temporal sin persistencia.
+- [x] Añadir espera acotada, cuota de conexión con cardinalidad limitada y rechazo controlado.
+- [x] Conservar single-flight/caché; reforzar cuotas Riot, cancelación y observabilidad.
+- [x] Comparación aislada reproducible: 40 escenarios T03.5/T03.6, análisis simulado, concurrencia1–50; datos guardados en `docs/benchmarks/T03_6_LOAD_RESULTS.json`.
+- [x] Validar frontend (21 pruebas, lint, types y build), Compose, runner y diff.
+- [x] Validar restore/build Release (0 warnings/0 errores), 105 unitarias,21 integración y `dotnet format --verify-no-changes` en SDK10 ARM64 aislado; timeout Riot→503 y presupuesto global→504 pasan.
+- [x] Ejecutar perfil CPU opt-in: cuatro bloques agregados,100 iteraciones por bloque; resultados en `T03_6_RESOURCE_PROTECTION.md`.
+- [ ] Publicar commit/PR hacia la rama que contiene T03.5 y verificar CI; el acceso a GitHub API sigue fallando en esta sesión. Sin merge ni deploy.
+
+## T03.5 — hitos completados
 
 - [x] Verificar rama base con T01/T02/T03 y aislar implementación en `feature/t03-5-stateless-api`.
 - [x] Implementar búsqueda autocontenida de cinco partidas y análisis directo sin búsqueda previa.

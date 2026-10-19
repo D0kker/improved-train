@@ -53,7 +53,7 @@ public sealed class OnDemandAnalysisOptions
 
     public void Validate()
     {
-        if (RequestTimeoutSeconds is < 5 or > 300 || RequestConcurrency is < 1 or > 5)
-            throw new InvalidOperationException("Analysis timeout must be 5-300 seconds and concurrency 1-5.");
+        if (RequestTimeoutSeconds is < 5 or > 180 || RequestConcurrency is < 1 or > 5)
+            throw new InvalidOperationException("Analysis timeout must be 5-180 seconds (below browser/proxy budgets) and concurrency 1-5.");
     }
 }
