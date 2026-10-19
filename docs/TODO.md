@@ -4,6 +4,39 @@
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
+## Estado actual
+
+T03.6 está publicado en `feature/t03-6-resource-protection`; RELEASE-01 lo integra en `release/echo-staging` sin despliegue. El runtime continúa en T03.5 hasta nueva autorización.
+
+## RELEASE-01 — consolidación de PROJECT ECHO (BLOCKED; validación pendiente)
+
+- [x] Verificar refs; confirmar T03.5/T04.1/T04.2 en la base de staging y excluir el merge posterior T04.3. PR #86 integrado en T03.5; estado de #87 necesita refresco GitHub.
+- [x] Iniciar merge explícito T03.6 → staging en worktree aislado y resolver los cuatro conflictos frontend preservando las dos ramas funcionales.
+- [x] Validar frontend: 33 pruebas, lint, type-check y build; validar Compose y `git diff --check`.
+- [x] Auditar dependencias de producción; registrar avisos y no aplicar upgrades fuera del alcance.
+- [x] Documentar estado, conflictos, validaciones, riesgos y siguiente paso en `docs/releases/ECHO_STAGING_01.md`.
+- [ ] Ejecutar `npm ci` con espacio suficiente; el intento actual terminó ENOSPC.
+- [ ] Ejecutar restore/build/test/format .NET en runner autorizado. Host sin SDK; Docker socket denegado, no se eludieron controles.
+- [ ] Resolver el hallazgo de dependencias npm parcheando versiones aprobadas y repetir audit/tests/build antes de despliegue público.
+- [ ] Completar validaciones en el árbol integrado; verificar CI sobre el merge commit.
+- [ ] Validar CI del árbol combinado; publicar el commit de staging cuando las comprobaciones requeridas estén satisfechas. Cerrar #87 solo después de comprobar que no conserva cambios exclusivos.
+- [ ] Crear PR `release/echo-staging` → `main` para revisión; no mergear ni desplegar sin autorización explícita.
+
+## T03.6 — protección de recursos (validación completada; PR abierto)
+
+- [x] Auditar código/runtime, PR #83/CI y ramas; crear feature desde `41ac5ee`.
+- [x] Conservar flujos independientes, estadísticas, cinco/tres y exclusión temporal sin persistencia.
+- [x] Añadir espera acotada, cuota de conexión con cardinalidad limitada y rechazo controlado.
+- [x] Conservar single-flight/caché; reforzar cuotas Riot, cancelación y observabilidad.
+- [x] Comparación aislada reproducible: 40 escenarios T03.5/T03.6, análisis simulado, concurrencia1–50; datos guardados en `docs/benchmarks/T03_6_LOAD_RESULTS.json`.
+- [x] Validar frontend (21 pruebas, lint, types y build), Compose, runner y diff.
+- [x] Validar restore/build Release (0 warnings/0 errores), 105 unitarias,21 integración y `dotnet format --verify-no-changes` en SDK10 ARM64 aislado; timeout Riot→503 y presupuesto global→504 pasan.
+- [x] Ejecutar perfil CPU opt-in: cuatro bloques agregados,100 iteraciones por bloque; resultados en `T03_6_RESOURCE_PROTECTION.md`.
+- [x] Publicar commit `f7428c6` en `feature/t03-6-resource-protection` por remoto SSH, sin merge ni deploy.
+- [x] Abrir [PR #86](https://github.com/D0kker/improved-train/pull/86) hacia `feature/t03-5-stateless-api` sin merge ni deploy.
+- [x] Verificar y registrar CI de `web`, `dotnet` y `containers` del run 39205716202.
+- [x] Integrar `origin/feature/t03-5-stateless-api` (`56502f1`) mediante merge `1fa7150`; resolver el conflicto documental de `TODO.md`, validar y publicar. PR #86 quedó `CLEAN`/`MERGEABLE`; sin merge del PR.
+
 ## T04.1 — auditoría UX/UI (solo documentación)
 
 - [x] Aislar desde T03.5 `41ac5ee` en `feature/t04-1-ux-audit`, preservando la sesión paralela T03.6.

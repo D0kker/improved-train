@@ -1,5 +1,4 @@
 using System.Net;
-using System.Threading.RateLimiting;
 using LolAnalyzer.Api;
 using LolAnalyzer.Application.Analysis;
 using LolAnalyzer.Application.Caching;
@@ -9,14 +8,18 @@ using LolAnalyzer.Application.Stateless;
 using LolAnalyzer.Infrastructure.Caching;
 using LolAnalyzer.Infrastructure.Riot;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 64 * 1024);
-var concurrency = builder.Configuration.GetValue("API_CONCURRENCY_LIMIT", 8);
-var queue = builder.Configuration.GetValue("API_QUEUE_LIMIT", 16);
-if (concurrency is < 1 or > 64 || queue is < 0 or > 128)
-    throw new InvalidOperationException("API concurrency must be 1-64 and queue size 0-128.");
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 64 * 1024;
+    options.Limits.MaxRequestLineSize = 2048;
+    options.Limits.MaxRequestHeadersTotalSize = 16 * 1024;
+});
+var resourceOptions = builder.Configuration.GetSection(ResourceProtectionOptions.SectionName).Get<ResourceProtectionOptions>() ?? new ResourceProtectionOptions();
+resourceOptions.ConcurrencyLimit = builder.Configuration.GetValue("API_CONCURRENCY_LIMIT", resourceOptions.ConcurrencyLimit);
+resourceOptions.QueueLimit = builder.Configuration.GetValue("API_QUEUE_LIMIT", resourceOptions.QueueLimit);
+resourceOptions.Validate();
 var riotOptions = builder.Configuration.GetSection(RiotOptions.SectionName).Get<RiotOptions>() ?? new RiotOptions();
 riotOptions.ApiKey = builder.Configuration["RIOT_API_KEY"] ?? riotOptions.ApiKey;
 riotOptions.PlatformRegion = builder.Configuration["RIOT_PLATFORM_REGION"] ?? riotOptions.PlatformRegion;
@@ -41,6 +44,8 @@ groupOptions.Validate();
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton(riotOptions);
 builder.Services.AddSingleton(analysisOptions);
+builder.Services.AddSingleton(resourceOptions);
+builder.Services.AddSingleton<ApiResourceGate>();
 builder.Services.AddSingleton(cacheOptions);
 builder.Services.AddSingleton(scoreOptions);
 builder.Services.AddSingleton(premadeOptions);
@@ -63,15 +68,6 @@ builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
 });
 builder.Services.AddHealthChecks().AddCheck("stateless-runtime", () =>
     Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), tags: ["ready"]);
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
-        context.Request.Path.StartsWithSegments("/api/v1")
-            ? RateLimitPartition.GetConcurrencyLimiter("analysis-api", _ => new ConcurrencyLimiterOptions
-            { PermitLimit = concurrency, QueueLimit = queue, QueueProcessingOrder = QueueProcessingOrder.OldestFirst })
-            : RateLimitPartition.GetNoLimiter("health"));
-});
 
 var app = builder.Build();
 app.UseMiddleware<SafeRequestLoggingMiddleware>();
@@ -91,9 +87,21 @@ app.Use(async (context, next) =>
     var disconnected = context.RequestAborted;
     context.RequestAborted = budget.Token;
     try { await next(context).ConfigureAwait(false); }
-    catch (OperationCanceledException) when (disconnected.IsCancellationRequested) { context.Abort(); }
+    catch (OperationCanceledException) when (disconnected.IsCancellationRequested)
+    { context.RequestServices.GetRequiredService<OperationalMetrics>().RecordCancellation(false); context.Abort(); }
+    catch (Exception) when (context.Response.HasStarted)
+    {
+        context.RequestServices.GetRequiredService<OperationalMetrics>().RecordCancellation(budget.IsCancellationRequested);
+        context.Abort();
+    }
+    catch (OperationCanceledException) when (!budget.IsCancellationRequested)
+    {
+        context.RequestServices.GetRequiredService<OperationalMetrics>().RecordCancellation(false);
+        await Results.Problem(statusCode: 503, title: "Riot API request timed out.").ExecuteAsync(context);
+    }
     catch (OperationCanceledException)
     {
+        context.RequestServices.GetRequiredService<OperationalMetrics>().RecordCancellation(true);
         context.RequestAborted = disconnected;
         await Results.Problem(statusCode: 504, title: "Analysis time budget exceeded. Try again; cached Riot data may reduce the duration.").ExecuteAsync(context);
     }
@@ -114,11 +122,26 @@ app.Use(async (context, next) =>
     catch (Exception)
     { await Results.Problem(statusCode: 500, title: "Analysis could not be completed.").ExecuteAsync(context); }
 });
-app.UseRateLimiter();
+app.Use(async (context, next) =>
+{
+    await context.RequestServices.GetRequiredService<ApiResourceGate>().InvokeAsync(context, async admitted =>
+    {
+        if (!RequestInputGuard.IsValid(admitted))
+        {
+            await Results.Problem(statusCode: 400, title: "Invalid or oversized request parameters.").ExecuteAsync(admitted).ConfigureAwait(false);
+            return;
+        }
+        await next(admitted).ConfigureAwait(false);
+    }).ConfigureAwait(false);
+});
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => false });
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = registration => registration.Tags.Contains("ready") });
-app.MapGet("/metrics", (OperationalMetrics metrics) => Results.Ok(metrics.Snapshot()));
+app.MapGet("/metrics", (OperationalMetrics metrics, ICacheService cache) =>
+{
+    if (cache is MemoryCacheService memory) metrics.RecordCacheSize(memory.Count, memory.EstimatedBytes);
+    return Results.Ok(metrics.Snapshot());
+});
 
 app.MapGet("/api/v1/players/by-riot-id/{gameName}/{tagLine}/analysis", async Task<IResult> (
     string gameName, string tagLine, string? platformRegion, OnDemandAnalysisService service, RiotOptions configuration, ILogger<Program> logger, CancellationToken token) =>

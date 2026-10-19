@@ -1,14 +1,23 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-10-18
+Última actualización: 2026-10-19
 
 ## Propósito
 
 PROJECT ECHO analiza partidas terminadas de League of Legends para mostrar encuentros, familiaridad e inferencias prudentes de posibles premades. PUUID es la identidad interna; Riot ID es mutable. Nunca revelar identidades ocultas ni presentar una inferencia como relación verificada.
 
-## Checkout actual: T03.5 stateless
+## Checkout actual: RELEASE-01 en integración local (sin desplegar)
 
-- Rama de trabajo: `feature/t03-5-stateless-api`, creada desde `feature/echo-product-focus` en `4d4580f`. Incluye T01, T02 y T03; no asumir que `main` los contiene.
+- Rama candidata: `release/echo-staging`, worktree aislado `/tmp/improved-train-release-echo-staging`, base remota inicial `2eb547e` (T04.2). Merge explícito de `origin/feature/t03-6-resource-protection` (`217ec8e`) en progreso; cuatro conflictos frontend resueltos y no quedan entradas de conflicto. No hay commit/push. Informe: [RELEASE-01](releases/ECHO_STAGING_01.md).
+- Refs frescas 2026-10-19: `feature/t03-5-stateless-api` avanzó a `eed0129`, que integra T03.6; el árbol coincide con `217ec8e`. `feature/t04-2-ux-corrections` avanzó a `002cbb4` por merge de T04.3, explícitamente excluida de staging. PR #86 aparece integrado por historial Git. El último estado consultable de #87 es open/draft/conflicting; el cliente GitHub falló en esta revisión y requiere verificación posterior. No se creó PR a main ni se cerró #87.
+- `release/echo-staging` contiene T03.5/T04.1/T04.2. Se integró localmente T03.6 preservando ambas implementaciones y excluyendo T04.3. Staging no está listo: `dotnet` no está instalado, el socket Docker denegó acceso, `npm ci` falló por ENOSPC; frontend test (33), lint, type-check, build, Compose config y diff-check sí pasaron con dependencias disponibles.
+- Audit de producción detectó 1 crítica y 2 altas en Next/sharp/source-map-js. No se cambiaron dependencias; no desplegar hasta actualizar/revisar y repetir el audit.
+
+- Rama histórica de T03.6: `feature/t03-6-resource-protection`; PR #86 fue integrado en `feature/t03-5-stateless-api` en `eed0129`. La base incluye T01/T02/T03/T03.5.
+- T03.6 conserva los dos flujos y sus ventanas. Añade una admisión FIFO única (8 activos/16 cola), espera de cola5s, cuota por IP de conexión20 tokens/20por minuto y máximo1024 clientes; detrás de Next los usuarios comparten la IP/cuota del proxy. No se confía en XFF ni Forwarded.
+- El mismo limiter singleton Riot incorpora ventanas configurables y headers app/método, además de concurrencia3, Retry-After y backoff. Estado solo local al proceso, sin coordinación entre réplicas. Las cuotas del proveedor simulado se elevan solo en benchmarks aislados, no en runtime.
+- Métricas ampliadas: admisión, rechazos, espera, cancelación, stages, caché, CPU/working set/GC. Caché conserva cotas4096/64MiB estimados, evita array UTF-8 explícito al estimar y single-flight revalida caché tras un miss tardío. No se cachean resultados funcionales.
+- Timeout API validado5–180s incluyendo cola/retries; navegador200s y Next210s. Acciones manuales, paginación y navegación propagan cancelación y no hacen retry automático.
 - Frontend Next.js 16/React 19/TypeScript; API ASP.NET Core .NET 10. Clean Architecture ligera con calculadores puros reutilizados de T03.
 - El runtime de la API ya no registra DbContext, repositorios, Redis, AnalysisJobs, Channel ni BackgroundService. No requiere base de datos.
 - Búsqueda: `GET /api/v1/players/by-riot-id/{gameName}/{tagLine}/analysis` resuelve Riot ID y devuelve cinco partidas, resumen y cobertura en una respuesta.
@@ -22,6 +31,7 @@ PROJECT ECHO analiza partidas terminadas de League of Legends para mostrar encue
 - `apps/api/tests/LolAnalyzer.Legacy` compila los repositorios/EF/Redis históricos exclusivamente para regresiones y benchmarks. El worker antiguo sigue como código de referencia, fuera de Compose y de la cadena de dependencias de la API; no debe activarse como parte del runtime stateless.
 - El artefacto API se prueba expresamente para excluir dependencias EF Core y StackExchange.Redis.
 - Detalles, contratos, pruebas, métricas reproducibles, riesgos y límites: [T03.5](T03_5_STATELESS_ARCHITECTURE.md).
+- Auditoría, validaciones, perfil CPU, 40 escenarios de carga aislada y límites de T03.6: [protección de recursos](T03_6_RESOURCE_PROTECTION.md). Build Release pasó sin warnings/errores; 105 unitarias y21 integración aprobadas, formato y perfil opt-in aprobados. El test de cuota quedó determinista. La base del PR avanzó a `56502f1`; se resolvió en T03.6 mediante el merge `1fa7150`, solo con cambios documentales de continuidad. CI push/PR pasó `web`, `dotnet` y `containers`; GitHub informa PR #86 `CLEAN`/`MERGEABLE`. Sin merge del PR ni despliegue. El runtime de abajo sigue en T03.5.
 
 ## Estado operativo separado del código
 

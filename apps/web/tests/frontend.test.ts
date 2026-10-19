@@ -117,7 +117,9 @@ test("selected-match analysis is one independent HTTP request with owner and can
       ownerPuuid: "owner",
       platformRegion: "LA1",
     });
-    assert.equal(init?.signal, controller.signal);
+    assert.equal(init?.signal?.aborted, false);
+    controller.abort();
+    assert.equal(init?.signal?.aborted, true);
     return Response.json(result);
   };
   try {

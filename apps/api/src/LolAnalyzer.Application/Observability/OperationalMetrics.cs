@@ -38,6 +38,11 @@ public sealed class OperationalMetrics : IDisposable
     private long matchIdsReturnedCount;
     private long uniqueMatchIdsCount;
     private long avoidedMatchDetailRequestCount;
+    private long activeRequests, queuedRequests, rejectedRequests, cancelledRequests, timedOutRequests, riotRetries, riotCancellations;
+    private long peakActiveRequests, peakQueuedRequests, cacheEntries, cacheBytes;
+    private double totalQueueMilliseconds;
+    private readonly object resourcesGate = new();
+    private readonly Dictionary<string, StageMeasurement> stages = new(StringComparer.Ordinal);
 
     public OperationalMetrics()
     {
@@ -55,12 +60,17 @@ public sealed class OperationalMetrics : IDisposable
         echoEncounterHits = meter.CreateCounter<long>("echo_encounter_hits_total", unit: "{match}");
         echoKnownPlayersFound = meter.CreateCounter<long>("echo_known_players_found_total", unit: "{player}");
         meter.CreateObservableGauge("analysis.jobs.active", () => Interlocked.Read(ref activeJobCount), unit: "{job}");
+        meter.CreateObservableGauge("http.server.active", () => Interlocked.Read(ref activeRequests));
+        meter.CreateObservableGauge("http.server.queued", () => Interlocked.Read(ref queuedRequests));
+        meter.CreateObservableGauge("http.server.rejected", () => Interlocked.Read(ref rejectedRequests));
+        meter.CreateObservableGauge("cache.entries", () => Interlocked.Read(ref cacheEntries));
+        meter.CreateObservableGauge("cache.estimated_bytes", () => Interlocked.Read(ref cacheBytes), unit: "By");
     }
 
-    public void RecordHttpRequest(string method, int statusCode, TimeSpan duration)
+    public void RecordHttpRequest(string method, int statusCode, TimeSpan duration, string endpoint = "unknown")
     {
         Interlocked.Increment(ref httpRequestCount);
-        var tags = new TagList { { "http.request.method", method }, { "http.response.status_code", statusCode } };
+        var tags = new TagList { { "http.request.method", method }, { "http.response.status_code", statusCode }, { "http.route", endpoint } };
         httpRequests.Add(1, tags);
         httpDuration.Record(duration.TotalSeconds, tags);
     }
@@ -172,7 +182,68 @@ public sealed class OperationalMetrics : IDisposable
         EchoKnownPlayersFound: Interlocked.Read(ref echoKnownPlayersFoundCount),
         MatchIdsReturned: Interlocked.Read(ref matchIdsReturnedCount),
         UniqueMatchIds: Interlocked.Read(ref uniqueMatchIdsCount),
-        AvoidedMatchDetailRequests: Interlocked.Read(ref avoidedMatchDetailRequestCount));
+        AvoidedMatchDetailRequests: Interlocked.Read(ref avoidedMatchDetailRequestCount))
+    { Resources = ResourceSnapshot() };
+
+    public void WorkStarted()
+    {
+        var count = Interlocked.Increment(ref activeRequests);
+        lock (resourcesGate) peakActiveRequests = Math.Max(peakActiveRequests, count);
+    }
+    public void WorkFinished() => Interlocked.Decrement(ref activeRequests);
+    public void QueueEntered()
+    {
+        var count = Interlocked.Increment(ref queuedRequests);
+        lock (resourcesGate) peakQueuedRequests = Math.Max(peakQueuedRequests, count);
+    }
+    public void QueueExited(TimeSpan wait, bool wasQueued)
+    {
+        if (wasQueued) Interlocked.Decrement(ref queuedRequests);
+        lock (resourcesGate) totalQueueMilliseconds += wait.TotalMilliseconds;
+    }
+    public void RecordRejection(string reason)
+    {
+        Interlocked.Increment(ref rejectedRequests);
+        RecordStage("rejection." + reason, TimeSpan.Zero);
+    }
+    public void RecordCancellation(bool timeout)
+    {
+        Interlocked.Increment(ref cancelledRequests);
+        if (timeout) Interlocked.Increment(ref timedOutRequests);
+    }
+    public void RecordRiotRetry() => Interlocked.Increment(ref riotRetries);
+    public void RecordRiotCancellation() => Interlocked.Increment(ref riotCancellations);
+    public void RecordCacheSize(int entries, long estimatedBytes)
+    {
+        Interlocked.Exchange(ref cacheEntries, entries);
+        Interlocked.Exchange(ref cacheBytes, estimatedBytes);
+    }
+    public void RecordStage(string stage, TimeSpan duration)
+    {
+        stage = stage switch
+        {
+            "search.calculate" or "match.calculate" or "riot.http" or "riot.parse" or "riot_api" or "cache.size"
+                or "rejection.client_quota" or "rejection.client_capacity" or "rejection.queue_timeout" or "rejection.capacity" => stage,
+            _ => "other"
+        };
+        lock (resourcesGate)
+        {
+            var previous = stages.GetValueOrDefault(stage);
+            stages[stage] = new StageMeasurement((previous?.Count ?? 0) + 1, (previous?.TotalMilliseconds ?? 0) + duration.TotalMilliseconds);
+        }
+    }
+    private ResourceMetricsSnapshot ResourceSnapshot()
+    {
+        using var process = Process.GetCurrentProcess();
+        var gc = GC.GetGCMemoryInfo();
+        lock (resourcesGate)
+            return new ResourceMetricsSnapshot(Interlocked.Read(ref activeRequests), Interlocked.Read(ref queuedRequests),
+                peakActiveRequests, peakQueuedRequests, Interlocked.Read(ref rejectedRequests), Interlocked.Read(ref cancelledRequests),
+                Interlocked.Read(ref timedOutRequests), totalQueueMilliseconds, Interlocked.Read(ref riotRetries), Interlocked.Read(ref riotCancellations),
+                Interlocked.Read(ref cacheEntries), Interlocked.Read(ref cacheBytes), process.WorkingSet64, GC.GetTotalMemory(false),
+                gc.HeapSizeBytes, gc.MemoryLoadBytes, GC.GetTotalAllocatedBytes(), process.TotalProcessorTime.TotalMilliseconds,
+                GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2), new Dictionary<string, StageMeasurement>(stages));
+    }
 
     public void Dispose() => meter.Dispose();
 }
@@ -196,7 +267,15 @@ public sealed record OperationalMetricsSnapshot(
     long UniqueMatchIds,
     long AvoidedMatchDetailRequests)
 {
+    public ResourceMetricsSnapshot? Resources { get; init; }
     public decimal EchoEncounterHitRate => EchoMatchesAnalyzed == 0
         ? 0
         : Math.Round(EchoEncounterHits * 100m / EchoMatchesAnalyzed, 1, MidpointRounding.AwayFromZero);
 }
+
+public sealed record StageMeasurement(long Count, double TotalMilliseconds);
+public sealed record ResourceMetricsSnapshot(long ActiveRequests, long QueuedRequests, long PeakActiveRequests, long PeakQueuedRequests,
+    long RejectedRequests, long CancelledRequests, long TimedOutRequests, double TotalQueueMilliseconds, long RiotRetries, long RiotCancellations,
+    long CacheEntries, long EstimatedCacheBytes, long WorkingSetBytes, long ManagedBytes, long LastGcHeapBytes, long MemoryLoadBytes,
+    long TotalAllocatedBytes, double ProcessCpuMilliseconds, int Gen0Collections, int Gen1Collections, int Gen2Collections,
+    IReadOnlyDictionary<string, StageMeasurement> Stages);

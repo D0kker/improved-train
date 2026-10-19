@@ -13,8 +13,10 @@ import { formatDate, formatDuration, queueLabel } from "@/src/format";
 import { PlayerProfileLink } from "@/src/player-profile-link";
 import { SiteHeader } from "@/src/site-header";
 import { platformRegionLabel } from "@/src/platform-region";
+import { useRequestLifetime } from "@/src/use-request-lifetime";
 
 export function LiveMatchView({ ownerPuuid, platformRegion }: { ownerPuuid?: string; platformRegion?: string }) {
+  const beginRequest = useRequestLifetime();
   const [game, setGame] = useState<ActiveGame | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,10 +26,11 @@ export function LiveMatchView({ ownerPuuid, platformRegion }: { ownerPuuid?: str
   const requestController = useRef<AbortController | null>(null);
   const lastOwnerPuuid = useRef(ownerPuuid);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (parentSignal?: AbortSignal) => {
     requestController.current?.abort();
     const controller = new AbortController();
     requestController.current = controller;
+    const signal = beginRequest(parentSignal ?? controller.signal);
     if (lastOwnerPuuid.current !== ownerPuuid) {
       lastOwnerPuuid.current = ownerPuuid;
       setGame(null);
@@ -46,9 +49,9 @@ export function LiveMatchView({ ownerPuuid, platformRegion }: { ownerPuuid?: str
     try {
       const activeGame = await fetchJson<ActiveGame | null>(
         playerActiveGamePath(ownerPuuid, platformRegion),
-        { signal: controller.signal },
+          { signal },
       );
-      if (controller.signal.aborted) return;
+      if (signal.aborted) return;
       if (!activeGame) {
         setHasNoActiveGame(true);
         setGame(null);
@@ -59,14 +62,14 @@ export function LiveMatchView({ ownerPuuid, platformRegion }: { ownerPuuid?: str
       setIsStale(false);
       setCheckedAt(new Date().toISOString());
     } catch (requestError) {
-      if (!controller.signal.aborted) {
+      if (!signal.aborted) {
         setIsStale(true);
         setError(requestError instanceof ApiError ? requestError.message : "No se pudo comprobar la partida en curso.");
       }
     } finally {
-      if (!controller.signal.aborted) setLoading(false);
+      if (!signal.aborted) setLoading(false);
     }
-  }, [ownerPuuid, platformRegion]);
+  }, [ownerPuuid, platformRegion, beginRequest]);
 
   useEffect(() => {
     let isCurrentEffect = true;
