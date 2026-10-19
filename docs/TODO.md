@@ -18,7 +18,7 @@ T03.6 está integrado en `release/echo-staging`; PR #89 está Draft hacia main. 
 - [x] Ejecutar en CI `npm ci`, test, lint, type-check y build sobre el SHA de staging. `npm ci` local fue bloqueado por ENOSPC.
 - [x] Ejecutar en CI restore/build/test/format .NET, Docker Compose config y build de imágenes. Host local sin SDK y socket Docker denegado; no se eludieron controles.
 - [ ] Resolver el hallazgo de dependencias npm parcheando versiones aprobadas y repetir audit/tests/build antes de despliegue público.
-- [x] Validar árbol integrado; run 39210831898 aprobó `web`, `dotnet`, `containers` en `e7b2ca5`.
+- [x] Validar árbol integrado; run 39211717495 aprobó `web`, `dotnet`, `containers` en `4b71afb`.
 - [x] Publicar merge/documentación de staging; PR #87 quedó merged y PR draft #89 quedó abierto hacia main.
 - [ ] Parchear/re-auditar dependencias antes de exposición pública. Despliegue de prueba controlado requiere autorización independiente del PO.
 
