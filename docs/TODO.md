@@ -4,6 +4,18 @@
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
+## T04.3 — design system Cyber Arcade
+
+- [x] Definir tokens semánticos en `apps/web/src/design-system.css`, incluyendo colores, tipografía, spacing, radios, sombras, motion, controles, capas y aliases Tailwind 4.
+- [x] Crear primitivas justificadas y desacopladas de API en `apps/web/src/design-system.tsx`.
+- [x] Añadir galería ficticia `/design-system`, dinámica y deshabilitada en producción por defecto; habilitación explícita con `ENABLE_DESIGN_SYSTEM_GALLERY=true`.
+- [x] Reemplazar valores de color dispersos de `globals.css` por tokens, manteniendo distribución y flujos de las cuatro páginas.
+- [x] Probar variantes, teclado, disabled/loading, contenido traducible largo, estados, accesibilidad DOM y gate de producción con Testing Library/JSDOM.
+- [ ] Validar visualmente viewports, contraste/foco con browser y tecnologías asistivas; no hubo browser en el entorno y no se afirma certificación WCAG.
+- [x] Publicar `feature/t04-3-design-system` y abrir [PR #88](https://github.com/D0kker/improved-train/pull/88) a `feature/t04-2-ux-corrections`; sin merge ni despliegue.
+- [ ] Revaluar cinco alertas high de `braces` en el árbol de lint cuando exista una versión compatible; sin degradar Next 16/ESLint.
+- Evidencia: `docs/T04_3_DESIGN_SYSTEM.md`. No se han rediseñado Home, dashboard, detalle ni partida activa; se realizan como tareas pequeñas posteriores.
+
 ## T04.1 — auditoría UX/UI (solo documentación)
 
 - [x] Aislar desde T03.5 `41ac5ee` en `feature/t04-1-ux-audit`, preservando la sesión paralela T03.6.
