@@ -26,7 +26,7 @@ PROJECT ECHO analiza partidas terminadas de League of Legends para mostrar encue
 - `apps/api/tests/LolAnalyzer.Legacy` compila los repositorios/EF/Redis históricos exclusivamente para regresiones y benchmarks. El worker antiguo sigue como código de referencia, fuera de Compose y de la cadena de dependencias de la API; no debe activarse como parte del runtime stateless.
 - El artefacto API se prueba expresamente para excluir dependencias EF Core y StackExchange.Redis.
 - Detalles, contratos, pruebas, métricas reproducibles, riesgos y límites: [T03.5](T03_5_STATELESS_ARCHITECTURE.md).
-- Auditoría, validaciones, perfil CPU, 40 escenarios de carga aislada y límites de T03.6: [protección de recursos](T03_6_RESOURCE_PROTECTION.md). Build Release pasó sin warnings/errores; 105 unitarias y21 integración aprobadas, formato y perfil opt-in aprobados. El test de cuota quedó determinista. CI GitHub del commit `323ac1c` pasó web/dotnet/containers. Rama publicada y [PR #86](https://github.com/D0kker/improved-train/pull/86) abierto hacia `feature/t03-5-stateless-api`; sin merge ni despliegue. El runtime de abajo sigue en T03.5.
+- Auditoría, validaciones, perfil CPU, 40 escenarios de carga aislada y límites de T03.6: [protección de recursos](T03_6_RESOURCE_PROTECTION.md). Build Release pasó sin warnings/errores; 105 unitarias y21 integración aprobadas, formato y perfil opt-in aprobados. El test de cuota quedó determinista. CI GitHub del commit `20ffa33` pasó web/dotnet/containers. La base del PR avanzó a `56502f1` con una auditoría T04.1 documental; el merge hacia T03.6 solo afecta continuidad documental y está pendiente de publicar/revalidar CI. Sin merge del PR ni despliegue. El runtime de abajo sigue en T03.5.
 
 ## Estado operativo separado del código
 
@@ -47,6 +47,14 @@ El PO autorizó explícitamente desplegar T03.5 después de la entrega sin despl
 - Código publicado en `3afd6c611cabd1ccc0d42333cf6a09e4f36c9e34`; [PR #83](https://github.com/D0kker/improved-train/pull/83) abierto hacia `main`, sin merge. La entrega inicial no desplegó; el despliegue posterior autorizado se registra arriba. Los checks web/dotnet/containers de `f14f328` terminaron en success antes de desplegar. Incluye los ancestros de la rama de referencia todavía ausentes de main. Consultar el informe T03.5 para los resultados finales.
 
 ## Próximo paso
+
+### T04.1 — auditoría UX/UI documental
+
+- Auditoría independiente desde T03.5 `41ac5ee` en `feature/t04-1-ux-audit`, mediante worktree aislado; no incorpora T03.6 ni modifica su sesión.
+- Informe: [T04_1_UX_UI_AUDIT.md](T04_1_UX_UI_AUDIT.md). Inventaría cuatro páginas reales, distingue código no montado y propuestas futuras, y prioriza copy stateless, cobertura, paginación, navegación y validación responsive/accesible.
+- Incluye dirección Cyber Arcade, preparación es/en/pt-BR y propuesta de feedback sin implementarlas. Son recomendaciones pendientes de selección del PO, no decisiones arquitectónicas aceptadas.
+- Evidencia estática: no hubo navegador disponible, pruebas visuales ni llamadas a Riot. Solo cambia documentación; no despliega ni reinicia servicios. La siguiente implementación debe elegirse por pantalla y coordinar gestión de solicitudes con T03.6 cuando corresponda.
+- Publicación de la auditoría mediante PR de `feature/t04-1-ux-audit` hacia `feature/t03-5-stateless-api`; no hacia main. El estado operativo de T03.5 registrado arriba no cambia.
 
 Revisar el PR T03.5 y validar los flujos reales de jugador/partida mediante uso autorizado. El proxy Next local conserva 210 s frente al presupuesto API de 180 s; no se ha hecho prueba de carga contra Riot ni validado otro borde/hosting. Varias instancias siguen necesitando controlar la cuota agregada de la clave; no se implementó coordinación distribuida. Cualquier siguiente despliegue requiere nueva instrucción explícita del PO.
 

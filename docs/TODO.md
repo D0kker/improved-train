@@ -20,9 +20,16 @@ T03.6 se implementa por separado en `feature/t03-6-resource-protection`; ver `T0
 - [x] Ejecutar perfil CPU opt-in: cuatro bloques agregados,100 iteraciones por bloque; resultados en `T03_6_RESOURCE_PROTECTION.md`.
 - [x] Publicar commit `f7428c6` en `feature/t03-6-resource-protection` por remoto SSH, sin merge ni deploy.
 - [x] Abrir [PR #86](https://github.com/D0kker/improved-train/pull/86) hacia `feature/t03-5-stateless-api` sin merge ni deploy.
-- [x] Verificar y registrar CI de `web`, `dotnet` y `containers` del run 39205441124.
+- [x] Verificar y registrar CI de `web`, `dotnet` y `containers` del run 39205716202.
 
-## T03.5 — hitos completados
+## T04.1 — auditoría UX/UI (solo documentación)
+
+- [x] Aislar desde T03.5 `41ac5ee` en `feature/t04-1-ux-audit`, preservando la sesión paralela T03.6.
+- [x] Inventariar las cuatro páginas reales y componentes/estados desde código; distinguir hallazgos confirmados, recomendaciones y validación visual pendiente.
+- [x] Documentar copy, distribución, navegación, responsive, accesibilidad, componentes, Cyber Arcade, idiomas y feedback en [T04_1_UX_UI_AUDIT.md](T04_1_UX_UI_AUDIT.md), con prioridades y aceptación por pantalla.
+- [ ] Seleccionar con el PO una mejora pequeña del informe para una historia posterior. No se implementó UI, i18n ni feedback; no se ejecutó evaluación en navegador ni se desplegó.
+
+## T03.5 — API stateless
 
 - [x] Verificar rama base con T01/T02/T03 y aislar implementación en `feature/t03-5-stateless-api`.
 - [x] Implementar búsqueda autocontenida de cinco partidas y análisis directo sin búsqueda previa.
