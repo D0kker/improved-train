@@ -14,7 +14,15 @@
 - Worktree aislado: `/tmp/improved-train-t04-4`, rama `feature/t04-4-home-redesign`, base exacta `origin/feature/t04-3-design-system` (`a7cec40b77b9f98ffdd86adb4e3248c2fc7183f8`). No se modificaron checkout T03.6 ni `release/echo-staging`.
 - La Home usa variante Search First, `SiteHeader`, `Container`, `Card` y `Button` existentes. Conserva búsqueda/configuración de región; los textos de Home y formulario son configurables por props. Evidencia, pruebas y límite de validación visual: [T04.4](T04_4_HOME_REDESIGN.md).
 - Build Next 16.4.2 y 35 pruebas DOM aprobaron; `npm audit --omit=dev` reportó cero vulnerabilidades. El audit completo encontró un high de desarrollo en Zod transitivo del plugin ESLint; no se cambió el lockfile. No hubo navegador para capturas/validación visual. T04.4 no incluye contratos ni cambios de backend.
-- Rama publicada: `origin/feature/t04-4-home-redesign`, HEAD `07ed7010296c8ad7136c0aa4409f5cb1ef5cf8a2`; [PR #90](https://github.com/D0kker/improved-train/pull/90) retargeteado y abierto hacia `main`. La comparación incorpora T04.1–T04.4 (solo frontend y documentación), sin API/worker ni T03.6. La PR #89 continúa draft e independiente. GitHub reporta PR #90 mergeable; checks CI aún no aparecen.
+- Rama `origin/feature/t04-4-home-redesign`, HEAD previo al merge `cedf6212957f7ebbff5e7dd85debfaadaa6c5ad6`; [PR #90](https://github.com/D0kker/improved-train/pull/90) integrado a `main` el 2026-10-25. El merge incorpora T04.1–T04.4 (frontend y documentación), sin API/worker ni T03.6. La PR #89 continúa draft e independiente.
+
+## Despliegue vigente
+
+- `origin/main` y el merge de PR #90 están en `8f27b1f61130263ac6586a5edd3591422328d632`. Se creó el worktree aislado `/tmp/improved-train-main-deploy` desde ese HEAD, se validó Compose y se construyó `web` desde esa revisión.
+- Imagen desplegada: `lol-network-analyzer-web`, digest `sha256:66f3e18a13d09bd1e34dc0f7325a00239b2577e0a7c2902ae9e2d66a04817b17`; contenedor healthy desde `2026-10-25T23:41:20Z`, publicado en `8081`.
+- Smoke checks locales: `GET /` devolvió 200 y contenía “Cada partida tiene una historia”; `GET /api/health` devolvió 200 con `healthy`.
+- API no se recreó: sigue healthy con digest `sha256:2eb828149a7afe2a43b07eeef6903bc334597581c32c0bac65b439124d2e62dc` y arranque `2026-10-19T00:29:47Z`. No se hicieron llamadas a Riot.
+- Compose reportó `lol-network-analyzer-redis-1` como huérfano. Se dejó intacto; no se retiraron recursos existentes.
 
 ## Propósito
 

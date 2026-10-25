@@ -59,11 +59,11 @@ No se muestran estadísticas, testimonios, actividad en vivo ni detecciones pres
 - `docker compose config --quiet` y `git diff --check`: aprobados.
 - No hay Chromium/browser instalado. Por eso no se tomaron capturas ni se declara validación visual por viewport o conformidad WCAG completa.
 - Los tests DOM comprueban que Home presenta un único `main`, jerarquía de encabezados, región visible, descripción ampliada sin truncar, validación/foco, teclado, anuncio de carga, ruta codificada y cero solicitudes `fetch`.
-- Publicación: `feature/t04-4-home-redesign`, PR [#90](https://github.com/D0kker/improved-train/pull/90), finalmente dirigido a `main` para integrar la cadena T04.1–T04.4; abierto antes de su merge.
+- Publicación: PR [#90](https://github.com/D0kker/improved-train/pull/90) integró la cadena T04.1–T04.4 en `main` el 2026-10-25. El frontend de ese HEAD se desplegó en Docker y respondió `/` y `/api/health` con 200; digest y evidencia del contenedor constan en `PROJECT_CONTEXT.md`.
 
 ## Limitaciones y pendientes para T04.5
 
 - No se añadió selector de región; se presenta la región efectiva que ya usa la búsqueda.
 - La evaluación visual en navegador y el contraste calculado de los textos pequeños quedan pendientes de entorno con browser.
 - El dashboard puede reutilizar tokens y componentes del sistema, pero su nueva jerarquía y presentación pertenecen a T04.5.
-- No se modificaron contratos, backend, staging, red de Riot ni servicios en ejecución.
+- No se modificaron contratos, backend, staging ni red de Riot. El único servicio recreado fue `web` para el despliegue autorizado; API y Redis quedaron intactos.
