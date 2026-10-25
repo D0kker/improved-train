@@ -14,7 +14,7 @@
 - Worktree aislado: `/tmp/improved-train-t04-4`, rama `feature/t04-4-home-redesign`, base exacta `origin/feature/t04-3-design-system` (`a7cec40b77b9f98ffdd86adb4e3248c2fc7183f8`). No se modificaron checkout T03.6 ni `release/echo-staging`.
 - La Home usa variante Search First, `SiteHeader`, `Container`, `Card` y `Button` existentes. Conserva búsqueda/configuración de región; los textos de Home y formulario son configurables por props. Evidencia, pruebas y límite de validación visual: [T04.4](T04_4_HOME_REDESIGN.md).
 - Build Next 16.4.2 y 35 pruebas DOM aprobaron; `npm audit --omit=dev` reportó cero vulnerabilidades. El audit completo encontró un high de desarrollo en Zod transitivo del plugin ESLint; no se cambió el lockfile. No hubo navegador para capturas/validación visual. T04.4 no incluye contratos ni cambios de backend.
-- Publicación y PR de T04.4 quedan pendientes hasta completar las validaciones y revisión final del diff. No desplegar ni reiniciar servicios.
+- Rama publicada: `origin/feature/t04-4-home-redesign`, commit inicial `5a76b29720fe83848a2a6bf1d77971dab174de9f`; [PR #90](https://github.com/D0kker/improved-train/pull/90) abierto hacia `feature/t04-3-design-system`, sin merge. La comparación confirma base `a7cec40` y un commit de adelanto; GitHub reportó mergeable. No desplegar ni reiniciar servicios.
 
 ## Propósito
 

@@ -23,7 +23,7 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Probar validación/foco, teclado, errores, región, navegación, texto largo, semántica y ausencia de solicitudes extra: 35/35 pruebas DOM aprobadas.
 - [x] `npm ci`, lint, type-check, build Next 16.4.2, `docker compose config --quiet`, `git diff --check` y `npm audit --omit=dev` (0 vulnerabilidades de producción).
 - [ ] Validación visual con navegador y capturas: no hay Chromium/browser en el entorno; no se declara verificación visual de viewport ni WCAG completa.
-- [ ] Publicar rama y abrir PR hacia `feature/t04-3-design-system`; completar después de push y creación del PR.
+- [x] Publicar `feature/t04-4-home-redesign` y abrir [PR #90](https://github.com/D0kker/improved-train/pull/90) hacia `feature/t04-3-design-system`; abierto, sin merge ni despliegue.
 - Riesgo observado: el audit completo deja un high de desarrollo en Zod transitivo por eslint plugin. Ver [T04.4](T04_4_HOME_REDESIGN.md); no afecta al árbol de producción. No se actualizó dependencia dentro de este alcance.
 
 ## T04.1 — auditoría UX/UI (solo documentación)

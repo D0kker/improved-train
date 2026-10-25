@@ -59,6 +59,7 @@ No se muestran estadísticas, testimonios, actividad en vivo ni detecciones pres
 - `docker compose config --quiet` y `git diff --check`: aprobados.
 - No hay Chromium/browser instalado. Por eso no se tomaron capturas ni se declara validación visual por viewport o conformidad WCAG completa.
 - Los tests DOM comprueban que Home presenta un único `main`, jerarquía de encabezados, región visible, descripción ampliada sin truncar, validación/foco, teclado, anuncio de carga, ruta codificada y cero solicitudes `fetch`.
+- Publicación: `feature/t04-4-home-redesign`, PR [#90](https://github.com/D0kker/improved-train/pull/90), base `feature/t04-3-design-system`; abierto y sin merge.
 
 ## Limitaciones y pendientes para T04.5
 
