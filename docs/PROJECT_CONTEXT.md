@@ -18,7 +18,7 @@
 
 ## Despliegue vigente
 
-- `origin/main` y el merge de PR #90 están en `8f27b1f61130263ac6586a5edd3591422328d632`. Se creó el worktree aislado `/tmp/improved-train-main-deploy` desde ese HEAD, se validó Compose y se construyó `web` desde esa revisión.
+- El despliegue se construyó desde el merge de PR #90, commit `8f27b1f61130263ac6586a5edd3591422328d632` (HEAD de `main` en ese momento). PR #91 añadió solo documentación; la comparación de `apps/web` entre ambos HEADs fue idéntica, así que la imagen desplegada corresponde al código web vigente.
 - Imagen desplegada: `lol-network-analyzer-web`, digest `sha256:66f3e18a13d09bd1e34dc0f7325a00239b2577e0a7c2902ae9e2d66a04817b17`; contenedor healthy desde `2026-10-25T23:41:20Z`, publicado en `8081`.
 - Smoke checks locales: `GET /` devolvió 200 y contenía “Cada partida tiene una historia”; `GET /api/health` devolvió 200 con `healthy`.
 - API no se recreó: sigue healthy con digest `sha256:2eb828149a7afe2a43b07eeef6903bc334597581c32c0bac65b439124d2e62dc` y arranque `2026-10-19T00:29:47Z`. No se hicieron llamadas a Riot.
