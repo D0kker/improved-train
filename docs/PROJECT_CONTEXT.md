@@ -1,6 +1,20 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-10-18
+Última actualización: 2026-10-25
+
+## Continuidad actual T04.3
+
+- T04.3 parte de `feature/t04-2-ux-corrections` (`2eb547e5c677b2f77baf99d6fc92134d2df82c39`) en un worktree aislado; su rama es `feature/t04-3-design-system`.
+- Se añadieron tokens semánticos, componentes presentacionales y galería `/design-system`, sin modificar contratos, llamadas de API ni distribución funcional de las cuatro rutas. La galería queda oculta en producción salvo `ENABLE_DESIGN_SYSTEM_GALLERY=true` en runtime.
+- Ver detalle y validación en [T04.3](T04_3_DESIGN_SYSTEM.md). La prueba visual en navegador permanece pendiente porque no hay browser de pruebas disponible. El triage npm dejó 5 avisos high únicamente en el árbol de lint; Next 16 se actualizó a 16.4.2, sin degradaciones ni `--force`.
+- Rama publicada en `origin/feature/t04-3-design-system`; commit inicial `60ede464a07afeaaeae076964eac2ed819a61bba`; [PR #88](https://github.com/D0kker/improved-train/pull/88) fue integrado en T04.2. La rama T04.3 conserva head `a7cec40b77b9f98ffdd86adb4e3248c2fc7183f8`, elegido como base de T04.4.
+
+## Continuidad actual T04.4
+
+- Worktree aislado: `/tmp/improved-train-t04-4`, rama `feature/t04-4-home-redesign`, base exacta `origin/feature/t04-3-design-system` (`a7cec40b77b9f98ffdd86adb4e3248c2fc7183f8`). No se modificaron checkout T03.6 ni `release/echo-staging`.
+- La Home usa variante Search First, `SiteHeader`, `Container`, `Card` y `Button` existentes. Conserva búsqueda/configuración de región; los textos de Home y formulario son configurables por props. Evidencia, pruebas y límite de validación visual: [T04.4](T04_4_HOME_REDESIGN.md).
+- Build Next 16.4.2 y 35 pruebas DOM aprobaron; `npm audit --omit=dev` reportó cero vulnerabilidades. El audit completo encontró un high de desarrollo en Zod transitivo del plugin ESLint; no se cambió el lockfile. No hubo navegador para capturas/validación visual. T04.4 no incluye contratos ni cambios de backend.
+- Rama publicada: `origin/feature/t04-4-home-redesign`, HEAD `07ed7010296c8ad7136c0aa4409f5cb1ef5cf8a2`; [PR #90](https://github.com/D0kker/improved-train/pull/90) retargeteado y abierto hacia `main`. La comparación incorpora T04.1–T04.4 (solo frontend y documentación), sin API/worker ni T03.6. La PR #89 continúa draft e independiente. GitHub reporta PR #90 mergeable; checks CI aún no aparecen.
 
 ## Propósito
 
@@ -42,6 +56,14 @@ El PO autorizó explícitamente desplegar T03.5 después de la entrega sin despl
 - Código publicado en `3afd6c611cabd1ccc0d42333cf6a09e4f36c9e34`; [PR #83](https://github.com/D0kker/improved-train/pull/83) abierto hacia `main`, sin merge. La entrega inicial no desplegó; el despliegue posterior autorizado se registra arriba. Los checks web/dotnet/containers de `f14f328` terminaron en success antes de desplegar. Incluye los ancestros de la rama de referencia todavía ausentes de main. Consultar el informe T03.5 para los resultados finales.
 
 ## Próximo paso
+
+### T04.1 — auditoría UX/UI documental
+
+- Auditoría independiente desde T03.5 `41ac5ee` en `feature/t04-1-ux-audit`, mediante worktree aislado; no incorpora T03.6 ni modifica su sesión.
+- Informe: [T04_1_UX_UI_AUDIT.md](T04_1_UX_UI_AUDIT.md). Inventaría cuatro páginas reales, distingue código no montado y propuestas futuras, y prioriza copy stateless, cobertura, paginación, navegación y validación responsive/accesible.
+- Incluye dirección Cyber Arcade, preparación es/en/pt-BR y propuesta de feedback sin implementarlas. Son recomendaciones pendientes de selección del PO, no decisiones arquitectónicas aceptadas.
+- Evidencia estática: no hubo navegador disponible, pruebas visuales ni llamadas a Riot. Solo cambia documentación; no despliega ni reinicia servicios. La siguiente implementación debe elegirse por pantalla y coordinar gestión de solicitudes con T03.6 cuando corresponda.
+- Publicación de la auditoría mediante PR de `feature/t04-1-ux-audit` hacia `feature/t03-5-stateless-api`; no hacia main. El estado operativo de T03.5 registrado arriba no cambia.
 
 Revisar el PR T03.5 y validar los flujos reales de jugador/partida mediante uso autorizado. El proxy Next local conserva 210 s frente al presupuesto API de 180 s; no se ha hecho prueba de carga contra Riot ni validado otro borde/hosting. Varias instancias siguen necesitando controlar la cuota agregada de la clave; no se implementó coordinación distribuida. Cualquier siguiente despliegue requiere nueva instrucción explícita del PO.
 

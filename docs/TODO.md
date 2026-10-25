@@ -1,8 +1,44 @@
 # Roadmap
 
-Última actualización: 2026-10-18
+Última actualización: 2026-10-19
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
+
+## T04.3 — design system Cyber Arcade
+
+- [x] Definir tokens semánticos en `apps/web/src/design-system.css`, incluyendo colores, tipografía, spacing, radios, sombras, motion, controles, capas y aliases Tailwind 4.
+- [x] Crear primitivas justificadas y desacopladas de API en `apps/web/src/design-system.tsx`.
+- [x] Añadir galería ficticia `/design-system`, dinámica y deshabilitada en producción por defecto; habilitación explícita con `ENABLE_DESIGN_SYSTEM_GALLERY=true`.
+- [x] Reemplazar valores de color dispersos de `globals.css` por tokens, manteniendo distribución y flujos de las cuatro páginas.
+- [x] Probar variantes, teclado, disabled/loading, contenido traducible largo, estados, accesibilidad DOM y gate de producción con Testing Library/JSDOM.
+- [ ] Validar visualmente viewports, contraste/foco con browser y tecnologías asistivas; no hubo browser en el entorno y no se afirma certificación WCAG.
+- [x] Publicar `feature/t04-3-design-system`; [PR #88](https://github.com/D0kker/improved-train/pull/88) fue posteriormente integrado en la rama T04.2. T04.4 parte del head T04.3 y no duplica el merge commit.
+- [ ] Revaluar cinco alertas high de `braces` en el árbol de lint cuando exista una versión compatible; sin degradar Next 16/ESLint.
+- Evidencia: `docs/T04_3_DESIGN_SYSTEM.md`. No se han rediseñado Home, dashboard, detalle ni partida activa; se realizan como tareas pequeñas posteriores.
+
+## T04.4 — rediseño de Home y búsqueda
+
+- [x] Rediseñar Home con prioridad de búsqueda usando `SiteHeader`, `Container`, `Card` y `Button`, conservando la región configurada y la ruta de búsqueda actual.
+- [x] Hacer configurables por props los textos de Home y formulario, explicar el alcance inicial de cinco partidas y añadir tres pasos sin resultados ficticios ni llamadas adicionales.
+- [x] Probar validación/foco, teclado, errores, región, navegación, texto largo, semántica y ausencia de solicitudes extra: 35/35 pruebas DOM aprobadas.
+- [x] `npm ci`, lint, type-check, build Next 16.4.2, `docker compose config --quiet`, `git diff --check` y `npm audit --omit=dev` (0 vulnerabilidades de producción).
+- [ ] Validación visual con navegador y capturas: no hay Chromium/browser en el entorno; no se declara verificación visual de viewport ni WCAG completa.
+- [x] Publicar `feature/t04-4-home-redesign` y abrir [PR #90](https://github.com/D0kker/improved-train/pull/90) hacia `main`; abierto, listo para merge autorizado, sin desplegar aún.
+- Riesgo observado: el audit completo deja un high de desarrollo en Zod transitivo por eslint plugin. Ver [T04.4](T04_4_HOME_REDESIGN.md); no afecta al árbol de producción. No se actualizó dependencia dentro de este alcance.
+
+## T04.1 — auditoría UX/UI (solo documentación)
+
+- [x] Aislar desde T03.5 `41ac5ee` en `feature/t04-1-ux-audit`, preservando la sesión paralela T03.6.
+- [x] Inventariar las cuatro páginas reales y componentes/estados desde código; distinguir hallazgos confirmados, recomendaciones y validación visual pendiente.
+- [x] Documentar copy, distribución, navegación, responsive, accesibilidad, componentes, Cyber Arcade, idiomas y feedback en [T04_1_UX_UI_AUDIT.md](T04_1_UX_UI_AUDIT.md), con prioridades y aceptación por pantalla.
+- [ ] Seleccionar con el PO una mejora pequeña del informe para una historia posterior. No se implementó UI, i18n ni feedback; no se ejecutó evaluación en navegador ni se desplegó.
+
+## T04.2 — correcciones UX prioritarias de PROJECT ECHO
+
+- [x] Implementar copy compatible con consultas stateless, región visible, enlaces de retorno explícitos, estados de cobertura/error separados, resumen de cinco partidas iniciales y accesibilidad básica; cambios publicados en la rama `feature/t04-2-ux-corrections` tras las validaciones de cierre.
+- [x] Probar con mocks las ventanas completas, parciales, repetidas, fallo temporal y agotamiento; reintenta el mismo offset ante cobertura incompleta para no saltar detalles. Un fallo de detalle permanente no permite avanzar sin riesgo de pérdida; documentado en `T04_2_UX_CORRECTIONS.md`, requiere propuesta coordinada de API.
+- [x] Validar interacciones DOM con JSDOM/Testing Library: foco del primer campo inválido, ARIA, teclado, skip link, landmark, paginación y render independiente de partida activa. Contraste, lectores de pantalla y responsive visual quedan pendientes de browser real.
+- [x] Cerrar build con `npm ci` y Node 24.18.0 / Next 16.3.3; causa raíz documentada: sandbox bloquea el proceso hijo TypeScript (`EPERM`), mientras el build fuera de esa restricción pasa. `npm test` 28/28, lint, type-check y `docker compose config --quiet` pasan; evidencia en `T04_2_UX_CORRECTIONS.md`.
 
 ## T03.5 — API stateless
 

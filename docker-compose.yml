@@ -41,6 +41,7 @@ services:
       dockerfile: Dockerfile
     environment:
       API_BASE_URL: http://api:8080
+      RIOT_PLATFORM_REGION: ${RIOT_PLATFORM_REGION:-la1}
       DATA_DRAGON_VERSION: ${DATA_DRAGON_VERSION:-16.17.1}
     depends_on:
       api:

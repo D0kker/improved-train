@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiError,
   fetchJson,
@@ -11,13 +11,30 @@ import {
 } from "@/src/api";
 import { formatDate, formatDuration, queueLabel } from "@/src/format";
 import { PlayerProfileLink } from "@/src/player-profile-link";
+import { SiteHeader } from "@/src/site-header";
+import { platformRegionLabel } from "@/src/platform-region";
 
-export function LiveMatchView({ ownerPuuid }: { ownerPuuid?: string }) {
+export function LiveMatchView({ ownerPuuid, platformRegion }: { ownerPuuid?: string; platformRegion?: string }) {
   const [game, setGame] = useState<ActiveGame | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hasNoActiveGame, setHasNoActiveGame] = useState(false);
+  const [isStale, setIsStale] = useState(false);
+  const [checkedAt, setCheckedAt] = useState<string | null>(null);
+  const requestController = useRef<AbortController | null>(null);
+  const lastOwnerPuuid = useRef(ownerPuuid);
 
   const load = useCallback(async () => {
+    requestController.current?.abort();
+    const controller = new AbortController();
+    requestController.current = controller;
+    if (lastOwnerPuuid.current !== ownerPuuid) {
+      lastOwnerPuuid.current = ownerPuuid;
+      setGame(null);
+      setCheckedAt(null);
+      setIsStale(false);
+      setHasNoActiveGame(false);
+    }
     if (!ownerPuuid) {
       setError("No se indicó el jugador observado.");
       setLoading(false);
@@ -28,28 +45,38 @@ export function LiveMatchView({ ownerPuuid }: { ownerPuuid?: string }) {
     setError(null);
     try {
       const activeGame = await fetchJson<ActiveGame | null>(
-        playerActiveGamePath(ownerPuuid),
+        playerActiveGamePath(ownerPuuid, platformRegion),
+        { signal: controller.signal },
       );
+      if (controller.signal.aborted) return;
       if (!activeGame) {
-        setError("La partida en curso ya no está disponible.");
+        setHasNoActiveGame(true);
         setGame(null);
       } else {
+        setHasNoActiveGame(false);
         setGame(activeGame);
       }
+      setIsStale(false);
+      setCheckedAt(new Date().toISOString());
     } catch (requestError) {
-      setError(
-        requestError instanceof ApiError || requestError instanceof Error
-          ? requestError.message
-          : "No pudimos cargar la partida en curso.",
-      );
+      if (!controller.signal.aborted) {
+        setIsStale(true);
+        setError(requestError instanceof ApiError ? requestError.message : "No se pudo comprobar la partida en curso.");
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
-  }, [ownerPuuid]);
+  }, [ownerPuuid, platformRegion]);
 
   useEffect(() => {
-    const request = window.setTimeout(() => void load(), 0);
-    return () => window.clearTimeout(request);
+    let isCurrentEffect = true;
+    queueMicrotask(() => {
+      if (isCurrentEffect) void load();
+    });
+    return () => {
+      isCurrentEffect = false;
+      requestController.current?.abort();
+    };
   }, [load]);
 
   const teams = game
@@ -62,25 +89,11 @@ export function LiveMatchView({ ownerPuuid }: { ownerPuuid?: string }) {
     : [];
 
   return (
-    <main className="dashboard-shell">
-      <header className="topbar">
-        <Link className="wordmark" href="/">
-          <span className="wordmark-icon">E</span>
-          <span>PROJECT ECHO</span>
-        </Link>
-        <Link className="text-link" href="/">
-          Buscar jugador
-        </Link>
-      </header>
+    <main className="dashboard-shell" id="main-content" tabIndex={-1}>
+      <SiteHeader />
 
       <div className="dashboard-content detail-content">
-        <button
-          className="back-link"
-          onClick={() => history.back()}
-          type="button"
-        >
-          ← Volver
-        </button>
+        <Link className="back-link" href="/">← Volver a la búsqueda</Link>
 
         {loading ? (
           <section className="loading-panel" role="status">
@@ -94,10 +107,10 @@ export function LiveMatchView({ ownerPuuid }: { ownerPuuid?: string }) {
             <div>
               <p className="eyebrow">Partida en curso</p>
               <h1>{error}</h1>
-              <p>La partida puede haber terminado mientras la consultábamos.</p>
+              <p>{isStale && game ? "Se conserva la información de la consulta anterior." : "Puedes volver a comprobarlo."}</p>
             </div>
-            <button className="secondary-button" onClick={() => void load()}>
-              Actualizar
+            <button className="secondary-button" disabled={loading} onClick={() => void load()}>
+              Volver a comprobar
             </button>
           </section>
         ) : null}
@@ -112,12 +125,22 @@ export function LiveMatchView({ ownerPuuid }: { ownerPuuid?: string }) {
                   {queueLabel(game.queueId)} · iniciada{" "}
                   {formatDate(game.gameStartTime)}
                 </p>
+                <p className="muted-copy">Región: {platformRegionLabel(platformRegion)}</p>
               </div>
               <div className="duration-pill">
                 <span>Transcurrido</span>
                 <strong>{formatDuration(game.gameLengthSeconds)}</strong>
               </div>
             </section>
+            <p className="profile-freshness">
+              {isStale ? "Consulta anterior. " : ""}
+              {checkedAt ? `Consultado: ${formatDate(checkedAt)}` : ""}
+            </p>
+            <div className="section-actions">
+              <button className="secondary-button" disabled={loading} onClick={() => void load()} type="button">
+                {loading ? "Comprobando…" : "Actualizar jugadores"}
+              </button>
+            </div>
 
             <div className="live-teams-grid">
               {teams.map((team) => (
@@ -140,6 +163,7 @@ export function LiveMatchView({ ownerPuuid }: { ownerPuuid?: string }) {
                         }
                         isObserved={participant.puuid === ownerPuuid}
                         participant={participant}
+                        platformRegion={platformRegion}
                       />
                     ))}
                   </ul>
@@ -147,6 +171,13 @@ export function LiveMatchView({ ownerPuuid }: { ownerPuuid?: string }) {
               ))}
             </div>
           </>
+        ) : null}
+        {hasNoActiveGame && !loading ? (
+          <div className="empty-state">
+            <h2>No hay una partida activa</h2>
+            <p>Esta consulta no encontró una partida en curso para el jugador seleccionado.</p>
+            <button className="secondary-button" onClick={() => void load()} type="button">Volver a comprobar</button>
+          </div>
         ) : null}
       </div>
     </main>
@@ -156,9 +187,11 @@ export function LiveMatchView({ ownerPuuid }: { ownerPuuid?: string }) {
 function LiveParticipant({
   isObserved,
   participant,
+  platformRegion,
 }: {
   isObserved: boolean;
   participant: ActiveGameParticipant;
+  platformRegion?: string;
 }) {
   return (
     <li className={isObserved ? "live-observed-player" : undefined}>
@@ -168,23 +201,18 @@ function LiveParticipant({
           <PlayerProfileLink
             gameName={participant.gameName}
             tagLine={participant.tagLine}
+            platformRegion={platformRegion}
           />
         ) : (
-          <strong>
-            {participant.gameName ||
-              (participant.summonerId
-                ? `Invocador ${participant.summonerId.slice(0, 8)}…`
-                : "Jugador en partida")}
-          </strong>
+          <strong>{participant.gameName || "Jugador no identificado"}</strong>
         )}
         <span>
           {participant.tagLine
             ? `#${participant.tagLine} · `
-            : participant.gameName
-              ? "Riot ID no disponible · "
-              : "Identidad no expuesta por Spectator-V5 · "}
-          Campeón ID {participant.championId || "?"}
+            : "Riot ID no disponible · "}
+          Campeón (ID) {participant.championId || "no disponible"}
         </span>
+        {isObserved ? <span className="observed-badge">Jugador consultado</span> : null}
       </div>
     </li>
   );
