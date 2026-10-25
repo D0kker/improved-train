@@ -1,13 +1,20 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-10-19
+Última actualización: 2026-10-25
 
 ## Continuidad actual T04.3
 
 - T04.3 parte de `feature/t04-2-ux-corrections` (`2eb547e5c677b2f77baf99d6fc92134d2df82c39`) en un worktree aislado; su rama es `feature/t04-3-design-system`.
 - Se añadieron tokens semánticos, componentes presentacionales y galería `/design-system`, sin modificar contratos, llamadas de API ni distribución funcional de las cuatro rutas. La galería queda oculta en producción salvo `ENABLE_DESIGN_SYSTEM_GALLERY=true` en runtime.
 - Ver detalle y validación en [T04.3](T04_3_DESIGN_SYSTEM.md). La prueba visual en navegador permanece pendiente porque no hay browser de pruebas disponible. El triage npm dejó 5 avisos high únicamente en el árbol de lint; Next 16 se actualizó a 16.4.2, sin degradaciones ni `--force`.
-- Rama publicada en `origin/feature/t04-3-design-system`; commit inicial `60ede464a07afeaaeae076964eac2ed819a61bba`; [PR #88](https://github.com/D0kker/improved-train/pull/88) abierto hacia `feature/t04-2-ux-corrections`, sin merge. Validaciones locales finales pasan; GitHub no reportaba runs ni checks al consultar el commit. No desplegar ni reiniciar servicios para T04.3.
+- Rama publicada en `origin/feature/t04-3-design-system`; commit inicial `60ede464a07afeaaeae076964eac2ed819a61bba`; [PR #88](https://github.com/D0kker/improved-train/pull/88) fue integrado en T04.2. La rama T04.3 conserva head `a7cec40b77b9f98ffdd86adb4e3248c2fc7183f8`, elegido como base de T04.4.
+
+## Continuidad actual T04.4
+
+- Worktree aislado: `/tmp/improved-train-t04-4`, rama `feature/t04-4-home-redesign`, base exacta `origin/feature/t04-3-design-system` (`a7cec40b77b9f98ffdd86adb4e3248c2fc7183f8`). No se modificaron checkout T03.6 ni `release/echo-staging`.
+- La Home usa variante Search First, `SiteHeader`, `Container`, `Card` y `Button` existentes. Conserva búsqueda/configuración de región; los textos de Home y formulario son configurables por props. Evidencia, pruebas y límite de validación visual: [T04.4](T04_4_HOME_REDESIGN.md).
+- Build Next 16.4.2 y 35 pruebas DOM aprobaron; `npm audit --omit=dev` reportó cero vulnerabilidades. El audit completo encontró un high de desarrollo en Zod transitivo del plugin ESLint; no se cambió el lockfile. No hubo navegador para capturas/validación visual. T04.4 no incluye contratos ni cambios de backend.
+- Publicación y PR de T04.4 quedan pendientes hasta completar las validaciones y revisión final del diff. No desplegar ni reiniciar servicios.
 
 ## Propósito
 

@@ -5,6 +5,8 @@ import { afterEach, test } from "node:test";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RiotIdSearchForm } from "../src/riot-id-search-form.tsx";
+import { HomeContent } from "../app/home-content.tsx";
+import { homeCopy } from "../app/home-copy.ts";
 import { SiteHeader } from "../src/site-header.tsx";
 import { SkipLink } from "../src/skip-link.tsx";
 import { PlayerDashboard } from "../app/player/[gameName]/[tagLine]/player-dashboard.tsx";
@@ -22,7 +24,7 @@ test("Riot ID validation associates field errors and focuses the first invalid i
   const user = userEvent.setup();
   render(<RiotIdSearchForm platformRegion="la1" onNavigate={() => assert.fail("No debe navegar")} />);
 
-  const gameName = screen.getByRole("textbox", { name: "Game Name" });
+  const gameName = screen.getByRole("textbox", { name: "Nombre de jugador" });
   const tagLine = screen.getByRole("textbox", { name: "Tag" });
   await user.click(screen.getByRole("button", { name: "Buscar jugador" }));
 
@@ -31,14 +33,14 @@ test("Riot ID validation associates field errors and focuses the first invalid i
   assert.equal(tagLine.getAttribute("aria-invalid"), "true");
   const gameErrorId = gameName.getAttribute("aria-describedby");
   const tagErrorId = tagLine.getAttribute("aria-describedby");
-  assert.equal(document.getElementById(gameErrorId!)?.textContent, "Escribe el Game Name.");
+  assert.equal(document.getElementById(gameErrorId!)?.textContent, "Escribe el nombre de jugador.");
   assert.equal(document.getElementById(tagErrorId!)?.textContent, "Escribe el Tag.");
 });
 
 test("Riot ID validation focuses Tag when only Tag is missing", async () => {
   const user = userEvent.setup();
   render(<RiotIdSearchForm platformRegion="la1" onNavigate={() => assert.fail("No debe navegar")} />);
-  const gameName = screen.getByRole("textbox", { name: "Game Name" });
+  const gameName = screen.getByRole("textbox", { name: "Nombre de jugador" });
   const tagLine = screen.getByRole("textbox", { name: "Tag" });
 
   await user.type(gameName, "Ana");
@@ -62,7 +64,7 @@ test("Riot ID form works by keyboard and announces navigation without rejecting 
       onNavigate={(href) => navigations.push(href)}
     />,
   );
-  const gameName = screen.getByRole("textbox", { name: "Game Name" });
+  const gameName = screen.getByRole("textbox", { name: "Nombre de jugador" });
   const tagLine = screen.getByRole("textbox", { name: "Tag" });
 
   await user.tab();
@@ -76,6 +78,57 @@ test("Riot ID form works by keyboard and announces navigation without rejecting 
   assert.deepEqual(navigations, ["/player/Ana%20Marie/A%2FB?platformRegion=la1"]);
   assert.equal(screen.getByRole("status").textContent, "Abriendo el perfil del jugador.");
   assert.equal(screen.getByRole("button", { name: "Abriendo perfil…" }).hasAttribute("disabled"), true);
+});
+
+test("Home presenta la búsqueda como acción principal y conecta el flujo sin llamadas adicionales", async () => {
+  const user = userEvent.setup();
+  const navigations: string[] = [];
+  globalThis.fetch = async () => assert.fail("Home no debe iniciar solicitudes de API");
+  render(
+    <>
+      <SiteHeader actionHref="#player-search-form" actionLabel="Ir a la búsqueda" />
+      <HomeContent
+        copy={homeCopy}
+        platformRegionLabel="Latinoamérica Sur (LAS) · LA2"
+        searchForm={
+          <RiotIdSearchForm
+            platformRegion="la2"
+            onNavigate={(href) => navigations.push(href)}
+          />
+        }
+      />
+    </>,
+  );
+
+  assert.equal(screen.getAllByRole("main").length, 1);
+  assert.equal(screen.getByRole("link", { name: "Ir a la búsqueda" }).getAttribute("href"), "#player-search-form");
+  assert.ok(document.getElementById("player-search-form"));
+  assert.equal(screen.getByRole("heading", { level: 1 }).textContent, "Cada partida tiene una historia.");
+  assert.match(screen.getByText(/Busca jugadores, explora sus partidas recientes/).textContent!, /encontrado antes/);
+  assert.match(screen.getByText(/La consulta inicial revisa cinco partidas recientes/).textContent!, /no confirma/);
+  assert.equal(screen.getByLabelText("Región configurada").textContent, "Región de búsqueda: Latinoamérica Sur (LAS) · LA2");
+  assert.equal(screen.getAllByRole("heading", { level: 3 }).length, 3);
+
+  await user.type(screen.getByRole("textbox", { name: "Nombre de jugador" }), "Ana Marie");
+  await user.type(screen.getByRole("textbox", { name: "Tag" }), "LAN");
+  await user.click(screen.getByRole("button", { name: /Buscar jugador/ }));
+
+  assert.deepEqual(navigations, ["/player/Ana%20Marie/LAN?platformRegion=la2"]);
+});
+
+test("Home conserva el contenido traducible largo sin abreviarlo", () => {
+  const longDescription = `${homeCopy.description} ${"Información de contexto ampliada. ".repeat(3)}`.trim();
+  const longRegion = `Región de juego con nombre extendido ${"y variante regional. ".repeat(2)}`.trim();
+  render(
+    <HomeContent
+      copy={{ ...homeCopy, description: longDescription }}
+      platformRegionLabel={longRegion}
+      searchForm={<div>Formulario de búsqueda</div>}
+    />,
+  );
+
+  assert.equal(document.querySelector(".home-lede")?.textContent?.trim(), longDescription);
+  assert.equal(screen.getByLabelText("Región configurada").textContent?.trim(), `Región de búsqueda: ${longRegion}`);
 });
 
 test("skip link has a valid main target and supports keyboard activation", async () => {

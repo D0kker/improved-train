@@ -12,9 +12,19 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Reemplazar valores de color dispersos de `globals.css` por tokens, manteniendo distribución y flujos de las cuatro páginas.
 - [x] Probar variantes, teclado, disabled/loading, contenido traducible largo, estados, accesibilidad DOM y gate de producción con Testing Library/JSDOM.
 - [ ] Validar visualmente viewports, contraste/foco con browser y tecnologías asistivas; no hubo browser en el entorno y no se afirma certificación WCAG.
-- [x] Publicar `feature/t04-3-design-system` y abrir [PR #88](https://github.com/D0kker/improved-train/pull/88) a `feature/t04-2-ux-corrections`; sin merge ni despliegue.
+- [x] Publicar `feature/t04-3-design-system`; [PR #88](https://github.com/D0kker/improved-train/pull/88) fue posteriormente integrado en la rama T04.2. T04.4 parte del head T04.3 y no duplica el merge commit.
 - [ ] Revaluar cinco alertas high de `braces` en el árbol de lint cuando exista una versión compatible; sin degradar Next 16/ESLint.
 - Evidencia: `docs/T04_3_DESIGN_SYSTEM.md`. No se han rediseñado Home, dashboard, detalle ni partida activa; se realizan como tareas pequeñas posteriores.
+
+## T04.4 — rediseño de Home y búsqueda
+
+- [x] Rediseñar Home con prioridad de búsqueda usando `SiteHeader`, `Container`, `Card` y `Button`, conservando la región configurada y la ruta de búsqueda actual.
+- [x] Hacer configurables por props los textos de Home y formulario, explicar el alcance inicial de cinco partidas y añadir tres pasos sin resultados ficticios ni llamadas adicionales.
+- [x] Probar validación/foco, teclado, errores, región, navegación, texto largo, semántica y ausencia de solicitudes extra: 35/35 pruebas DOM aprobadas.
+- [x] `npm ci`, lint, type-check, build Next 16.4.2, `docker compose config --quiet`, `git diff --check` y `npm audit --omit=dev` (0 vulnerabilidades de producción).
+- [ ] Validación visual con navegador y capturas: no hay Chromium/browser en el entorno; no se declara verificación visual de viewport ni WCAG completa.
+- [ ] Publicar rama y abrir PR hacia `feature/t04-3-design-system`; completar después de push y creación del PR.
+- Riesgo observado: el audit completo deja un high de desarrollo en Zod transitivo por eslint plugin. Ver [T04.4](T04_4_HOME_REDESIGN.md); no afecta al árbol de producción. No se actualizó dependencia dentro de este alcance.
 
 ## T04.1 — auditoría UX/UI (solo documentación)
 
