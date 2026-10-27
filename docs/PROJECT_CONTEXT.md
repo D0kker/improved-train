@@ -4,7 +4,7 @@
 
 ## RELEASE-02 — integración aislada
 
-- Rama `release/echo-v2`, worktree `/tmp/improved-train-release-echo-v2`, creada desde `origin/main` `6b5f088`. Integra el merge T03.6 ya revisado en `release/echo-staging` (#87), manteniendo T04.1–T04.4 de `main`.
+- Rama `release/echo-v2`, worktree `/tmp/improved-train-release-echo-v2`, creada desde `origin/main` `6b5f088`. Commit de integración `0db73581f4c2c3bb7f7cf028866273cc5eab9f98`; integra el merge T03.6 ya revisado en `release/echo-staging` (#87), manteniendo T04.1–T04.4 de `main`.
 - No hubo conflictos de código; se resolvieron `docs/PROJECT_CONTEXT.md` y `docs/TODO.md` preservando la continuidad más reciente. Evidencia, validaciones, riesgos y rollback: [RELEASE-02](releases/ECHO_RELEASE_02.md).
 - Restore/build/test/format .NET en SDK10 ARM64 pasaron; 126 tests aprobados, 3 opt-in omitidos. Frontend: 40 tests, lint, types y build pasaron; audit producción cero, audit completo un high dev-only de Zod.
 - Imágenes ARM64 compilaron y un smoke API/web aislado pasó sin Riot. Build local AMD64 no dispone de emulación; debe validarse en el job Containers de GitHub Actions antes de considerar READY.

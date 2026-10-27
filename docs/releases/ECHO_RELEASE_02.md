@@ -100,7 +100,8 @@ El candidato contiene el trabajo útil de #89 (T03.5/T03.6 y UX T04.1/T04.2) ade
 
 **Aún no autorizado ni ejecutado.** Requiere autorización explícita posterior a la revisión del PR y checks verdes.
 
-- SHA candidato: completar después del commit de integración.
+- SHA de integración (árbol de aplicación usado para construir): `0db73581f4c2c3bb7f7cf028866273cc5eab9f98`.
+- El HEAD de publicación puede incluir después un commit documental adicional; el código de app no cambia respecto a este SHA.
 - `main` previo: `6b5f088ed89a68ac69b4fcac31f8b1a8ac123b18`.
 - Servicios a actualizar si el PR se aprueba: API y web. Ambos difieren del release integrado; el web desplegado no contiene request lifetime de T03.6.
 - Puertos: web `8081` → contenedor `3000`; API solo interno `8080`.
