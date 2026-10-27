@@ -1,6 +1,6 @@
 # Roadmap
 
-Última actualización: 2026-10-19
+Última actualización: 2026-10-27
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
@@ -28,8 +28,8 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 
 ## RELEASE-02 — consolidación de main y despliegue
 
-- [x] Preparar integración T03.6 sobre `main` preservando T04.1–T04.4; [PR #93](https://github.com/D0kker/improved-train/pull/93) abierto, validaciones locales y CI aprobadas.
-- [ ] Merge final a `main` y actualización de contenedores activos requieren autorización explícita posterior a la revisión de evidencias.
+- [x] Integrar T03.6 preservando T04.1–T04.4; [PR #93](https://github.com/D0kker/improved-train/pull/93) merged a `main` en `1a8ae443`.
+- [x] Desplegar API/web de RELEASE-02; health y smoke checks aprobados, Redis/volumen preservados. Evidencia: [informe RELEASE-02](releases/ECHO_RELEASE_02.md).
 
 ## T04.1 — auditoría UX/UI (solo documentación)
 

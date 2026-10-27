@@ -4,6 +4,8 @@
 
 ## RELEASE-02 — integración aislada
 
+**Estado vigente (2026-10-27):** PR #93 fue fusionado a `main` mediante merge commit `1a8ae443678b13f3e56c31e388df3624860ab051` y RELEASE-02 quedó desplegado. API `sha256:3676f4ef2a49c311eed5646d90d891de5ae3b17d09424e9f5d59be17b8a50ac0` y web `sha256:f39bb94667393bbcfc7d084b6da1d4bce30de8436756f596264650f6f760aa78` están healthy; web publica 8081 y API queda interna en 8080. `/`, `/api/health`, readiness y proxy web→API pasaron. Redis sigue detenido y su volumen se conservó; no se hicieron llamadas a Riot. Evidencia y rollback: [informe RELEASE-02](releases/ECHO_RELEASE_02.md). Los bullets siguientes conservan el estado previo como registro histórico.
+
 - Rama `release/echo-v2`, worktree `/tmp/improved-train-release-echo-v2`, creada desde `origin/main` `6b5f088`. Commit de integración `0db73581f4c2c3bb7f7cf028866273cc5eab9f98`; integra el merge T03.6 ya revisado en `release/echo-staging` (#87), manteniendo T04.1–T04.4 de `main`.
 - No hubo conflictos de código; se resolvieron `docs/PROJECT_CONTEXT.md` y `docs/TODO.md` preservando la continuidad más reciente. Evidencia, validaciones, riesgos y rollback: [RELEASE-02](releases/ECHO_RELEASE_02.md).
 - Restore/build/test/format .NET en SDK10 ARM64 pasaron; 126 tests aprobados, 3 opt-in omitidos. Frontend: 40 tests, lint, types y build pasaron; audit producción cero, audit completo un high dev-only de Zod.
