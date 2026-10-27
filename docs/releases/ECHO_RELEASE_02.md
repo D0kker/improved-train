@@ -26,6 +26,7 @@ Se verificó `merged` explícitamente, no solo `closed`:
 | #89 | open, draft | RELEASE-01 antigua hacia `main`; no fusionada |
 | #90 | merged | T04.1–T04.4 → `main` |
 | #91/#92 | merged | Solo documentación de despliegue |
+| #93 | merged | RELEASE-02: T03.6 + T04.1–T04.4 → `main` |
 
 El merge-base de `main` y `release/echo-staging` es `2eb547e` (T04.2). Se eligió fusionar esa rama de staging porque ya incorpora T03.6 mediante el merge revisado #87 y preserva las resoluciones previas; la rama resultante conserva las entregas T04.3/T04.4 presentes en `main`. Esto evita aplicar un parche de API a ciegas o duplicar commits individuales.
 
@@ -92,6 +93,17 @@ Node `v24.18.0`, npm `11.16.0`.
 - Smoke aislado sin Riot ni credenciales: API `/health/ready` pasó; web root y `/api/health` pasaron internamente; Next.js pudo conectar/proxy a API en red interna (`/api/v1/release02-smoke-nonexistent` devolvió 404 esperado). Los contenedores/red temporales fueron retirados; los servicios existentes permanecieron intactos.
 - Build AMD64 local: intentado con buildx, falló al ejecutar `/bin/sh` por falta de emulación/binfmt en el host ARM64. No se afirma build AMD64 local exitoso; el job `containers` de Actions en Ubuntu x64 sí completó `docker compose build` satisfactoriamente para el PR #93.
 
+### Despliegue RELEASE-02 (2026-10-27)
+
+- PR #93 se fusionó en `main` mediante merge commit `1a8ae443678b13f3e56c31e388df3624860ab051`. El código de aplicación de ese main es idéntico al árbol validado/build de `0db73581f4c2c3bb7f7cf028866273cc5eab9f98`; commits documentales posteriores no cambiaron `apps/api`, `apps/web`, Compose ni infraestructura.
+- Se actualizaron solo API y web con Compose desde `/tmp/improved-train-release-echo-v2`, pasando el `.env` existente y `WEB_PORT=8081`: `docker compose ... up -d --no-build --wait --wait-timeout 180 api web`. Compose advirtió Redis huérfano; no se utilizó `--remove-orphans`.
+- Se conservaron para rollback los tags `lol-network-analyzer-api:release02-rollback` y `lol-network-analyzer-web:release02-rollback` con los digests previos exactos.
+- API nueva: `sha256:3676f4ef2a49c311eed5646d90d891de5ae3b17d09424e9f5d59be17b8a50ac0`, contenedor `388d3b1fca2c`, ARM64, started `2026-10-27T07:22:49.228957282Z`, healthy. API sigue interna en `8080`, sin host port ni mounts.
+- Web nueva: `sha256:f39bb94667393bbcfc7d084b6da1d4bce30de8436756f596264650f6f760aa78`, contenedor `6f00409d54b8`, ARM64, started `2026-10-27T07:22:55.574496826Z`, healthy. Publica `8081:3000`, sin mounts.
+- Smoke posterior: `GET /` HTTP 200 y copy de Home presente; `GET /api/health` HTTP 200 con `healthy`; healthcheck API `/health/ready` pasó; desde el contenedor web, `api:8080/health/ready` respondió y una ruta API inexistente fue proxyada a 404 esperado. No se hicieron llamadas a Riot.
+- Redis conservó el ID `c606fd91491e`, estado `exited`, y el volumen `lol-network-analyzer_redis_data` montado en `/data`; no se inició, borró ni recreó. Ningún otro contenedor se tocó.
+- CI previo al despliegue: run `40465960715` en el HEAD de PR validó `web`, `dotnet` y `containers` (incluido Docker Compose build x64). No apareció un run separado post-merge para el merge commit; el árbol de aplicación es idéntico al HEAD de PR aprobado.
+
 ## 8. Seguridad y limitaciones
 
 - No se detectaron secretos añadidos en el diff; la clave Riot permanece como variable de runtime de API y no se imprimió ni incluyó en el informe.
@@ -106,18 +118,18 @@ El candidato contiene el trabajo útil de #89 (T03.5/T03.6 y UX T04.1/T04.2) ade
 
 ## 10. Preparación de despliegue y rollback
 
-**Aún no autorizado ni ejecutado.** Requiere autorización explícita posterior a la revisión del PR y checks verdes.
+**Ejecutado con autorización explícita del propietario.**
 
 - SHA de integración (árbol de aplicación usado para construir): `0db73581f4c2c3bb7f7cf028866273cc5eab9f98`.
 - El HEAD de publicación puede incluir después un commit documental adicional; el código de app no cambia respecto a este SHA.
 - `main` previo: `6b5f088ed89a68ac69b4fcac31f8b1a8ac123b18`.
-- Servicios a actualizar si el PR se aprueba: API y web. Ambos difieren del release integrado; el web desplegado no contiene request lifetime de T03.6.
+- Servicios actualizados: API y web; ambos ahora corresponden a los artefactos listados en §7.
 - Puertos: web `8081` → contenedor `3000`; API solo interno `8080`.
-- Mantener configuración Riot runtime actual, sin imprimir secretos. Inspección segura de `.env`: `RIOT_PLATFORM_REGION=la1`, `RIOT_REGIONAL_ROUTING=americas`, timeout Riot `10s` y concurrencia Riot `3`; `RIOT_API_KEY` está configurada solo en API (su valor nunca se mostró). No hay overrides para los límites nuevos: Compose aplicará defaults de admisión 8 activos/16 en cola, espera de cola 5000ms, cuota por cliente burst20/20 por minuto, máximo1024 clientes/idle180s y ventanas Riot 20 por 1s / 100 por 120s. Confirmar estos defaults y la compatibilidad de la cuota con el proxy antes de ejecutar el despliegue.
+- Se mantuvo la configuración Riot runtime existente, sin imprimir secretos. Inspección segura de `.env`: `RIOT_PLATFORM_REGION=la1`, `RIOT_REGIONAL_ROUTING=americas`, timeout Riot `10s` y concurrencia Riot `3`; `RIOT_API_KEY` está configurada solo en API (su valor nunca se mostró). Compose aplicó defaults de admisión 8 activos/16 en cola, espera de cola 5000ms, cuota por cliente burst20/20 por minuto, máximo1024 clientes/idle180s y ventanas Riot 20 por 1s / 100 por 120s.
 - Health: API `/health/ready`; web `/api/health`; smoke `GET /` y proxy web→API.
-- Rollback: reconstruir/recrear solo API/web con los digests previos listados arriba, mantener Redis y volúmenes existentes; verificar health y HTTP 200. No borrar imágenes/volúmenes.
-- Abortar si un healthcheck falla, hay errores sostenidos en logs, el proxy web→API no funciona, la API no carga configuración o los resultados de CI no corresponden al SHA aprobado. Este informe no ejecuta el rollback.
+- Rollback disponible: volver a etiquetar `lol-network-analyzer-api:release02-rollback` y `lol-network-analyzer-web:release02-rollback` sobre los tags Compose `latest`, y ejecutar desde el mismo worktree `WEB_PORT=8081 docker compose --env-file /home/dokker/improved-train/.env up -d --no-build --wait --wait-timeout 180 api web`; Redis/volúmenes permanecen fuera de la operación. Verificar `/health/ready`, `/api/health` y `GET /`.
+- Criterios de aborto originales: healthcheck fallido, errores sostenidos, proxy roto o configuración inválida. No se activaron; ambos servicios quedaron healthy y los smoke checks pasaron.
 
 ## 11. Estado final
 
-**READY** para revisión del propietario. El run de Actions indicado pasó en todos los jobs en el HEAD `3924478`; como el informe ahora documenta ese resultado, debe verificarse el nuevo HEAD tras publicar esta actualización. El merge a `main` y la sustitución/reinicio de API/web requieren autorización explícita posterior. No se hizo merge ni despliegue.
+**DEPLOYED**. PR #93 está merged en `main` (`1a8ae44`); API/web usan los digests RELEASE-02 y quedaron healthy en el puerto web 8081. Smoke checks y proxy pasaron; Redis/volumen permanecen intactos. No hubo llamadas a Riot ni cambios a otros servicios. Triage residual: un high solo de desarrollo en Zod transitivo de ESLint; audit de producción cero.
