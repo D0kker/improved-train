@@ -170,12 +170,14 @@ function matchItem(id: string) {
     kills: 3,
     deaths: 2,
     assists: 4,
-    win: true,
+    win: !id.endsWith("1"),
   };
 }
 
 function result(ids: string[], status: "complete" | "partial" | "insufficient" = "complete"): PlayerSearchResult {
   const puuid = "owner-puuid";
+  const wins = ids.filter((id) => !id.endsWith("1")).length;
+  const losses = ids.length - wins;
   return {
     player: { puuid, gameName: "Ana", tagLine: "LAN", platformRegion: "la1" },
     summary: {
@@ -183,9 +185,9 @@ function result(ids: string[], status: "complete" | "partial" | "insufficient" =
       gameName: "Ana",
       tagLine: "LAN",
       matchesAnalyzed: ids.length,
-      wins: ids.length,
-      losses: 0,
-      winRate: 100,
+      wins,
+      losses,
+      winRate: ids.length === 0 ? 0 : Math.round((wins * 1000) / ids.length) / 10,
       uniquePlayersEncountered: 4,
       repeatedPlayers: 1,
       dataUpdatedAt: "2026-10-18T10:00:00Z",
@@ -228,7 +230,7 @@ test("dashboard pagination retries partial and failed windows, deduplicates IDs,
   const user = userEvent.setup();
   render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
   const history = await screen.findByRole("region", { name: "Partidas recientes" });
-  const summary = screen.getByRole("region", { name: "Tu historial de encuentros" });
+  const summary = await screen.findByRole("region", { name: "Tu resumen inicial" });
   const loadMore = () => within(history).getByRole("button");
   const initialMatchesAnalyzed = () =>
     within(summary).getByText("Partidas analizadas").parentElement?.querySelector("dd")?.textContent;
@@ -260,6 +262,57 @@ test("dashboard pagination retries partial and failed windows, deduplicates IDs,
   assert.equal(document.querySelectorAll(".match-card").length, 10);
 });
 
+test("dashboard highlights identity, region, initial metrics and one clear action per match", async () => {
+  globalThis.fetch = async (input) => {
+    const path = String(input);
+    if (path.includes("/analysis?")) return Response.json(result(["LA1_0", "LA1_1", "LA1_2", "LA1_3", "LA1_4"]));
+    if (path.includes("/active-game")) return Response.json(null);
+    throw new Error(`Solicitud no esperada: ${path}`);
+  };
+
+  const user = userEvent.setup();
+  render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
+
+  const identity = await screen.findByRole("heading", { level: 1, name: "Ana#LAN" });
+  assert.ok(identity);
+  assert.equal(screen.getByText("Región · Latinoamérica Norte (LAN) · LA1").getAttribute("class")?.includes("ui-badge"), true);
+
+  const summary = await screen.findByRole("region", { name: "Tu resumen inicial" });
+  assert.match(summary.textContent ?? "", /Calculado con 5 de hasta cinco partidas iniciales disponibles/);
+  assert.ok(within(summary).getByText("Win rate"));
+  assert.ok(within(summary).getByText("80%"));
+  assert.ok(within(summary).getByText("Victorias"));
+  assert.ok(within(summary).getByText("Derrotas"));
+
+  const history = screen.getByRole("region", { name: "Partidas recientes" });
+  assert.equal(within(history).getAllByText("Victoria").length, 4);
+  assert.equal(within(history).getAllByText("Derrota").length, 1);
+  assert.equal(within(history).getAllByText(/Analizar partida/).length, 5);
+  assert.equal(document.querySelectorAll(".match-card").length, 5);
+  assert.equal(screen.queryByText("Analiza esta partida"), null);
+  const firstMatchLink = within(history).getAllByRole("link", { name: /Victoria.*Annie.*Analizar partida/ })[0];
+  assert.match(firstMatchLink.getAttribute("href") ?? "", /^\/match\/LA1_/);
+  await user.tab();
+  await user.tab();
+  await user.tab();
+  await user.tab();
+  assert.equal(document.activeElement, firstMatchLink);
+});
+
+test("dashboard empty history explains the initial window and coverage separately", async () => {
+  globalThis.fetch = async (input) => {
+    const path = String(input);
+    if (path.includes("/analysis?")) return Response.json(result([], "insufficient"));
+    if (path.includes("/active-game")) return Response.json(null);
+    throw new Error(`Solicitud no esperada: ${path}`);
+  };
+
+  render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
+  assert.ok(await screen.findByText("No hay partidas disponibles en esta consulta"));
+  assert.ok(screen.getByText(/Esto no describe todo el historial de la cuenta/));
+  assert.ok(screen.getByText("Información insuficiente"));
+});
+
 test("dashboard shows history before a pending active-game request resolves", async () => {
   let resolveActiveGame: ((response: Response) => void) | undefined;
   globalThis.fetch = async (input) => {
@@ -272,7 +325,7 @@ test("dashboard shows history before a pending active-game request resolves", as
   };
   render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
 
-  assert.ok(await screen.findByRole("region", { name: "Tu historial de encuentros" }));
+  assert.ok(await screen.findByRole("region", { name: "Tu resumen inicial" }));
   assert.match(screen.getByText("Comprobando si hay una partida en curso…").textContent!, /Comprobando/);
   resolveActiveGame?.(Response.json(null));
   assert.ok(await screen.findByText("No se detectó una partida en curso en la última consulta."));

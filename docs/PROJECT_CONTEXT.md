@@ -2,6 +2,16 @@
 
 Última actualización: 2026-10-27
 
+## Estado vigente — RELEASE-02 / T04.5
+
+- `main` parte de RELEASE-02: PR #93 se integró mediante merge `1a8ae443`; API y web están desplegadas con smoke/readiness aprobados. El informe y los digests están en [RELEASE-02](releases/ECHO_RELEASE_02.md).
+- PR #94 (`docs/release02-deployment-record` → `main`) es un seguimiento documental todavía abierto en esta revisión de main; sus cambios no pertenecen al código base de T04.5.
+- T04.5 trabaja en `feature/t04-5-player-dashboard`, creada desde `origin/main` `1a8ae443678b13f3e56c31e388df3624860ab051`, en `/tmp/improved-train-t04-5`.
+- El dashboard presenta identidad/región, resumen inicial de hasta cinco partidas, estado independiente de partida activa, cobertura e historial. `loadMoreMatches` y los contratos no cambian. Hallazgos, validaciones y límites visuales: [T04.5](T04_5_PLAYER_DASHBOARD.md).
+- Estado al inicio del sprint: Node 24.18.0/npm 11.16.0, Next 16.4.2. No se modificó backend, dependencias, secrets ni runtime; no hubo llamadas a Riot ni despliegue.
+
+El registro detallado bajo esta sección conserva notas de sprints anteriores; cuando discrepe con el estado vigente de arriba o los informes de sprint, esos pasajes son históricos.
+
 ## RELEASE-02 — integración aislada
 
 - Rama `release/echo-v2`, worktree `/tmp/improved-train-release-echo-v2`, creada desde `origin/main` `6b5f088`. Commit de integración `0db73581f4c2c3bb7f7cf028866273cc5eab9f98`; integra el merge T03.6 ya revisado en `release/echo-staging` (#87), manteniendo T04.1–T04.4 de `main`.

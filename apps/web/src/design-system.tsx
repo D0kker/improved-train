@@ -123,11 +123,13 @@ export function StatusMessage({
 
 export function SectionHeader({
   title,
+  titleId,
   description,
   action,
   className,
 }: {
   title: ReactNode;
+  titleId?: string;
   description?: ReactNode;
   action?: ReactNode;
   className?: string;
@@ -135,7 +137,7 @@ export function SectionHeader({
   return (
     <header className={cx("ui-section-header", className)}>
       <div>
-        <h2>{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         {description ? <p>{description}</p> : null}
       </div>
       {action ? <div>{action}</div> : null}
