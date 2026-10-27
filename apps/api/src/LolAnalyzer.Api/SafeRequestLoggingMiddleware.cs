@@ -17,11 +17,13 @@ public sealed partial class SafeRequestLoggingMiddleware(
         finally
         {
             var duration = TimeProvider.System.GetElapsedTime(startedAt);
-            metrics.RecordHttpRequest(context.Request.Method, context.Response.StatusCode, duration);
+            metrics.RecordHttpRequest(context.Request.Method, context.Response.StatusCode, duration,
+                (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText ?? "unmatched");
             LogRequestCompleted(
                 logger,
                 context.TraceIdentifier,
                 context.Request.Method,
+                (context.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText ?? "unmatched",
                 context.Response.StatusCode,
                 duration.TotalMilliseconds);
         }
@@ -30,11 +32,12 @@ public sealed partial class SafeRequestLoggingMiddleware(
     [LoggerMessage(
         EventId = 100,
         Level = LogLevel.Information,
-        Message = "HTTP request completed. CorrelationId={CorrelationId} Method={Method} StatusCode={StatusCode} DurationMs={DurationMs}")]
+        Message = "HTTP request completed. CorrelationId={CorrelationId} Method={Method} Endpoint={Endpoint} StatusCode={StatusCode} DurationMs={DurationMs}")]
     private static partial void LogRequestCompleted(
         ILogger logger,
         string correlationId,
         string method,
+        string endpoint,
         int statusCode,
         double durationMs);
 }

@@ -15,6 +15,10 @@ public sealed class OnDemandAnalysisService(
 {
     public async Task<PlayerSearchResult?> SearchAsync(string gameName, string tagLine, string platformRegion, CancellationToken cancellationToken)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gameName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tagLine);
+        if (gameName.Length > 64 || tagLine.Length > 16 || gameName.Any(char.IsControl) || tagLine.Any(char.IsControl))
+            throw new ArgumentException("Invalid Riot ID.");
         var client = riot.ForPlatform(platformRegion);
         var account = await client.GetAccountByRiotIdAsync(gameName, tagLine, cancellationToken).ConfigureAwait(false);
         if (account is null) return null;
@@ -26,6 +30,7 @@ public sealed class OnDemandAnalysisService(
         CancellationToken cancellationToken, PlayerIdentity? identity = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(puuid);
+        if (puuid.Length > 128) throw new ArgumentException("Invalid player identifier.");
         ArgumentOutOfRangeException.ThrowIfNegative(start);
         ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(count, 5);
@@ -33,6 +38,8 @@ public sealed class OnDemandAnalysisService(
         var ids = (await client.GetMatchIdsAsync(puuid, start, count, cancellationToken).ConfigureAwait(false))
             .Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).Take(count).ToArray();
         var downloads = await DownloadAsync(client, ids, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        var calculation = Stopwatch.GetTimestamp();
         var matches = downloads.Where(item => item.Match is not null && item.Match.Participants.Any(player => player.Puuid == puuid))
             .Select(item => item.Match!).OrderByDescending(RequestAnalysisCalculator.OccurredAt)
             .ThenBy(match => match.RiotMatchId, StringComparer.Ordinal).ToArray();
@@ -43,13 +50,16 @@ public sealed class OnDemandAnalysisService(
         var coverage = new AnalysisCoverage(failures.Length > 0 ? matches.Length == 0 ? "error" : "partial"
             : limited ? "insufficient" : "complete", 1, ids.Length, ids.Length, matches.Length,
             [new ParticipantCoverage(puuid, count, ids.Length, matches.Length, limited)], failures);
-        return new PlayerSearchResult(identity, RequestAnalysisCalculator.Summary(identity, matches),
+        var result = new PlayerSearchResult(identity, RequestAnalysisCalculator.Summary(identity, matches),
             new PagedPlayerMatches(start / count + 1, count, start + matches.Length, matches.Select(match =>
             {
                 var own = match.Participants.First(candidate => candidate.Puuid == puuid);
                 return new PlayerMatchListItem(match.RiotMatchId, match.QueueId, match.GameStartTimestamp, match.GameDurationSeconds,
                     own.ChampionId, own.ChampionName, own.Kills, own.Deaths, own.Assists, own.Win);
             }).ToArray()), RequestAnalysisCalculator.Encounters(puuid, matches), coverage);
+        metrics.RecordStage("search.calculate", Stopwatch.GetElapsedTime(calculation));
+        cancellationToken.ThrowIfCancellationRequested();
+        return result;
     }
 
     public async Task<MatchAnalysisResult?> AnalyzeAsync(string matchId, string ownerPuuid, string platformRegion, CancellationToken cancellationToken)
@@ -69,7 +79,7 @@ public sealed class OnDemandAnalysisService(
         var targetStart = target.GameStartTimestamp ?? target.GameCreation;
         if (targetStart is null)
             return calculator.Analyze(target, ownerPuuid, platformRegion, [], new AnalysisCoverage("insufficient",
-                participants.Length, 0, 0, 0, [], [new AnalysisFailure("target", "missing_target_timestamp")]));
+                participants.Length, 0, 0, 0, [], [new AnalysisFailure("target", "missing_target_timestamp")]), cancellationToken);
         var plans = new HistoryPlan[participants.Length];
         await Parallel.ForEachAsync(Enumerable.Range(0, participants.Length), ParallelSettings(cancellationToken), async (index, token) =>
         {
@@ -110,7 +120,9 @@ public sealed class OnDemandAnalysisService(
             : participants.Length != 10 || coverageRows.Any(row => row.Limited) ? "partial" : "complete";
         var coverage = new AnalysisCoverage(status, participants.Length, allIds.Length, uniqueIds.Length, selected.Count, coverageRows, failures);
         cancellationToken.ThrowIfCancellationRequested();
-        var result = calculator.Analyze(target, ownerPuuid, platformRegion, selected.Values.ToArray(), coverage);
+        var calculation = Stopwatch.GetTimestamp();
+        var result = calculator.Analyze(target, ownerPuuid, platformRegion, selected.Values.ToArray(), coverage, cancellationToken);
+        metrics.RecordStage("match.calculate", Stopwatch.GetElapsedTime(calculation));
         metrics.RecordMatchAnalysisPlan(allIds.Length, uniqueIds.Length, allIds.Length - uniqueIds.Length);
         metrics.RecordSyncDuration(Stopwatch.GetElapsedTime(started), status == "complete");
         if (status == "complete") metrics.RecordMatchFamiliarity(result.Match.Familiarity?.KnownPlayers ?? 0);
