@@ -9,7 +9,7 @@
 - Restore/build/test/format .NET en SDK10 ARM64 pasaron; 126 tests aprobados, 3 opt-in omitidos. Frontend: 40 tests, lint, types y build pasaron; audit producción cero, audit completo un high dev-only de Zod.
 - Imágenes ARM64 compilaron y un smoke API/web aislado pasó sin Riot. El run de GitHub Actions `40465130308` pasó `web`, `dotnet` y `containers` (build de Compose en runner Ubuntu x64) para el HEAD `3924478`; se publica una actualización documental y se confirmarán los checks sobre su HEAD final.
 - [PR #93](https://github.com/D0kker/improved-train/pull/93) está abierto, limpio y no fusionado; estado listo para revisión. Merge/despliegue esperan autorización explícita.
-- El stack existente permanece intacto: API T03.5 y web T04.4 healthy; Redis huérfano sin cambios. No se fusionó a `main` ni se desplegó.
+- El stack existente permanece intacto: API T03.5 y web T04.4 healthy (sin mounts, puerto web 8081); Redis está detenido y su volumen persistente se conservó. No se fusionó a `main` ni se desplegó.
 - PR #89 permanece abierto como draft; RELEASE-02 contiene su trabajo útil y T04.3/T04.4 más recientes. Recomendar revisar su cierre como sustituido; no cerrarlo automáticamente.
 
 ## Continuidad actual T04.3

@@ -81,6 +81,8 @@ Node `v24.18.0`, npm `11.16.0`.
 - `docker compose config --quiet`: correcto en el worktree release.
 - El host activo es ARM64. API y web preexistentes estaban `healthy`; API no publica puerto al host y web publica `8081`. No se reiniciaron ni alteraron servicios.
 - Digests activos al inspeccionar: API `sha256:2eb828149a7afe2a43b07eeef6903bc334597581c32c0bac65b439124d2e62dc` (runtime T03.5); web `sha256:66f3e18a13d09bd1e34dc0f7325a00239b2577e0a7c2902ae9e2d66a04817b17` (Home T04.4). Ambos ARM64.
+- IDs activos sin cambio durante la evaluación: API `647cab7b9f06`, web `cd331589abfa`. Ambos sin mounts y en `lol-network-analyzer_default`; API tiene puerto interno `8080` sin publicación host, web publica `8081:3000`. `GET /` y `/api/health` devolvieron 200.
+- Redis `lol-network-analyzer-redis-1` estaba detenido (`Exited 0`), sin ser eliminado ni iniciado; su volumen persistente `lol-network-analyzer_redis_data` permanece montado en `/data`. T03.5/T03.6 no lo requieren en el runtime. Tampoco se tocaron otros contenedores detenidos.
 - `GET /` y `GET /api/health` desde `127.0.0.1:8081`: HTTP 200. El healthcheck interno de API `/health/ready` pasó; el contenedor no expone 8080 al host.
 - Redis aparece fuera de Compose como recurso huérfano; se conserva intacto.
 - La suite integrada usa servicios Riot simulados para rate limits, timeouts, cancelación, fallos parciales y concurrencia. No se consumió cuota real.
@@ -111,7 +113,7 @@ El candidato contiene el trabajo útil de #89 (T03.5/T03.6 y UX T04.1/T04.2) ade
 - `main` previo: `6b5f088ed89a68ac69b4fcac31f8b1a8ac123b18`.
 - Servicios a actualizar si el PR se aprueba: API y web. Ambos difieren del release integrado; el web desplegado no contiene request lifetime de T03.6.
 - Puertos: web `8081` → contenedor `3000`; API solo interno `8080`.
-- Mantener configuración Riot runtime actual, sin imprimir secretos. Revisar y confirmar cada límite nuevo contra `.env` antes de ejecutar el despliegue; la candidata usa defaults documentados para protección de recursos cuando no hay override.
+- Mantener configuración Riot runtime actual, sin imprimir secretos. Inspección segura de `.env`: `RIOT_PLATFORM_REGION=la1`, `RIOT_REGIONAL_ROUTING=americas`, timeout Riot `10s` y concurrencia Riot `3`; `RIOT_API_KEY` está configurada solo en API (su valor nunca se mostró). No hay overrides para los límites nuevos: Compose aplicará defaults de admisión 8 activos/16 en cola, espera de cola 5000ms, cuota por cliente burst20/20 por minuto, máximo1024 clientes/idle180s y ventanas Riot 20 por 1s / 100 por 120s. Confirmar estos defaults y la compatibilidad de la cuota con el proxy antes de ejecutar el despliegue.
 - Health: API `/health/ready`; web `/api/health`; smoke `GET /` y proxy web→API.
 - Rollback: reconstruir/recrear solo API/web con los digests previos listados arriba, mantener Redis y volúmenes existentes; verificar health y HTTP 200. No borrar imágenes/volúmenes.
 - Abortar si un healthcheck falla, hay errores sostenidos en logs, el proxy web→API no funciona, la API no carga configuración o los resultados de CI no corresponden al SHA aprobado. Este informe no ejecuta el rollback.
