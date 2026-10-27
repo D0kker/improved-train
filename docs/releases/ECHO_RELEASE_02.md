@@ -2,7 +2,7 @@
 
 Fecha de evaluación: 2026-10-27
 Rama candidata: `release/echo-v2`, creada desde `origin/main` (`6b5f088ed89a68ac69b4fcac31f8b1a8ac123b18`).
-Estado: **BLOCKED** hasta que GitHub Actions valide el HEAD publicado y el propietario autorice merge/despliegue.
+Estado: **READY** para revisión/autorización; no fusionado ni desplegado.
 
 ## 1. Estado inicial
 
@@ -70,6 +70,12 @@ Node `v24.18.0`, npm `11.16.0`.
 - `npm audit --omit=dev`: 0 vulnerabilidades reportadas.
 - `npm audit`: 1 high en Zod `4.5.4`, transitivo solo de desarrollo vía `eslint-config-next@16.4.2` → `eslint-plugin-react-hooks@7.1.1`. No se ejecutó `npm audit fix`; revisar parche compatible como trabajo separado. El intento posterior de obtener JSON actualizado del audit no pudo contactar registry.npmjs.org, por lo que no se presenta como un segundo resultado válido.
 
+## 6.1 GitHub Actions
+
+- PR [#93](https://github.com/D0kker/improved-train/pull/93), base `main`, compare `release/echo-v2`.
+- Run `40465130308` del HEAD `392447879d7b68ad969901193c60548bbf5e0f93`: `web`, `dotnet` y `containers` terminaron `success`. El job `containers` ejecutó `docker compose config --quiet` y `docker compose build` en runner Ubuntu x64, completando la validación AMD64 que no permite el host ARM64 local.
+- Al actualizar este informe se generará un HEAD documental nuevo; los checks de ese HEAD deben confirmarse antes de considerar READY definitivo.
+
 ## 7. Docker, despliegue actual y regresiones
 
 - `docker compose config --quiet`: correcto en el worktree release.
@@ -82,7 +88,7 @@ Node `v24.18.0`, npm `11.16.0`.
   - API `project-echo-release02-api:arm64`: `sha256:3676f4ef2a49c311eed5646d90d891de5ae3b17d09424e9f5d59be17b8a50ac0`.
   - Web `project-echo-release02-web:arm64`: `sha256:f39bb94667393bbcfc7d084b6da1d4bce30de8436756f596264650f6f760aa78`.
 - Smoke aislado sin Riot ni credenciales: API `/health/ready` pasó; web root y `/api/health` pasaron internamente; Next.js pudo conectar/proxy a API en red interna (`/api/v1/release02-smoke-nonexistent` devolvió 404 esperado). Los contenedores/red temporales fueron retirados; los servicios existentes permanecieron intactos.
-- Build AMD64 local: intentado con buildx, falló al ejecutar `/bin/sh` por falta de emulación/binfmt en el host ARM64. No se afirma build AMD64 local exitoso; el job `containers` de Actions corre en `ubuntu-latest` AMD64 y deberá validar las imágenes en el PR.
+- Build AMD64 local: intentado con buildx, falló al ejecutar `/bin/sh` por falta de emulación/binfmt en el host ARM64. No se afirma build AMD64 local exitoso; el job `containers` de Actions en Ubuntu x64 sí completó `docker compose build` satisfactoriamente para el PR #93.
 
 ## 8. Seguridad y limitaciones
 
@@ -112,4 +118,4 @@ El candidato contiene el trabajo útil de #89 (T03.5/T03.6 y UX T04.1/T04.2) ade
 
 ## 11. Estado final
 
-**BLOCKED** hasta que: (1) GitHub Actions valide el build AMD64 y el HEAD publicado; (2) la revisión confirme el plan. El build/smoke ARM64 están completos. El merge a `main` y la sustitución/reinicio de API/web requieren autorización explícita posterior. No se hizo merge ni despliegue.
+**READY** para revisión del propietario. El run de Actions indicado pasó en todos los jobs en el HEAD `3924478`; como el informe ahora documenta ese resultado, debe verificarse el nuevo HEAD tras publicar esta actualización. El merge a `main` y la sustitución/reinicio de API/web requieren autorización explícita posterior. No se hizo merge ni despliegue.
