@@ -8,6 +8,7 @@ public sealed class RiotResponseCache(ICacheService cache, OperationalMetrics? m
 {
     private readonly object gate = new();
     private readonly Dictionary<string, Flight> flights = new(StringComparer.Ordinal);
+    public int InFlightCount { get { lock (gate) return flights.Count; } }
 
     public async Task<T?> GetOrCreateAsync<T>(string key, TimeSpan timeToLive, string tag,
         Func<CancellationToken, Task<T?>> factory, CancellationToken cancellationToken) where T : class
@@ -25,6 +26,13 @@ public sealed class RiotResponseCache(ICacheService cache, OperationalMetrics? m
             {
                 pending = new Flight(async flight =>
                 {
+                    // Another flight may have completed after our first cache lookup.
+                    try
+                    {
+                        var existing = await cache.GetAsync<T>(key, flight.Cancellation.Token).ConfigureAwait(false);
+                        if (existing is not null) return existing;
+                    }
+                    catch (Exception) when (!flight.Cancellation.IsCancellationRequested) { /* Optional cache. */ }
                     var value = await factory(flight.Cancellation.Token).ConfigureAwait(false);
                     if (value is not null)
                     {

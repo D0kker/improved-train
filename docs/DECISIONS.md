@@ -338,3 +338,12 @@ Vigente para el runtime del checkout: **D-042 — stateless, sin base de datos n
 - Consecuencias: reemplaza para el runtime las decisiones previas de persistencia (incluyendo D-021–D-026), D-040 sobre jobs y el corpus global de D-041; conserva sus definiciones estadísticas y degradación de cobertura. EF/Redis/repositorios históricos se compilan exclusivamente en el proyecto Legacy para pruebas y benchmark; el worker queda fuera del runtime/Compose. Los endpoints stateful retirados responden 410 y el frontend usa contratos autocontenidos. No existe progreso persistido ni reanudación de jobs. Caché acotada y single-flight solo optimizan llamadas, nunca constituyen un almacén funcional.
 - Límites: presupuesto HTTP configurable (180 s por defecto), proxy Next 210 s y cancelación hasta Riot. Benchmarks simulados no certifican duración bajo cuota real; un presupuesto agotado devuelve 504 y requiere reintento explícito. La cuota agregada entre instancias sigue pendiente de diseño antes de escalar.
 - Evidencia y contratos: `docs/T03_5_STATELESS_ARCHITECTURE.md`. No autoriza despliegue, reinicio, cambios de secretos ni merge automático.
+
+## D-043 — Admisión acotada, cuota de conexión y presupuestos locales
+
+- Fecha: 2026-10-18
+- Estado: aceptada para T03.6 en rama feature; no desplegada
+- Decisión: reutilizar ConcurrencyLimiter en una admisión singleton con FIFO, cola y deadline propios; cuota token-bucket en tabla acotada por IP de conexión; no confiar en XFF del proxy Next sin una frontera que lo sanee. Usar503 para falta de capacidad y429 para cuota, con Retry-After. El presupuesto global comienza antes de cola y queda por debajo del navegador/proxy.
+- Razón: controlar memoria y trabajo pendiente ante sobrecarga, evitar particiones de clientes ilimitadas y spoofing de identidad, sin nueva infraestructura ni autenticación.
+- Consecuencias: usuarios detrás de Next/NAT comparten cuota hasta diseñar ingress confiable. Se conservan objetos locales y ventanas cinco/tres. El limiter Riot existente conserva un único singleton y añade ventanas preventivas configurables y observación app/método; puede esperar de forma conservadora más de lo mínimo conocido. Las cotas de caché/estructuras no son un techo de RSS. Escalar réplicas requiere resolver cuotas agregadas; no se implementa coordinación distribuida.
+- Evidencia y límites: `docs/T03_6_RESOURCE_PROTECTION.md`. Cargas exclusivamente simuladas, aisladas y opt-in; sin despliegue ni reinicio de servicios.

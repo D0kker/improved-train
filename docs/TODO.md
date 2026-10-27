@@ -24,7 +24,12 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] `npm ci`, lint, type-check, build Next 16.4.2, `docker compose config --quiet`, `git diff --check` y `npm audit --omit=dev` (0 vulnerabilidades de producción).
 - [ ] Validación visual con navegador y capturas: no hay Chromium/browser en el entorno; no se declara verificación visual de viewport ni WCAG completa.
 - [x] Publicar `feature/t04-4-home-redesign`, fusionar [PR #90](https://github.com/D0kker/improved-train/pull/90) a `main` y desplegar el HEAD `8f27b1f`; web healthy en 8081, smoke checks `/` y `/api/health` 200. Evidencia en `PROJECT_CONTEXT.md`.
-- Riesgo observado: el audit completo deja un high de desarrollo en Zod transitivo por eslint plugin. Ver [T04.4](T04_4_HOME_REDESIGN.md); no afecta al árbol de producción. No se actualizó dependencia dentro de este alcance.
+- [ ] T03.6 — protección de recursos está integrada en `release/echo-staging` (merge #87) y queda pendiente de validación en una rama combinada con T04.1–T04.4. Consulte `docs/T03_6_RESOURCE_PROTECTION.md` y `docs/releases/ECHO_STAGING_01.md` para evidencia específica de T03.6 y RELEASE-01.
+
+## RELEASE-02 — consolidación de main y despliegue
+
+- [ ] Preparar integración T03.6 sobre `main` preservando T04.1–T04.4; validar CI local y remoto.
+- [ ] Merge final a `main` y actualización de contenedores activos requieren autorización explícita posterior a la revisión de evidencias.
 
 ## T04.1 — auditoría UX/UI (solo documentación)
 
