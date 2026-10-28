@@ -108,7 +108,7 @@ public sealed class RiotApiClientTests
     public async Task GetMatchAsyncPreservesRawJsonAndNormalizesACompletedMatch()
     {
         const string responseBody = """
-            {"metadata":{"matchId":"TEST_1"},"info":{"queueId":420,"gameCreation":1700000000000,"gameStartTimestamp":1700000010000,"gameEndTimestamp":1700001210000,"gameDuration":1200,"gameVersion":"test","participants":[{"puuid":"test-puuid","riotIdGameName":"Test","riotIdTagline":"TAG","teamId":100,"participantId":1,"championId":1,"championName":"Annie","teamPosition":"MIDDLE","individualPosition":"MIDDLE","kills":1,"deaths":2,"assists":3,"win":true,"goldEarned":1000,"totalDamageDealtToChampions":2000,"visionScore":10,"totalMinionsKilled":50,"neutralMinionsKilled":5}]}}
+            {"metadata":{"matchId":"TEST_1"},"info":{"queueId":420,"gameCreation":1700000000000,"gameStartTimestamp":1700000010000,"gameEndTimestamp":1700001210000,"gameDuration":1200,"gameVersion":"test","participants":[{"puuid":"test-puuid","riotIdGameName":"Test","riotIdTagline":"TAG","teamId":100,"participantId":1,"profileIcon":29,"championId":1,"championName":"Annie","teamPosition":"MIDDLE","individualPosition":"MIDDLE","kills":1,"deaths":2,"assists":3,"win":true,"goldEarned":1000,"totalDamageDealtToChampions":2000,"visionScore":10,"totalMinionsKilled":50,"neutralMinionsKilled":5}]}}
             """;
         using var handler = new StubHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
         {
@@ -121,6 +121,7 @@ public sealed class RiotApiClientTests
         var riotClient = CreateRiotClient(client, new RiotOptions { ApiKey = "unit-test-key" });
 
         var match = await riotClient.GetMatchAsync("TEST_1", TestContext.Current.CancellationToken);
+        Assert.Equal(29, match!.Participants[0].ProfileIconId);
 
         Assert.NotNull(match);
         Assert.Equal("TEST_1", match.RiotMatchId);

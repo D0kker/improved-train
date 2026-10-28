@@ -56,6 +56,8 @@ export function performance(items: MatchListItem[]) {
   };
 }
 export function relationships(windows: DashboardWindow[], owner: string) {
+  if (windows.some((w) => w.result.matches.items.some((m) => m.evidence)))
+    return evidenceRelationships(windows, owner);
   const ids = windows.flatMap((w) =>
     w.result.matches.items.map((m) => m.riotMatchId),
   );
@@ -79,6 +81,7 @@ export function relationships(windows: DashboardWindow[], owner: string) {
       total: number;
       ally: number;
       enemy: number;
+      sharedMatches: { id: string; platform: string; side: string }[];
     }
   >();
   for (const w of windows)
@@ -88,6 +91,7 @@ export function relationships(windows: DashboardWindow[], owner: string) {
       if (!p.otherPlayerPuuid || p.otherPlayerPuuid === owner) continue;
       const prev = players.get(p.otherPlayerPuuid);
       players.set(p.otherPlayerPuuid, {
+        sharedMatches: [],
         puuid: p.otherPlayerPuuid,
         name: p.gameName,
         tag: p.tagLine,
@@ -98,6 +102,7 @@ export function relationships(windows: DashboardWindow[], owner: string) {
     }
   const all = [...players.values()];
   return {
+    incompleteMatches: loadedMatches(windows).length,
     unique: all.length,
     repeated: all.filter((p) => p.total >= 2).length,
     participations: all.reduce((s, p) => s + p.total, 0),
@@ -125,5 +130,134 @@ export function filterMatches(items: MatchListItem[], filter: string) {
     (m) =>
       filter === "all" ||
       (filter === "wins" ? m.win === true : m.win === false),
+  );
+}
+
+function evidenceRelationships(windows: DashboardWindow[], owner: string) {
+  const validIds = new Set(loadedMatches(windows).map((m) => m.riotMatchId));
+  const candidates = windows
+    .flatMap((w) => w.result.matches.items)
+    .filter((m) => validIds.has(m.riotMatchId));
+  const canonical = (m: MatchListItem) =>
+    JSON.stringify(
+      m.evidence
+        ? {
+            ...m.evidence,
+            participants: [...m.evidence.participants].sort((a, b) =>
+              a.puuid.localeCompare(b.puuid, "en"),
+            ),
+          }
+        : null,
+    );
+  const quality = (m: MatchListItem) =>
+    m.evidence?.ownerPuuid === owner
+      ? (m.evidence.status === "complete" ? 100 : 0) +
+        m.evidence.participants.filter((p) => p.puuid).length
+      : -1;
+  candidates.sort(
+    (a, b) =>
+      quality(b) - quality(a) || canonical(a).localeCompare(canonical(b), "en"),
+  );
+  const unique = new Map<string, MatchListItem>();
+  for (const m of candidates)
+    if (!unique.has(m.riotMatchId)) unique.set(m.riotMatchId, m);
+  const players = new Map<
+    string,
+    {
+      puuid: string;
+      name: string;
+      tag: string;
+      total: number;
+      ally: number;
+      enemy: number;
+      sharedMatches: { id: string; platform: string; side: string }[];
+    }
+  >();
+  let incompleteMatches = 0;
+  for (const m of [...unique.values()].sort((a, b) =>
+    a.riotMatchId.localeCompare(b.riotMatchId, "en"),
+  )) {
+    const e = m.evidence,
+      own = e?.participants.find((p) => p.puuid === owner);
+    if (!e || e.ownerPuuid !== owner || !own) {
+      incompleteMatches++;
+      continue;
+    }
+    if (e.status !== "complete") incompleteMatches++;
+    const grouped = new Map<string, typeof e.participants>();
+    for (const p of e.participants)
+      if (p.puuid && p.puuid !== owner)
+        grouped.set(p.puuid, [...(grouped.get(p.puuid) ?? []), p]);
+    for (const [puuid, rows] of grouped) {
+      const p = rows[0],
+        teams = new Set(rows.map((r) => r.teamId));
+      const side =
+        (own.teamId === 100 || own.teamId === 200) &&
+        teams.size === 1 &&
+        (p.teamId === 100 || p.teamId === 200)
+          ? own.teamId === p.teamId
+            ? "ally"
+            : "enemy"
+          : "unknown";
+      const prev = players.get(puuid) ?? {
+        puuid,
+        name: p.gameName,
+        tag: p.tagLine,
+        total: 0,
+        ally: 0,
+        enemy: 0,
+        sharedMatches: [],
+      };
+      players.set(puuid, {
+        ...prev,
+        total: prev.total + 1,
+        ally: prev.ally + (side === "ally" ? 1 : 0),
+        enemy: prev.enemy + (side === "enemy" ? 1 : 0),
+        sharedMatches: [
+          ...prev.sharedMatches,
+          { id: m.riotMatchId, platform: e.platformRegion, side },
+        ],
+      });
+    }
+  }
+  const all = [...players.values()];
+  return {
+    unique: all.length,
+    repeated: all.filter((p) => p.total >= 2).length,
+    participations: all.reduce((s, p) => s + p.total, 0),
+    allies: all.filter((p) => p.ally > 0).length,
+    enemies: all.filter((p) => p.enemy > 0).length,
+    incompleteMatches,
+    players: all
+      .filter((p) => p.total >= 2)
+      .sort(
+        (a, b) => b.total - a.total || a.puuid.localeCompare(b.puuid, "en"),
+      ),
+  };
+}
+
+export function reconcileMatches(items: MatchListItem[]): MatchListItem[] {
+  const quality = (m: MatchListItem) =>
+    (m.evidence?.status === "complete" ? 100 : 0) +
+    (m.evidence?.participants.length ?? 0);
+  const rows = items
+    .filter(
+      (m) =>
+        m.riotMatchId &&
+        [m.kills, m.deaths, m.assists].every(
+          (n) => Number.isFinite(n) && n >= 0,
+        ),
+    )
+    .sort(
+      (a, b) =>
+        quality(b) - quality(a) ||
+        JSON.stringify(a).localeCompare(JSON.stringify(b), "en"),
+    );
+  const map = new Map<string, MatchListItem>();
+  for (const m of rows) if (!map.has(m.riotMatchId)) map.set(m.riotMatchId, m);
+  return [...map.values()].sort(
+    (a, b) =>
+      (b.gameStartTimestamp ?? "").localeCompare(a.gameStartTimestamp ?? "") ||
+      a.riotMatchId.localeCompare(b.riotMatchId, "en"),
   );
 }

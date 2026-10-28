@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, feature/t03-6-resource-protection]
   pull_request:
-    branches: [main, feature/t03-5-stateless-api]
+    branches: [main, feature/t03-5-stateless-api, feature/t04-10-competitive-dashboard]
 
 permissions:
   contents: read

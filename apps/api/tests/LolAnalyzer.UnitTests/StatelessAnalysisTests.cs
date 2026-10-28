@@ -11,6 +11,31 @@ namespace LolAnalyzer.UnitTests;
 
 public sealed class StatelessAnalysisTests
 {
+    [Fact]
+    public void EvidenceOmitsMissingIdentityAndDoesNotInventTeams()
+    {
+        var match = StatelessFixture.Match("LA1_TARGET");
+        var broken = match with { Participants = match.Participants.Select((p, i) => i == 1 ? p with { Puuid = "" } : i == 2 ? p with { TeamId = 0 } : p).ToArray() };
+        var evidence = RequestAnalysisCalculator.Evidence(broken, "owner", "LA1");
+        Assert.Equal("partial", evidence.Status);
+        Assert.Equal(9, evidence.Participants.Count);
+        Assert.Null(Assert.Single(evidence.Participants, p => p.Puuid == "p2").TeamId);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData(29, 29)]
+    [InlineData(-1, null)]
+    public async Task HistoricalIconAndEvidenceReuseExistingDownloads(int? input, int? expected)
+    {
+        var fixture = new StatelessFixture { ProfileIconId = input };
+        var result = await StatelessFixture.Service(fixture).SearchAsync("Fixture", "TEST", "LA1", TestContext.Current.CancellationToken);
+        Assert.NotNull(result);
+        Assert.Equal(expected, result.Player.ProfileIconId);
+        Assert.Equal(5, fixture.Details.Count);
+        Assert.All(result.Matches.Items, row => Assert.Equal(10, row.Evidence!.Participants.Count));
+    }
+
     [Theory]
     [InlineData(5, 5)]
     [InlineData(1, 2)]

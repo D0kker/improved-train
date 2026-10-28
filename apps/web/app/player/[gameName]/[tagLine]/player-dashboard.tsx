@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ProfileIcon } from "@/src/profile-icon";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiError,
@@ -40,6 +41,7 @@ import {
 } from "@/src/competitive-sections";
 import {
   loadedMatches,
+  reconcileMatches,
   filterMatches,
   kda,
   type DashboardWindow,
@@ -233,14 +235,10 @@ export function PlayerDashboard({
           ...result,
           matches: {
             ...result.matches,
-            items: [
-              ...new Map(
-                [
-                  ...(prior?.result.matches.items ?? []),
-                  ...result.matches.items,
-                ].map((m) => [m.riotMatchId, m]),
-              ).values(),
-            ],
+            items: reconcileMatches([
+              ...(prior?.result.matches.items ?? []),
+              ...result.matches.items,
+            ]),
           },
         };
         const windows = [
@@ -289,12 +287,10 @@ export function PlayerDashboard({
             <section className="player-heading" aria-labelledby="player-title">
               <Card variant="elevated" className="player-identity-card">
                 <div className="player-identity-copy">
-                  <span
-                    className="competitive-avatar" role="img"
-                    aria-label="Ícono de perfil no disponible"
-                  >
-                    E
-                  </span>
+                  <ProfileIcon
+                    id={data?.player.profileIconId}
+                    observedAt={data?.player.profileIconObservedAt}
+                  />
                   <p className="eyebrow">Perfil del jugador</p>
                   <h1 id="player-title">
                     {data?.summary.gameName || gameName}
@@ -359,7 +355,8 @@ export function PlayerDashboard({
                       )
                         .then((game) =>
                           setData((current) =>
-                            !controller.signal.aborted && current?.player.puuid === data.player.puuid
+                            !controller.signal.aborted &&
+                            current?.player.puuid === data.player.puuid
                               ? { ...current, activeGame: game }
                               : current,
                           ),

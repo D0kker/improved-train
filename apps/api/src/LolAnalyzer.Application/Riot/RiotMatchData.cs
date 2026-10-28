@@ -28,4 +28,7 @@ public sealed record RiotMatchParticipantData(
     int GoldEarned,
     int TotalDamageDealtToChampions,
     int VisionScore,
-    int Cs);
+    int Cs)
+{
+    public int? ProfileIconId { get; init; }
+}

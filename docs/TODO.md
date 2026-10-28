@@ -1,6 +1,6 @@
 # Roadmap
 
-Última actualización: 2026-10-27
+Última actualización: 2026-10-28
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
@@ -244,3 +244,8 @@ Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redi
 - [x] Cabecera 60/40, partida activa independiente, rendimiento sobre muestra cargada, filtros y detalles locales; documentación en [T04.10](T04_10_COMPETITIVE_DASHBOARD.md).
 - [ ] Relaciones exactas con ventanas solapadas y navegación a partidas compartidas: falta asociación PUUID→Match IDs en el contrato; no implementado ni simulado.
 - [ ] Validación visual y asistiva en navegador, pendiente por disponibilidad del entorno.
+
+## T04.10.1 — evidencia por partida
+
+- Contratos aditivos de icono histórico y participantes ligeros implementados en la rama hija de T04.10; validación y publicación registradas en [informe](T04_10_1_DASHBOARD_DATA_CONTRACTS.md).
+- La integración en T04.10/main y despliegue siguen pendientes de decisión del PO; no se ejecutan automáticamente.
