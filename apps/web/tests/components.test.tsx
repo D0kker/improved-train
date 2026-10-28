@@ -2,7 +2,13 @@ import "./dom-environment.ts";
 
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RiotIdSearchForm } from "../src/riot-id-search-form.tsx";
 import { HomeContent } from "../app/home-content.tsx";
@@ -22,7 +28,12 @@ afterEach(() => {
 
 test("Riot ID validation associates field errors and focuses the first invalid input", async () => {
   const user = userEvent.setup();
-  render(<RiotIdSearchForm platformRegion="la1" onNavigate={() => assert.fail("No debe navegar")} />);
+  render(
+    <RiotIdSearchForm
+      platformRegion="la1"
+      onNavigate={() => assert.fail("No debe navegar")}
+    />,
+  );
 
   const gameName = screen.getByRole("textbox", { name: "Nombre de jugador" });
   const tagLine = screen.getByRole("textbox", { name: "Tag" });
@@ -33,13 +44,24 @@ test("Riot ID validation associates field errors and focuses the first invalid i
   assert.equal(tagLine.getAttribute("aria-invalid"), "true");
   const gameErrorId = gameName.getAttribute("aria-describedby");
   const tagErrorId = tagLine.getAttribute("aria-describedby");
-  assert.equal(document.getElementById(gameErrorId!)?.textContent, "Escribe el nombre de jugador.");
-  assert.equal(document.getElementById(tagErrorId!)?.textContent, "Escribe el Tag.");
+  assert.equal(
+    document.getElementById(gameErrorId!)?.textContent,
+    "Escribe el nombre de jugador.",
+  );
+  assert.equal(
+    document.getElementById(tagErrorId!)?.textContent,
+    "Escribe el Tag.",
+  );
 });
 
 test("Riot ID validation focuses Tag when only Tag is missing", async () => {
   const user = userEvent.setup();
-  render(<RiotIdSearchForm platformRegion="la1" onNavigate={() => assert.fail("No debe navegar")} />);
+  render(
+    <RiotIdSearchForm
+      platformRegion="la1"
+      onNavigate={() => assert.fail("No debe navegar")}
+    />,
+  );
   const gameName = screen.getByRole("textbox", { name: "Nombre de jugador" });
   const tagLine = screen.getByRole("textbox", { name: "Tag" });
 
@@ -50,7 +72,8 @@ test("Riot ID validation focuses Tag when only Tag is missing", async () => {
   assert.equal(gameName.getAttribute("aria-invalid"), "false");
   assert.equal(tagLine.getAttribute("aria-invalid"), "true");
   assert.equal(
-    document.getElementById(tagLine.getAttribute("aria-describedby")!)?.textContent,
+    document.getElementById(tagLine.getAttribute("aria-describedby")!)
+      ?.textContent,
     "Escribe el Tag.",
   );
 });
@@ -75,18 +98,32 @@ test("Riot ID form works by keyboard and announces navigation without rejecting 
   await user.type(tagLine, "A/B");
   await user.keyboard("{Enter}");
 
-  assert.deepEqual(navigations, ["/player/Ana%20Marie/A%2FB?platformRegion=la1"]);
-  assert.equal(screen.getByRole("status").textContent, "Abriendo el perfil del jugador.");
-  assert.equal(screen.getByRole("button", { name: "Abriendo perfil…" }).hasAttribute("disabled"), true);
+  assert.deepEqual(navigations, [
+    "/player/Ana%20Marie/A%2FB?platformRegion=la1",
+  ]);
+  assert.equal(
+    screen.getByRole("status").textContent,
+    "Abriendo el perfil del jugador.",
+  );
+  assert.equal(
+    screen
+      .getByRole("button", { name: "Abriendo perfil…" })
+      .hasAttribute("disabled"),
+    true,
+  );
 });
 
 test("Home presenta la búsqueda como acción principal y conecta el flujo sin llamadas adicionales", async () => {
   const user = userEvent.setup();
   const navigations: string[] = [];
-  globalThis.fetch = async () => assert.fail("Home no debe iniciar solicitudes de API");
+  globalThis.fetch = async () =>
+    assert.fail("Home no debe iniciar solicitudes de API");
   render(
     <>
-      <SiteHeader actionHref="#player-search-form" actionLabel="Ir a la búsqueda" />
+      <SiteHeader
+        actionHref="#player-search-form"
+        actionLabel="Ir a la búsqueda"
+      />
       <HomeContent
         copy={homeCopy}
         platformRegionLabel="Latinoamérica Sur (LAS) · LA2"
@@ -101,15 +138,35 @@ test("Home presenta la búsqueda como acción principal y conecta el flujo sin l
   );
 
   assert.equal(screen.getAllByRole("main").length, 1);
-  assert.equal(screen.getByRole("link", { name: "Ir a la búsqueda" }).getAttribute("href"), "#player-search-form");
+  assert.equal(
+    screen.getByRole("link", { name: "Ir a la búsqueda" }).getAttribute("href"),
+    "#player-search-form",
+  );
   assert.ok(document.getElementById("player-search-form"));
-  assert.equal(screen.getByRole("heading", { level: 1 }).textContent, "Cada partida tiene una historia.");
-  assert.match(screen.getByText(/Busca jugadores, explora sus partidas recientes/).textContent!, /encontrado antes/);
-  assert.match(screen.getByText(/La consulta inicial revisa cinco partidas recientes/).textContent!, /no confirma/);
-  assert.equal(screen.getByLabelText("Región configurada").textContent, "Región de búsqueda: Latinoamérica Sur (LAS) · LA2");
+  assert.equal(
+    screen.getByRole("heading", { level: 1 }).textContent,
+    "Cada partida tiene una historia.",
+  );
+  assert.match(
+    screen.getByText(/Busca jugadores, explora sus partidas recientes/)
+      .textContent!,
+    /encontrado antes/,
+  );
+  assert.match(
+    screen.getByText(/La consulta inicial revisa cinco partidas recientes/)
+      .textContent!,
+    /no confirma/,
+  );
+  assert.equal(
+    screen.getByLabelText("Región configurada").textContent,
+    "Región de búsqueda: Latinoamérica Sur (LAS) · LA2",
+  );
   assert.equal(screen.getAllByRole("heading", { level: 3 }).length, 3);
 
-  await user.type(screen.getByRole("textbox", { name: "Nombre de jugador" }), "Ana Marie");
+  await user.type(
+    screen.getByRole("textbox", { name: "Nombre de jugador" }),
+    "Ana Marie",
+  );
   await user.type(screen.getByRole("textbox", { name: "Tag" }), "LAN");
   await user.click(screen.getByRole("button", { name: /Buscar jugador/ }));
 
@@ -117,8 +174,10 @@ test("Home presenta la búsqueda como acción principal y conecta el flujo sin l
 });
 
 test("Home conserva el contenido traducible largo sin abreviarlo", () => {
-  const longDescription = `${homeCopy.description} ${"Información de contexto ampliada. ".repeat(3)}`.trim();
-  const longRegion = `Región de juego con nombre extendido ${"y variante regional. ".repeat(2)}`.trim();
+  const longDescription =
+    `${homeCopy.description} ${"Información de contexto ampliada. ".repeat(3)}`.trim();
+  const longRegion =
+    `Región de juego con nombre extendido ${"y variante regional. ".repeat(2)}`.trim();
   render(
     <HomeContent
       copy={{ ...homeCopy, description: longDescription }}
@@ -127,8 +186,14 @@ test("Home conserva el contenido traducible largo sin abreviarlo", () => {
     />,
   );
 
-  assert.equal(document.querySelector(".home-lede")?.textContent?.trim(), longDescription);
-  assert.equal(screen.getByLabelText("Región configurada").textContent?.trim(), `Región de búsqueda: ${longRegion}`);
+  assert.equal(
+    document.querySelector(".home-lede")?.textContent?.trim(),
+    longDescription,
+  );
+  assert.equal(
+    screen.getByLabelText("Región configurada").textContent?.trim(),
+    `Región de búsqueda: ${longRegion}`,
+  );
 });
 
 test("skip link has a valid main target and supports keyboard activation", async () => {
@@ -136,7 +201,9 @@ test("skip link has a valid main target and supports keyboard activation", async
   render(
     <>
       <SkipLink />
-      <main id="main-content" tabIndex={-1}>Contenido principal</main>
+      <main id="main-content" tabIndex={-1}>
+        Contenido principal
+      </main>
     </>,
   );
   const skipLink = screen.getByRole("link", { name: "Saltar al contenido" });
@@ -152,11 +219,26 @@ test("skip link has a valid main target and supports keyboard activation", async
 test("site header exposes a named navigation landmark and keyboard-reachable links", async () => {
   const user = userEvent.setup();
   render(<SiteHeader actionLabel="Nueva búsqueda" />);
-  const navigation = screen.getByRole("navigation", { name: "Navegación principal" });
-  assert.equal(within(navigation).getByRole("link", { name: "PROJECT ECHO — Inicio" }).getAttribute("href"), "/");
-  assert.equal(within(navigation).getByRole("link", { name: "Nueva búsqueda" }).getAttribute("href"), "/");
+  const navigation = screen.getByRole("navigation", {
+    name: "Navegación principal",
+  });
+  assert.equal(
+    within(navigation)
+      .getByRole("link", { name: "PROJECT ECHO — Inicio" })
+      .getAttribute("href"),
+    "/",
+  );
+  assert.equal(
+    within(navigation)
+      .getByRole("link", { name: "Nueva búsqueda" })
+      .getAttribute("href"),
+    "/",
+  );
   await user.tab();
-  assert.equal(document.activeElement, within(navigation).getByRole("link", { name: "PROJECT ECHO — Inicio" }));
+  assert.equal(
+    document.activeElement,
+    within(navigation).getByRole("link", { name: "PROJECT ECHO — Inicio" }),
+  );
 });
 
 function matchItem(id: string) {
@@ -174,7 +256,10 @@ function matchItem(id: string) {
   };
 }
 
-function result(ids: string[], status: "complete" | "partial" | "insufficient" = "complete"): PlayerSearchResult {
+function result(
+  ids: string[],
+  status: "complete" | "partial" | "insufficient" = "complete",
+): PlayerSearchResult {
   const puuid = "owner-puuid";
   const wins = ids.filter((id) => !id.endsWith("1")).length;
   const losses = ids.length - wins;
@@ -187,12 +272,18 @@ function result(ids: string[], status: "complete" | "partial" | "insufficient" =
       matchesAnalyzed: ids.length,
       wins,
       losses,
-      winRate: ids.length === 0 ? 0 : Math.round((wins * 1000) / ids.length) / 10,
+      winRate:
+        ids.length === 0 ? 0 : Math.round((wins * 1000) / ids.length) / 10,
       uniquePlayersEncountered: 4,
       repeatedPlayers: 1,
       dataUpdatedAt: "2026-10-18T10:00:00Z",
     },
-    matches: { page: 1, pageSize: 5, totalCount: ids.length, items: ids.map(matchItem) },
+    matches: {
+      page: 1,
+      pageSize: 5,
+      totalCount: ids.length,
+      items: ids.map(matchItem),
+    },
     encounters: [],
     coverage: {
       status,
@@ -200,8 +291,19 @@ function result(ids: string[], status: "complete" | "partial" | "insufficient" =
       matchIdsObtained: status === "insufficient" ? 0 : 5,
       uniqueMatchIds: ids.length,
       matchesRecovered: ids.length,
-      players: [{ puuid, requested: 5, matchIds: 5, eligibleMatches: ids.length, limited: status !== "complete" }],
-      failures: status === "partial" ? [{ stage: "match_detail", code: "mock_failure" }] : [],
+      players: [
+        {
+          puuid,
+          requested: 5,
+          matchIds: 5,
+          eligibleMatches: ids.length,
+          limited: status !== "complete",
+        },
+      ],
+      failures:
+        status === "partial"
+          ? [{ stage: "match_detail", code: "mock_failure" }]
+          : [],
     },
   };
 }
@@ -216,7 +318,10 @@ test("dashboard pagination retries partial and failed windows, deduplicates IDs,
   ];
   globalThis.fetch = async (input) => {
     const path = String(input);
-    if (path.includes("/analysis?")) return Response.json(result(["LA1_0", "LA1_1", "LA1_2", "LA1_3", "LA1_4"]));
+    if (path.includes("/analysis?"))
+      return Response.json(
+        result(["LA1_0", "LA1_1", "LA1_2", "LA1_3", "LA1_4"]),
+      );
     if (path.includes("/active-game")) return Response.json(null);
     if (path.includes("/recent-matches")) {
       requests.push(path);
@@ -229,35 +334,75 @@ test("dashboard pagination retries partial and failed windows, deduplicates IDs,
 
   const user = userEvent.setup();
   render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
-  const history = await screen.findByRole("region", { name: "Partidas recientes" });
-  const summary = await screen.findByRole("region", { name: "Tu resumen inicial" });
-  const loadMore = () => within(history).getByRole("button");
+  const history = await screen.findByRole("region", {
+    name: "Partidas recientes",
+  });
+  const summary = await screen.findByRole("region", {
+    name: "Rendimiento competitivo",
+  });
+  const loadMore = () =>
+    within(history).getByRole("button", {
+      name: /Cargar cinco|Reintentar este bloque/,
+    });
   const initialMatchesAnalyzed = () =>
-    within(summary).getByText("Partidas analizadas").parentElement?.querySelector("dd")?.textContent;
-  assert.equal(within(history).getByText("5 partidas cargadas").textContent, "5 partidas cargadas");
+    within(summary)
+      .getByText("Partidas analizadas")
+      .parentElement?.querySelector("dd")?.textContent;
+  assert.equal(
+    within(history).getByText("5 partidas cargadas").textContent,
+    "5 partidas cargadas",
+  );
   assert.equal(initialMatchesAnalyzed(), "5");
 
   await user.click(loadMore());
-  await screen.findByText("Consulta parcial");
+  await screen.findAllByText(/Consulta parcial/);
   assert.match(requests[0], /start=5/);
-  assert.equal(within(history).getByText("8 partidas cargadas").textContent, "8 partidas cargadas");
-  assert.equal(within(history).getByRole("button").textContent, "Reintentar este bloque de cinco");
-  assert.equal(initialMatchesAnalyzed(), "5");
+  assert.equal(
+    within(history).getByText("8 partidas cargadas").textContent,
+    "8 partidas cargadas",
+  );
+  assert.equal(
+    within(history).getByRole("button", {
+      name: /Cargar cinco|Reintentar este bloque/,
+    }).textContent,
+    "Reintentar este bloque de cinco",
+  );
+  assert.equal(initialMatchesAnalyzed(), "8");
 
   await user.click(loadMore());
   await screen.findByText(/El servicio de Riot no está disponible/);
   assert.match(requests[1], /start=5/);
-  assert.equal(within(history).getByText("8 partidas cargadas").textContent, "8 partidas cargadas");
-  assert.equal(within(history).getByRole("button").textContent, "Reintentar este bloque de cinco");
+  assert.equal(
+    within(history).getByText("8 partidas cargadas").textContent,
+    "8 partidas cargadas",
+  );
+  assert.equal(
+    within(history).getByRole("button", {
+      name: /Cargar cinco|Reintentar este bloque/,
+    }).textContent,
+    "Reintentar este bloque de cinco",
+  );
 
   await user.click(loadMore());
-  await waitFor(() => assert.equal(within(history).getByText("10 partidas cargadas").textContent, "10 partidas cargadas"));
+  await waitFor(() =>
+    assert.equal(
+      within(history).getByText("10 partidas cargadas").textContent,
+      "10 partidas cargadas",
+    ),
+  );
   assert.match(requests[2], /start=5/);
   assert.equal(document.querySelectorAll(".match-card").length, 10);
-  assert.equal(initialMatchesAnalyzed(), "5");
+  assert.equal(initialMatchesAnalyzed(), "10");
 
   await user.click(loadMore());
-  await waitFor(() => assert.equal(within(history).queryByRole("button"), null));
+  await waitFor(() =>
+    assert.equal(
+      within(history).queryByRole("button", {
+        name: /Cargar cinco|Reintentar este bloque/,
+      }),
+      null,
+    ),
+  );
   assert.match(requests[3], /start=10/);
   assert.equal(document.querySelectorAll(".match-card").length, 10);
 });
@@ -265,7 +410,10 @@ test("dashboard pagination retries partial and failed windows, deduplicates IDs,
 test("dashboard highlights identity, region, initial metrics and one clear action per match", async () => {
   globalThis.fetch = async (input) => {
     const path = String(input);
-    if (path.includes("/analysis?")) return Response.json(result(["LA1_0", "LA1_1", "LA1_2", "LA1_3", "LA1_4"]));
+    if (path.includes("/analysis?"))
+      return Response.json(
+        result(["LA1_0", "LA1_1", "LA1_2", "LA1_3", "LA1_4"]),
+      );
     if (path.includes("/active-game")) return Response.json(null);
     throw new Error(`Solicitud no esperada: ${path}`);
   };
@@ -273,60 +421,192 @@ test("dashboard highlights identity, region, initial metrics and one clear actio
   const user = userEvent.setup();
   render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
 
-  const identity = await screen.findByRole("heading", { level: 1, name: "Ana#LAN" });
+  const identity = await screen.findByRole("heading", {
+    level: 1,
+    name: "Ana#LAN",
+  });
   assert.ok(identity);
-  assert.equal(screen.getByText("Región · Latinoamérica Norte (LAN) · LA1").getAttribute("class")?.includes("ui-badge"), true);
+  assert.equal(
+    screen
+      .getByText("Región · Latinoamérica Norte (LAN) · LA1")
+      .getAttribute("class")
+      ?.includes("ui-badge"),
+    true,
+  );
 
-  const summary = await screen.findByRole("region", { name: "Tu resumen inicial" });
-  assert.match(summary.textContent ?? "", /Calculado con 5 de hasta cinco partidas iniciales disponibles/);
+  const summary = await screen.findByRole("region", {
+    name: "Rendimiento competitivo",
+  });
+  assert.match(
+    summary.textContent ?? "",
+    /Todas las partidas válidas cargadas: 5/,
+  );
   assert.ok(within(summary).getByText("Win rate"));
-  assert.ok(within(summary).getByText("80%"));
+  assert.ok(within(summary).getByRole("img", { name: /Win rate: 80%/ }));
   assert.ok(within(summary).getByText("Victorias"));
   assert.ok(within(summary).getByText("Derrotas"));
 
   const history = screen.getByRole("region", { name: "Partidas recientes" });
   assert.equal(within(history).getAllByText("Victoria").length, 4);
   assert.equal(within(history).getAllByText("Derrota").length, 1);
-  assert.equal(within(history).getAllByText(/Analizar partida/).length, 5);
+  assert.equal(within(history).getAllByText(/Analizar encuentros/).length, 5);
   assert.equal(document.querySelectorAll(".match-card").length, 5);
   assert.equal(screen.queryByText("Analiza esta partida"), null);
-  const firstMatchLink = within(history).getAllByRole("link", { name: /Victoria.*Annie.*Analizar partida/ })[0];
+  const firstMatchLink = within(history).getAllByRole("link", {
+    name: /Victoria.*Annie.*Analizar encuentros/,
+  })[0];
   assert.match(firstMatchLink.getAttribute("href") ?? "", /^\/match\/LA1_/);
-  await user.tab();
-  await user.tab();
-  await user.tab();
-  await user.tab();
+  for (let i = 0; i < 12 && document.activeElement !== firstMatchLink; i++)
+    await user.tab();
   assert.equal(document.activeElement, firstMatchLink);
 });
 
 test("dashboard empty history explains the initial window and coverage separately", async () => {
   globalThis.fetch = async (input) => {
     const path = String(input);
-    if (path.includes("/analysis?")) return Response.json(result([], "insufficient"));
+    if (path.includes("/analysis?"))
+      return Response.json(result([], "insufficient"));
     if (path.includes("/active-game")) return Response.json(null);
     throw new Error(`Solicitud no esperada: ${path}`);
   };
 
   render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
-  assert.ok(await screen.findByText("No hay partidas disponibles en esta consulta"));
-  assert.ok(screen.getByText(/Esto no describe todo el historial de la cuenta/));
-  assert.ok(screen.getByText("Información insuficiente"));
+  assert.ok(
+    await screen.findByText("No hay partidas disponibles en esta consulta"),
+  );
+  assert.ok(
+    screen.getByText(/Esto no describe todo el historial de la cuenta/),
+  );
+  assert.ok(screen.getAllByText(/Información insuficiente/)[0]);
 });
 
 test("dashboard shows history before a pending active-game request resolves", async () => {
   let resolveActiveGame: ((response: Response) => void) | undefined;
   globalThis.fetch = async (input) => {
     const path = String(input);
-    if (path.includes("/analysis?")) return Response.json(result(["LA1_0", "LA1_1", "LA1_2", "LA1_3", "LA1_4"]));
+    if (path.includes("/analysis?"))
+      return Response.json(
+        result(["LA1_0", "LA1_1", "LA1_2", "LA1_3", "LA1_4"]),
+      );
     if (path.includes("/active-game")) {
-      return await new Promise<Response>((resolve) => { resolveActiveGame = resolve; });
+      return await new Promise<Response>((resolve) => {
+        resolveActiveGame = resolve;
+      });
     }
     throw new Error(`Solicitud no esperada: ${path}`);
   };
   render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
 
-  assert.ok(await screen.findByRole("region", { name: "Tu resumen inicial" }));
-  assert.match(screen.getByText("Comprobando si hay una partida en curso…").textContent!, /Comprobando/);
+  assert.ok(
+    await screen.findByRole("region", { name: "Rendimiento competitivo" }),
+  );
+  assert.match(
+    screen.getByText("Comprobando si hay una partida en curso…").textContent!,
+    /Comprobando/,
+  );
   resolveActiveGame?.(Response.json(null));
-  assert.ok(await screen.findByText("No se detectó una partida en curso en la última consulta."));
+  assert.ok(
+    await screen.findByText(
+      "No se detectó una partida en curso en la última consulta.",
+    ),
+  );
+});
+
+test("competitive filters and expansion use loaded data without changing performance", async () => {
+  const fixture = result(["LA1_0", "LA1_2"]);
+  let requests = 0;
+  globalThis.fetch = async (input) => {
+    requests++;
+    return Response.json(
+      String(input).includes("/active-game") ? null : fixture,
+    );
+  };
+  const user = userEvent.setup();
+  render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
+  const history = await screen.findByRole("region", {
+    name: "Partidas recientes",
+  });
+  await user.click(within(history).getByRole("button", { name: "Derrotas" }));
+  assert.ok(
+    screen.getByText("No hay partidas cargadas que coincidan con este filtro."),
+  );
+  assert.ok(screen.getByRole("img", { name: /Win rate: 100%/ }));
+  await user.click(within(history).getByRole("button", { name: "Todas" }));
+  const detail = within(history).getAllByText("Ver detalles de Annie")[0];
+  detail.focus();
+  assert.equal(document.activeElement, detail);
+  await user.click(detail);
+  assert.ok(detail.closest("details")?.hasAttribute("open"));
+  assert.equal(requests, 2);
+});
+
+test("recurrent players expand locally and link only complete identities", async () => {
+  const fixture = result(["LA1_0", "LA1_2"]);
+  fixture.encounters = Array.from({ length: 6 }, (_, i) => ({
+    otherPlayerPuuid: `other-${i}`,
+    gameName: `Nombre ${i}`,
+    tagLine: i === 5 ? "" : "TEST",
+    totalMatches: 2,
+    sameTeamMatches: 1,
+    enemyTeamMatches: 1,
+    winsTogether: 1,
+    lossesTogether: 0,
+    winsAgainst: 1,
+    lossesAgainst: 0,
+    firstSeenAt: "2026-01-01",
+    lastSeenAt: "2026-01-02",
+  }));
+  let calls = 0;
+  globalThis.fetch = async (input) => {
+    calls++;
+    return Response.json(
+      String(input).includes("/active-game") ? null : fixture,
+    );
+  };
+  const user = userEvent.setup();
+  render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
+  await screen.findByRole("heading", { name: "Relaciones entre jugadores" });
+  assert.equal(
+    document.querySelectorAll(".competitive-recurrent li").length,
+    5,
+  );
+  assert.match(
+    screen.getByRole("link", { name: "Nombre 0#TEST" }).getAttribute("href")!,
+    /platformRegion=la1/,
+  );
+  await user.click(screen.getByRole("button", { name: "Ver más" }));
+  assert.equal(
+    document.querySelectorAll(".competitive-recurrent li").length,
+    6,
+  );
+  assert.equal(screen.queryByRole("link", { name: "Nombre 5" }), null);
+  assert.equal(calls, 2);
+});
+
+test("active game failure is independent and can be retried manually into a live link", async () => {
+  let active = 0;
+  globalThis.fetch = async (input) =>
+    String(input).includes("/active-game")
+      ? ++active === 1
+        ? new Response("", { status: 503 })
+        : Response.json({
+            gameId: 1,
+            queueId: 420,
+            gameStartTime: "2026-01-01",
+            gameLengthSeconds: 60,
+            participants: [],
+          })
+      : Response.json(result(["LA1_0"]));
+  const user = userEvent.setup();
+  render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
+  await screen.findByRole("region", { name: "Rendimiento competitivo" });
+  await user.click(
+    await screen.findByRole("button", { name: "Volver a comprobar" }),
+  );
+  const live = await screen.findByRole("link", {
+    name: "Ver partida en curso →",
+  });
+  assert.match(live.getAttribute("href")!, /ownerPuuid=owner-puuid/);
+  assert.equal(active, 2);
+  assert.equal(document.querySelectorAll(".match-card").length, 1);
 });

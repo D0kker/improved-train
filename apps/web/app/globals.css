@@ -674,7 +674,9 @@ p {
   margin-top: 4rem;
 }
 
-.player-dashboard-shell .dashboard-content > section:not(.player-heading):not(.message-panel):not(.loading-panel) {
+.player-dashboard-shell
+  .dashboard-content
+  > section:not(.player-heading):not(.message-panel):not(.loading-panel) {
   margin-top: var(--echo-space-8);
 }
 
@@ -1895,5 +1897,169 @@ td > span,
 
   .network-node circle {
     transition: none;
+  }
+}
+
+.player-dashboard-shell {
+  --accent: var(--echo-gold);
+}
+.competitive-header {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1rem;
+}
+.competitive-header .player-identity-card {
+  height: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+.competitive-header .player-identity-copy h1 {
+  font-size: clamp(1.6rem, 4vw, 2.8rem);
+}
+.competitive-header .profile-actions {
+  width: 100%;
+  justify-items: start;
+}
+.competitive-avatar {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid var(--echo-gold);
+  border-radius: var(--echo-radius-lg);
+  color: var(--echo-gold);
+  font-weight: 800;
+  float: left;
+  margin-inline-end: 1rem;
+}
+.competitive-session {
+  padding: 1.5rem;
+  border: 1px solid var(--echo-border);
+  border-radius: var(--echo-radius-lg);
+  background: var(--echo-ink-900);
+  min-width: 0;
+}
+.competitive-session .active-game-banner,
+.competitive-session .active-game-status {
+  display: grid;
+  padding: 0;
+  border: 0;
+  gap: 1rem;
+  background: transparent;
+}
+.competitive-session p {
+  overflow-wrap: anywhere;
+}
+.competitive-performance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+  gap: 1rem;
+}
+.competitive-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+  gap: 1rem;
+  margin-block: 1rem;
+}
+.competitive-metrics .ui-stat-card {
+  min-width: 0;
+  padding: 1rem;
+  background: var(--echo-ink-900);
+  border: 1px solid var(--echo-border);
+  border-radius: var(--echo-radius-lg);
+  overflow-wrap: anywhere;
+}
+.competitive-ring-card {
+  text-align: center;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+.competitive-ring-card svg {
+  width: min(100%, 12rem);
+}
+.ring-track,
+.ring-value {
+  fill: none;
+  stroke-width: 8;
+}
+.ring-track {
+  stroke: var(--echo-border);
+}
+.ring-value {
+  stroke: var(--echo-gold);
+}
+.competitive-ring-card text {
+  fill: var(--echo-gold);
+  font-size: 1rem;
+  font-weight: 800;
+}
+.competitive-champions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+.competitive-champions .ui-card {
+  padding: 1rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.competitive-coverage {
+  color: var(--echo-gold);
+  font-size: var(--echo-font-size-sm);
+}
+.competitive-recurrent {
+  padding: 0;
+  list-style: none;
+}
+.competitive-recurrent li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--echo-border);
+  overflow-wrap: anywhere;
+}
+.competitive-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block: 1rem;
+}
+.competitive-filters [aria-pressed="true"] {
+  border-color: var(--echo-gold);
+  color: var(--echo-gold);
+}
+.competitive-match {
+  border: 1px solid var(--echo-border);
+  border-radius: var(--echo-radius-lg);
+  overflow: hidden;
+  background: var(--echo-ink-900);
+}
+.competitive-match .match-card {
+  border: 0;
+  border-radius: 0;
+}
+.competitive-match details {
+  padding: 0.6rem 1rem;
+}
+.player-dashboard-shell summary {
+  cursor: pointer;
+  min-height: 2.75rem;
+  padding-block: 0.6rem;
+  color: var(--echo-gold);
+  overflow-wrap: anywhere;
+}
+.player-dashboard-shell details p {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .competitive-header,
+  .competitive-performance {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .competitive-champions {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
   }
 }

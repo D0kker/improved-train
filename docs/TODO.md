@@ -238,3 +238,9 @@ Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redi
 - [ ] Obtener el nivel de acceso Riot apropiado y registrar el producto.
 - [ ] Revisar políticas, privacidad, términos, disclaimer, HTTPS, seguridad, backups y observabilidad.
 - [ ] Decidir licencia, dominio e indexación pública.
+
+## T04.10 — dashboard competitivo
+
+- [x] Cabecera 60/40, partida activa independiente, rendimiento sobre muestra cargada, filtros y detalles locales; documentación en [T04.10](T04_10_COMPETITIVE_DASHBOARD.md).
+- [ ] Relaciones exactas con ventanas solapadas y navegación a partidas compartidas: falta asociación PUUID→Match IDs en el contrato; no implementado ni simulado.
+- [ ] Validación visual y asistiva en navegador, pendiente por disponibilidad del entorno.

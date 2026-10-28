@@ -2,6 +2,10 @@
 
 Última actualización: 2026-10-27
 
+## T04.10 — implementación para revisión
+
+Rama `feature/t04-10-competitive-dashboard`, base `main` `2c67fe5`. El PO aprobó cambiar el rendimiento del dashboard a todas las partidas válidas cargadas. No cambia el resumen del backend ni el análisis profundo. Relaciones por ventanas disjuntas disponibles; asociación jugador→Match IDs ausente, pendiente de contrato futuro. Ver [informe](T04_10_COMPETITIVE_DASHBOARD.md). Validaciones: 49/49 pruebas, lint, tipos, build y audit de producción aprobados. Límites del contrato documentados; no se declara completada la navegación a partidas compartidas. Sin cambios de runtime; el registro inferior es histórico de la base.
+
 ## Estado vigente — RELEASE-02 / T04.5
 
 - `main` parte de RELEASE-02: PR #93 se integró mediante merge `1a8ae443`; API y web están desplegadas con smoke/readiness aprobados. El informe y los digests están en [RELEASE-02](releases/ECHO_RELEASE_02.md).
