@@ -1,6 +1,6 @@
 # Roadmap
 
-Última actualización: 2026-10-19
+Última actualización: 2026-10-27
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
@@ -28,8 +28,20 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 
 ## RELEASE-02 — consolidación de main y despliegue
 
-- [x] Preparar integración T03.6 sobre `main` preservando T04.1–T04.4; [PR #93](https://github.com/D0kker/improved-train/pull/93) abierto, validaciones locales y CI aprobadas.
-- [ ] Merge final a `main` y actualización de contenedores activos requieren autorización explícita posterior a la revisión de evidencias.
+- [x] Integrar T03.6 preservando T04.1–T04.4; [PR #93](https://github.com/D0kker/improved-train/pull/93) merged en `main` mediante `1a8ae443`.
+- [x] Desplegar API/web de RELEASE-02; health y smoke checks aprobados, Redis/volumen preservados. Evidencia: [informe RELEASE-02](releases/ECHO_RELEASE_02.md).
+- [x] Registrar el despliegue posterior en [PR #94](https://github.com/D0kker/improved-train/pull/94), todavía abierto en esta base `main`; no se incluye ni se integra automáticamente.
+
+## T04.5 — rediseño del dashboard del jugador
+
+- [x] Agrupar identidad, Riot ID/Tag, región y actualización con componentes Cyber Arcade.
+- [x] Resumir las cinco partidas iniciales con las métricas existentes, incluido win rate, sin recalcular el resumen al cargar más.
+- [x] Hacer del historial el punto central, eliminar la tarjeta duplicada de última partida y mostrar resultados textuales y acción explícita de análisis.
+- [x] Preservar estados de cobertura, paginación, cancelación y carga independiente de partida activa.
+- [x] Agregar pruebas DOM para identidad, métricas, teclado, estados vacíos, paginación y carga activa; `npm test` 42/42.
+- [x] `npm ci`, lint, type-check, build, `npm audit --omit=dev` (0 vulnerabilidades de producción), Compose config y diff-check aprobados.
+- [ ] Validación en navegador/capturas y evaluación asistiva: no hay navegador disponible; no se declara validación visual completa ni certificación WCAG.
+- Evidencia: [T04.5](T04_5_PLAYER_DASHBOARD.md). Detalle de partida queda para T04.6.
 
 ## T04.1 — auditoría UX/UI (solo documentación)
 
