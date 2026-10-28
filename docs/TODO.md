@@ -242,10 +242,18 @@ Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redi
 ## T04.10 — dashboard competitivo
 
 - [x] Cabecera 60/40, partida activa independiente, rendimiento sobre muestra cargada, filtros y detalles locales; documentación en [T04.10](T04_10_COMPETITIVE_DASHBOARD.md).
-- [ ] Relaciones exactas con ventanas solapadas y navegación a partidas compartidas: falta asociación PUUID→Match IDs en el contrato; no implementado ni simulado.
+- [x] Relaciones con ventanas solapadas y partidas compartidas implementadas en T04.10.1, integrado mediante #98 en T04.10; aún pendiente de release a main.
 - [ ] Validación visual y asistiva en navegador, pendiente por disponibilidad del entorno.
 
 ## T04.10.1 — evidencia por partida
 
 - Contratos aditivos de icono histórico y participantes ligeros implementados en la rama hija de T04.10; validación y publicación registradas en [informe](T04_10_1_DASHBOARD_DATA_CONTRACTS.md).
-- La integración en T04.10/main y despliegue siguen pendientes de decisión del PO; no se ejecutan automáticamente.
+- La integración en T04.10 se realizó mediante #98; main y despliegue siguen pendientes de decisión del PO.
+
+
+## RELEASE-04 — preparación
+
+- [x] Integrar solo #98 en T04.10, validar ambas tareas y documentar compatibilidad API/web, seguridad y rollback.
+- [x] Repetir 130 pruebas .NET, 55 frontend y matriz DOM 4/4; builds, tipos, lint, formato, audit producción y Compose aprobados.
+- [ ] Revisión visual en navegador: 320/390/768/1024/1440 y escenarios descritos en [plan](releases/ECHO_RELEASE_04_PLAN.md).
+- [ ] Autorización de merge de #97 y despliegue de API/web; ninguna de estas acciones se ejecuta en esta preparación.

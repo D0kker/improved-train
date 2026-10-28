@@ -2,6 +2,10 @@
 
 Última actualización: 2026-10-28
 
+## RELEASE-04 — candidata integrada, revisión visual pendiente
+
+PR #98 se fusionó únicamente en T04.10 mediante `b551f4312b63af66717de6b6271ec2c190154729`; PR #97 sigue abierto/Draft hacia main. Se repitieron pruebas combinadas (130 .NET y 55 frontend) y una matriz DOM adicional de cuatro combinaciones API/web. Despliegue recomendado API primero por contrato aditivo. Plan y evidencias: [RELEASE-04](releases/ECHO_RELEASE_04_PLAN.md). Estado REVIEW_REQUIRED: no hay navegador disponible y la revisión visual del PO sigue pendiente. No se hizo merge a main, despliegue ni reinicio de servicios. La información anterior de T04.10/T04.10.1 que sigue abajo conserva su contexto histórico de implementación.
+
 ## T04.10.1 — contratos aditivos de dashboard
 
 Rama hija `feature/t04-10-1-dashboard-data-contracts`, desde PR #97 `d010b98`, aún abierto/draft. Match-V5 ya disponible alimenta evidencia por fila y el ícono histórico del owner; no agrega llamadas Riot API. Relaciones deduplicadas por Match ID/PUUID con enlaces compartidos reales. Detalle, compatibilidad y pruebas en [T04.10.1](T04_10_1_DASHBOARD_DATA_CONTRACTS.md). No hay merge ni cambios de servicios/secrets.
