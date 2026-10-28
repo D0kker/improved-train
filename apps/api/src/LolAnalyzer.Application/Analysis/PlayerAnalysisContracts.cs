@@ -110,7 +110,10 @@ public sealed record PlayerMatchListItem(
     int Kills,
     int Deaths,
     int Assists,
-    bool Win);
+    bool Win)
+{
+    public LolAnalyzer.Application.Stateless.DashboardMatchEvidence? Evidence { get; init; }
+}
 
 public sealed record PagedPlayerMatches(
     int Page,

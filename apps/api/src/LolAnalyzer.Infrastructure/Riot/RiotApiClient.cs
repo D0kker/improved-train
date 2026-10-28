@@ -452,7 +452,8 @@ public sealed class RiotApiClient(
         GetRequiredInt(participant, "goldEarned"),
         GetRequiredInt(participant, "totalDamageDealtToChampions"),
         GetRequiredInt(participant, "visionScore"),
-        GetRequiredInt(participant, "totalMinionsKilled") + GetRequiredInt(participant, "neutralMinionsKilled"));
+        GetRequiredInt(participant, "totalMinionsKilled") + GetRequiredInt(participant, "neutralMinionsKilled"))
+    { ProfileIconId = GetNullableInt(participant, "profileIcon") };
 
     private static JsonElement GetRequiredObject(JsonElement source, string propertyName) =>
         source.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.Object

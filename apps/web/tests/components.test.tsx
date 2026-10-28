@@ -610,3 +610,44 @@ test("active game failure is independent and can be retried manually into a live
   assert.equal(active, 2);
   assert.equal(document.querySelectorAll(".match-card").length, 1);
 });
+
+test("historical shared-match links are backed by deduplicated match evidence", async () => {
+  const fixture = result(["LA1_0", "LA1_2"]);
+  fixture.matches.items = fixture.matches.items.map((m, i) => ({
+    ...m,
+    evidence: {
+      ownerPuuid: "owner-puuid",
+      platformRegion: "la1",
+      status: "partial",
+      participants: [
+        { puuid: "owner-puuid", gameName: "Ana", tagLine: "LAN", teamId: 100 },
+        {
+          puuid: "other",
+          gameName: "Other",
+          tagLine: "TEST",
+          teamId: i === 0 ? 100 : 200,
+        },
+      ],
+    },
+  }));
+  let calls = 0;
+  globalThis.fetch = async (input) => {
+    calls++;
+    return Response.json(
+      String(input).includes("/active-game") ? null : fixture,
+    );
+  };
+  const user = userEvent.setup();
+  render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
+  const summary = await screen.findByText("Partidas compartidas (2)");
+  await user.click(summary);
+  const link = screen.getByRole("link", { name: "Analizar LA1_0" });
+  assert.match(link.getAttribute("href")!, /ownerPuuid=owner-puuid/);
+  assert.match(link.closest("li")!.textContent!, /Aliados/);
+  assert.match(
+    screen.getByRole("link", { name: "Analizar LA1_2" }).closest("li")!
+      .textContent!,
+    /Rivales/,
+  );
+  assert.equal(calls, 2);
+});

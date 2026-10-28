@@ -1,6 +1,10 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-10-27
+Última actualización: 2026-10-28
+
+## T04.10.1 — contratos aditivos de dashboard
+
+Rama hija `feature/t04-10-1-dashboard-data-contracts`, desde PR #97 `d010b98`, aún abierto/draft. Match-V5 ya disponible alimenta evidencia por fila y el ícono histórico del owner; no agrega llamadas Riot API. Relaciones deduplicadas por Match ID/PUUID con enlaces compartidos reales. Detalle, compatibilidad y pruebas en [T04.10.1](T04_10_1_DASHBOARD_DATA_CONTRACTS.md). No hay merge ni cambios de servicios/secrets.
 
 ## T04.10 — implementación para revisión
 

@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { matchDetailPath } from "./api";
 import { useState } from "react";
 import { ChampionIcon } from "./champion-icon";
 import { Card, StatCard, SectionHeader, Button } from "./design-system";
@@ -147,6 +148,13 @@ export function CompetitiveRelationships({
       <p className="competitive-coverage">
         {coverageTitle(coverageStatus(windows))} · Solo evidencia disponible.
       </p>
+      {stats && stats.incompleteMatches > 0 && (
+        <p className="warning-banner">
+          {stats.incompleteMatches} partidas sin evidencia completa de
+          participantes. Se cuentan solo coincidencias identificables; algunos
+          equipos o encuentros no están disponibles.
+        </p>
+      )}
       {stats ? (
         <>
           <div className="competitive-metrics">
@@ -190,6 +198,34 @@ export function CompetitiveRelationships({
                   {p.total} partidas compartidas · {p.ally} como aliados ·{" "}
                   {p.enemy} como rivales
                 </span>
+                {p.sharedMatches.length > 0 && (
+                  <details>
+                    <summary>
+                      Partidas compartidas ({p.sharedMatches.length})
+                    </summary>
+                    <ul>
+                      {p.sharedMatches.map((m) => (
+                        <li key={m.id}>
+                          {regions.includes(m.platform.toLowerCase()) ? (
+                            <Link
+                              href={matchDetailPath(m.id, owner, m.platform)}
+                            >
+                              Analizar {m.id}
+                            </Link>
+                          ) : (
+                            <span>{m.id}</span>
+                          )}{" "}
+                          ·{" "}
+                          {m.side === "ally"
+                            ? "Aliados"
+                            : m.side === "enemy"
+                              ? "Rivales"
+                              : "Equipo no disponible"}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
               </li>
             ))}
           </ul>
@@ -210,14 +246,15 @@ export function CompetitiveRelationships({
         </>
       ) : (
         <p className="warning-banner">
-          Las ventanas contienen solapamientos o detalles sin asociación suficiente. El contrato no permite
-          deduplicar sus relaciones con exactitud; los conteos acumulados no
-          están disponibles.
+          Las ventanas contienen solapamientos o detalles sin asociación
+          suficiente. El contrato no permite deduplicar sus relaciones con
+          exactitud; los conteos acumulados no están disponibles.
         </p>
       )}
       <p className="muted-copy">
-        Los datos de encuentros no incluyen Match IDs por jugador. No es posible
-        listar partidas compartidas concretas sin ampliar el contrato.
+        Las partidas compartidas se muestran cuando la respuesta contiene
+        evidencia por partida; respuestas antiguas solo permiten conteos
+        agregados.
       </p>
     </section>
   );

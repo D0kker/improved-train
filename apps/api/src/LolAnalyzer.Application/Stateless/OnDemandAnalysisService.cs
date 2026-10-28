@@ -45,6 +45,12 @@ public sealed class OnDemandAnalysisService(
             .ThenBy(match => match.RiotMatchId, StringComparer.Ordinal).ToArray();
         var player = matches.SelectMany(match => match.Participants).FirstOrDefault(candidate => candidate.Puuid == puuid);
         identity ??= new PlayerIdentity(puuid, player?.GameName ?? "", player?.TagLine ?? "", platformRegion);
+        identity = identity with
+        {
+            ProfileIconId = player?.ProfileIconId is >= 0 and <= 99999 ? player.ProfileIconId : null,
+            ProfileIconObservedAt = player?.ProfileIconId is >= 0 and <= 99999 && matches.Length > 0
+                ? RequestAnalysisCalculator.OccurredAt(matches[0]) : null,
+        };
         var failures = downloads.Where(item => item.Failure is not null).Select(item => item.Failure!).ToArray();
         var limited = matches.Length < count;
         var coverage = new AnalysisCoverage(failures.Length > 0 ? matches.Length == 0 ? "error" : "partial"
@@ -55,7 +61,8 @@ public sealed class OnDemandAnalysisService(
             {
                 var own = match.Participants.First(candidate => candidate.Puuid == puuid);
                 return new PlayerMatchListItem(match.RiotMatchId, match.QueueId, match.GameStartTimestamp, match.GameDurationSeconds,
-                    own.ChampionId, own.ChampionName, own.Kills, own.Deaths, own.Assists, own.Win);
+                    own.ChampionId, own.ChampionName, own.Kills, own.Deaths, own.Assists, own.Win)
+                { Evidence = RequestAnalysisCalculator.Evidence(match, puuid, platformRegion) };
             }).ToArray()), RequestAnalysisCalculator.Encounters(puuid, matches), coverage);
         metrics.RecordStage("search.calculate", Stopwatch.GetElapsedTime(calculation));
         cancellationToken.ThrowIfCancellationRequested();

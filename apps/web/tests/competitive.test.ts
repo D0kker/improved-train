@@ -102,3 +102,89 @@ test("KDA is the mean of per-match ratios and not the aggregate ratio", () => {
   assert.equal(stats.kills, 7);
   assert.equal(stats.deaths, 1);
 });
+
+test("per-match evidence deduplicates overlapping windows, preserves sides, and is reception-order invariant", () => {
+  const a = {
+    ...match("LA1_A"),
+    evidence: {
+      ownerPuuid: "owner",
+      platformRegion: "la1",
+      status: "complete" as const,
+      participants: [
+        { puuid: "owner", gameName: "Owner", tagLine: "T", teamId: 100 },
+        { puuid: "p", gameName: "Player", tagLine: "T", teamId: 100 },
+      ],
+    },
+  };
+  const b = {
+    ...match("LA1_B"),
+    evidence: {
+      ...a.evidence,
+      participants: [
+        a.evidence.participants[0],
+        { ...a.evidence.participants[1], teamId: 200 },
+      ],
+    },
+  };
+  const wa = window(0, [a, b]),
+    wb = window(5, [a]);
+  const stats = relationships([wa, wb], "owner")!;
+  assert.equal(stats.participations, 2);
+  assert.equal(stats.repeated, 1);
+  assert.equal(stats.allies, 1);
+  assert.equal(stats.enemies, 1);
+  assert.deepEqual(
+    stats.players[0].sharedMatches.map((m) => m.id),
+    ["LA1_A", "LA1_B"],
+  );
+  assert.deepEqual(stats, relationships([wb, wa], "owner"));
+  const incomplete = {
+    ...b,
+    evidence: {
+      ...b.evidence,
+      status: "partial" as const,
+      participants: [
+        b.evidence.participants[0],
+        { ...b.evidence.participants[1], teamId: null },
+        { puuid: "", gameName: "", tagLine: "", teamId: 100 },
+      ],
+    },
+  };
+  const partial = relationships([window(0, [incomplete])], "owner")!;
+  assert.equal(partial.participations, 1);
+  assert.equal(partial.enemies, 0);
+  assert.equal(partial.incompleteMatches, 1);
+  const missing = { ...a, evidence: { ...a.evidence, participants: [] } };
+  assert.equal(relationships([window(0, [missing])], "owner")!.unique, 0);
+});
+
+test("retries retain complete evidence instead of downgrading it", async () => {
+  const { reconcileMatches } = await import("../src/competitive-dashboard.ts");
+  const full = {
+    ...match("a"),
+    evidence: {
+      ownerPuuid: "owner",
+      platformRegion: "la1",
+      status: "complete" as const,
+      participants: [
+        { puuid: "owner", gameName: "O", tagLine: "T", teamId: 100 },
+      ],
+    },
+  };
+  const partial = {
+    ...full,
+    evidence: {
+      ...full.evidence,
+      status: "partial" as const,
+      participants: [],
+    },
+  };
+  assert.deepEqual(
+    reconcileMatches([full, partial, full]),
+    reconcileMatches([partial, full]),
+  );
+  assert.equal(
+    reconcileMatches([full, partial])[0].evidence?.status,
+    "complete",
+  );
+});

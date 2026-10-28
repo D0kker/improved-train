@@ -25,3 +25,14 @@ export function championImageUrl(
   if (!/^[A-Za-z][A-Za-z0-9]+$/.test(assetId)) return null;
   return `https://ddragon.leagueoflegends.com/cdn/${dataDragonVersion(version)}/img/champion/${assetId}.png`;
 }
+
+export function profileIconPath(id?: number | null): string | null {
+  return Number.isInteger(id) && id! >= 0 && id! <= 99999
+    ? `/api/assets/profile-icons/${id}`
+    : null;
+}
+export function profileIconUrl(version: string, id: number): string | null {
+  return profileIconPath(id)
+    ? `https://ddragon.leagueoflegends.com/cdn/${dataDragonVersion(version)}/img/profileicon/${id}.png`
+    : null;
+}

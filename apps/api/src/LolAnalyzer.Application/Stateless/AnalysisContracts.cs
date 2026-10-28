@@ -2,7 +2,11 @@ using LolAnalyzer.Application.Analysis;
 
 namespace LolAnalyzer.Application.Stateless;
 
-public sealed record PlayerIdentity(string Puuid, string GameName, string TagLine, string PlatformRegion);
+public sealed record PlayerIdentity(string Puuid, string GameName, string TagLine, string PlatformRegion)
+{
+    public int? ProfileIconId { get; init; }
+    public DateTimeOffset? ProfileIconObservedAt { get; init; }
+}
 
 public sealed record AnalysisFailure(string Stage, string Code, string? Puuid = null, string? MatchId = null);
 
@@ -57,3 +61,7 @@ public sealed class OnDemandAnalysisOptions
             throw new InvalidOperationException("Analysis timeout must be 5-180 seconds (below browser/proxy budgets) and concurrency 1-5.");
     }
 }
+
+public sealed record DashboardParticipant(string Puuid, string GameName, string TagLine, int? TeamId);
+public sealed record DashboardMatchEvidence(string OwnerPuuid, string PlatformRegion, string Status,
+    IReadOnlyList<DashboardParticipant> Participants);
