@@ -1,8 +1,16 @@
 # Roadmap
 
-Última actualización: 2026-10-27
+Última actualización: 2026-10-28
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
+
+## RELEASE-03 — despliegue del dashboard T04.5
+
+- [x] Fusionar exclusivamente [PR #95](https://github.com/D0kker/improved-train/pull/95) hacia `main`; SHA final `2c67fe5cb9d5ffaba6b9f99e3651616a53526409`.
+- [x] Validar la revisión fusionada: CI `40472081429` aprobó `dotnet`, `web` y `containers`; suite frontend 42/42, lint, type-check, build, audit de producción (0 findings) y Compose config aprobados.
+- [x] Construir y desplegar únicamente `web` ARM64; health y smoke tests aprobados. API y Redis sin cambios; imagen previa de web retenida para rollback.
+- [x] Registrar SHA, imágenes, health y rollback en [ECHO_RELEASE_03.md](releases/ECHO_RELEASE_03.md). El PR de documentación se publica por separado y no se fusiona automáticamente.
+- T04.6 no se incluye en RELEASE-03.
 
 ## T04.3 — design system Cyber Arcade
 
