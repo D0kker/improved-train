@@ -258,7 +258,7 @@ Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redi
 - [x] Repetir 130 pruebas .NET, 55 frontend y matriz DOM 4/4; builds, tipos, lint, formato, audit producción y Compose aprobados.
 - [x] T04.10.2: recorrido real de navegador en 320/390/768/1024/1440 con fixtures y 16 capturas; ver [plan](releases/ECHO_RELEASE_04_PLAN.md).
 - [ ] Aprobación visual del PO; contraste inconcluso de axe/evaluación asistiva y assets reales pendientes. PR #97 permanece Draft.
-- [ ] Autorización de merge de #97 y despliegue de API/web; ninguna de estas acciones se ejecuta en esta preparación.
+- [x] #97 integrado externamente en main 22d1152 y despliegue posterior autorizado de API/web ejecutado; ver [registro RELEASE-04](releases/ECHO_RELEASE_04_DEPLOYMENT.md).
 
 
 ## T04.10.3 — refinamiento visual
@@ -267,5 +267,12 @@ Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redi
 - [x] Métricas equilibradas, cifras sin saltos en tablet y campeones horizontales; pruebas y capturas en [informe](T04_10_3_DASHBOARD_VISUAL_REFINEMENT.md).
 - [x] Propuesta documental de publicidad, sin integración ni slots.
 - [ ] Aprobación visual del PO y revisión manual/asistiva; #97 sigue Draft.
-- [ ] Futuro release autorizado: reconstruir web desde el SHA aprobado; imagen b551f43 no contiene este refinamiento.
+- [x] RELEASE-04: API y web construidas desde main 22d1152 y desplegadas healthy; no se reutilizó la web b551f43 anterior al refinamiento.
 - [ ] Publicidad futura (baja prioridad): un emplazamiento reversible, condicionado a aprobación Riot/producto y proveedor; reserva responsive, rotulado, consentimiento aplicable y medición CLS. Criterios y límites en [propuesta](T04_10_3_AD_PLACEMENT_PROPOSAL.md); no habilitar anuncios por esta tarea.
+
+
+## Continuidad operativa RELEASE-04
+
+- [x] Despliegue API→web de 22d1152, health/proxy aprobados y rollback conservado; estado DEPLOYED_WITH_WARNINGS por límites de validación, no por health fallido.
+- [ ] Validación end-to-end con identidad controlada/Riot real, separada de smokes con fixtures; respetar cuotas y no guardar datos personales.
+- [ ] OpenAPI de análisis (prioridad media, futura): añadir metadata de respuesta a endpoints IResult para describir campos aditivos existentes. Criterios: esquema con profileIconId/profileIconObservedAt/evidence, pruebas de contrato y compatibilidad; sin nuevas llamadas Riot, endpoints ni cambios del análisis. Depende de revisar las firmas reales; no se implementa durante el despliegue.
