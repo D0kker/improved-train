@@ -12,14 +12,15 @@ export function ProfileIcon({
   const [failedSource, setFailedSource] = useState<string | null>(null),
     source = profileIconPath(id);
   return (
-    <div>
+    <div className="profile-icon">
       {source && failedSource !== source ? (
         <img
           src={source}
           alt="Ícono de invocador observado en su última partida disponible"
           title={observedAt ? `Observado en partida: ${observedAt}` : undefined}
-          width={48}
-          height={48}
+          className="profile-icon__image"
+          width={88}
+          height={88}
           onError={() => setFailedSource(source)}
         />
       ) : (
@@ -31,9 +32,7 @@ export function ProfileIcon({
           E
         </span>
       )}
-      {source && failedSource !== source && (
-        <small>Ícono de la última partida</small>
-      )}
+      {source && failedSource !== source && <small>Ícono histórico</small>}
     </div>
   );
 }

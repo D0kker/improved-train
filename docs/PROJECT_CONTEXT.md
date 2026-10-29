@@ -1,6 +1,10 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-10-28
+Última actualización: 2026-10-29
+
+## T04.10.3 — refinamiento visual pendiente de aprobación
+
+Sobre PR #97 se optimiza cabecera, fecha/región, grilla de siete métricas y campeones horizontales, conservando lógica y contratos. [Informe](T04_10_3_DASHBOARD_VISUAL_REFINEMENT.md), [comparación visual](releases/release04-captures/t04-10-3/README.md) y [publicidad futura documental](T04_10_3_AD_PLACEMENT_PROPOSAL.md). 59 pruebas frontend, lint/tipos/build y audit producción cero; validación Chromium con fixtures en cinco anchos. Se corrigió una cifra dividida en tablet y se añadió comprobación de una línea para valores. READY_FOR_REVIEW, PR Draft; aprobación visual del PO y contraste/asistiva pendientes. La imagen web b551f43 es anterior al refinamiento y deberá reconstruirse antes de un futuro despliegue autorizado. Sin cambios de backend, main, secretos ni servicios.
 
 ## T04.10.2 — candidata lista para revisión del PO
 

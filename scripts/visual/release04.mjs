@@ -51,6 +51,34 @@ try {
     const dimensions=await page.evaluate(()=>({viewport:innerWidth,scroll:document.documentElement.scrollWidth,columns:getComputedStyle(document.querySelector('.competitive-header')).gridTemplateColumns}));
     assert.ok(dimensions.scroll<=width,`horizontal overflow at ${width}: ${dimensions.scroll}`);
     report.viewports.push({width,...dimensions});
+    if(process.env.VISUAL_REFINEMENT) {
+      const geometry=await page.evaluate(()=>{
+        const box=s=>{const r=document.querySelector(s).getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};};
+        const metrics=Array.from(document.querySelectorAll('.competitive-performance-metrics dl')).map(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height};});
+        return {profile:box('.player-identity-card'),session:box('.competitive-session'),icon:box('.profile-icon__image'),date:box('.profile-freshness'),dateText:document.querySelector('.profile-freshness').textContent,region:document.querySelector('.profile-region').textContent,metrics,champion:box('.competitive-champion-card .champion-icon'),championCopy:box('.competitive-champion-copy')};
+      });
+      const figures=await page.locator('.competitive-metrics .ui-stat-card__value').evaluateAll(elements=>elements.map(e=>({height:e.getBoundingClientRect().height,lineHeight:parseFloat(getComputedStyle(e).lineHeight),width:e.clientWidth,scroll:e.scrollWidth})));
+      assert.ok(figures.every(v=>v.height<=v.lineHeight+1 && v.scroll<=v.width),'statistics must fit on one line');
+      geometry.figures=figures;
+      assert.equal(geometry.region.trim(),'Latinoamérica Norte (LAN)');
+      assert.match(geometry.dateText,/oct/);
+      assert.equal(geometry.icon.width,width>600?88:64);
+      assert.ok(geometry.championCopy.x>=geometry.champion.x+geometry.champion.width);
+      if(width>=1024) {
+        assert.ok(geometry.date.height<=22,'desktop date should occupy one line');
+        assert.ok(geometry.session.height<280,'session must fit its compact contents');
+        const rows=Object.values(Object.groupBy(geometry.metrics,m=>Math.round(m.y))).map(row=>row.length);
+        assert.deepEqual(rows,[3,4]);
+      }
+      if(width===768) {
+        const rows=Object.values(Object.groupBy(geometry.metrics,m=>Math.round(m.y))).map(row=>row.length);
+        assert.deepEqual(rows,[3,2,2]);
+      }
+      report.viewports.at(-1).geometry=geometry;
+      if(width===768||width===1024) await shot(page,`viewport-${width}`);
+      if(width===1440) await shot(page,'17-champions',page.locator('.competitive-champions'));
+    }
+
     if(width===1440) {
       const cols=dimensions.columns.split(' ').map(parseFloat); assert.ok(Math.abs(cols[0]/cols[1]-1.5)<0.02);
       await shot(page,'01-desktop'); await shot(page,'02-header',page.locator('.competitive-header'));

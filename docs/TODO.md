@@ -259,3 +259,13 @@ Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redi
 - [x] T04.10.2: recorrido real de navegador en 320/390/768/1024/1440 con fixtures y 16 capturas; ver [plan](releases/ECHO_RELEASE_04_PLAN.md).
 - [ ] Aprobación visual del PO; contraste inconcluso de axe/evaluación asistiva y assets reales pendientes. PR #97 permanece Draft.
 - [ ] Autorización de merge de #97 y despliegue de API/web; ninguna de estas acciones se ejecuta en esta preparación.
+
+
+## T04.10.3 — refinamiento visual
+
+- [x] Cabecera compacta 60/40, icono histórico grande, región corta y fecha española; lógica de consultas intacta.
+- [x] Métricas equilibradas, cifras sin saltos en tablet y campeones horizontales; pruebas y capturas en [informe](T04_10_3_DASHBOARD_VISUAL_REFINEMENT.md).
+- [x] Propuesta documental de publicidad, sin integración ni slots.
+- [ ] Aprobación visual del PO y revisión manual/asistiva; #97 sigue Draft.
+- [ ] Futuro release autorizado: reconstruir web desde el SHA aprobado; imagen b551f43 no contiene este refinamiento.
+- [ ] Publicidad futura (baja prioridad): un emplazamiento reversible, condicionado a aprobación Riot/producto y proveedor; reserva responsive, rotulado, consentimiento aplicable y medición CLS. Criterios y límites en [propuesta](T04_10_3_AD_PLACEMENT_PROPOSAL.md); no habilitar anuncios por esta tarea.

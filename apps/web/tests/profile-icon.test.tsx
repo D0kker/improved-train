@@ -2,6 +2,7 @@ import "./dom-environment.ts";
 import assert from "node:assert/strict";
 import { test, afterEach } from "node:test";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { ChampionIcon } from "../src/champion-icon.tsx";
 import { ProfileIcon } from "../src/profile-icon.tsx";
 import { profileIconPath, profileIconUrl } from "../src/data-dragon.ts";
 afterEach(cleanup);
@@ -21,4 +22,26 @@ test("profile icon is historical, validated, and falls back after image failure"
 test("absent profile icon makes no resource URL", () => {
   render(<ProfileIcon />);
   assert.ok(screen.getByRole("img", { name: "Ícono de perfil no disponible" }));
+});
+
+test("larger champion fallback preserves its requested size without a resource request", () => {
+  const { container, rerender } = render(
+    <ChampionIcon
+      championId={0}
+      championName="Campeón con nombre largo"
+      size={72}
+    />,
+  );
+  const fallback = container.querySelector<HTMLElement>(
+    ".champion-icon-fallback",
+  )!;
+  assert.equal(fallback.style.width, "72px");
+  assert.equal(fallback.style.height, "72px");
+  assert.equal(container.querySelector("img"), null);
+  rerender(<ChampionIcon championId={0} championName="Campeón" />);
+  assert.equal(
+    container.querySelector<HTMLElement>(".champion-icon-fallback")!.style
+      .width,
+    "",
+  );
 });

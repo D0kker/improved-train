@@ -1,7 +1,7 @@
 # RELEASE-04 — candidata de Dashboard Gaming Competitivo
 
 Fecha: 2026-10-28
-Estado: **READY_FOR_REVIEW** — validación de navegador realizada en T04.10.2; pendiente aprobación visual del Product Owner. No autorizado para merge a main ni despliegue. Las secciones de preparación inicial se conservan como registro histórico; el cierre de T04.10.2 al final es el estado vigente.
+Estado: **READY_FOR_REVIEW** — validación de navegador realizada en T04.10.2; pendiente aprobación visual del Product Owner. No autorizado para merge a main ni despliegue. Las secciones de preparación inicial se conservan como registro histórico; el cierre de T04.10.3 al final es el estado vigente.
 
 ## 1. Estado inicial y consolidación
 
@@ -202,3 +202,16 @@ El 2026-10-29 04:13 UTC se observaron recreaciones de los contenedores existente
 Al terminar las pruebas se observaron aproximadamente 954 MiB libres (97% ocupado). Se retiraron exclusivamente las herramientas temporales de navegador, node_modules/.next y bin/obj generados por esta validación en su worktree, después de finalizar todos los comandos. Se recuperó espacio hasta aproximadamente 2.4 GiB libres (92% ocupado). No se eliminaron imágenes, cachés Docker compartidas ni volúmenes; comprobar nuevamente capacidad antes de desplegar.
 
 Commit de publicación de las evidencias: `d1f2a20f0442170d97d01e3443bdf02e8ddc0f2f`. El seguimiento posterior solo registra esta limpieza local; el SHA de entrega y su CI están en PR #97.
+
+
+## 15. T04.10.3 — optimización visual para revisión del PO
+
+Se refinan únicamente presentación y estilos del dashboard, sobre HEAD inicial `21b1051560d153a3aedbd81f7c99bef368dbc6dc`. Informe: [T04.10.3](../T04_10_3_DASHBOARD_VISUAL_REFINEMENT.md). Cabecera 60/40 con alturas independientes, ícono histórico 88/64 px, región sin código duplicado, fecha española compacta, siete métricas con cifras protagonistas y grillas completas, campeones horizontales de 72/64 px. La muestra, fórmulas, cobertura, deduplicación, offsets/reintentos y contratos no cambian; no hay nuevas llamadas Riot ni dependencias.
+
+Validación de producción web: npm ci, 59/59 pruebas, lint, TypeScript, build y audit producción cero; Compose config y diff-check. Chromium con fixtures en 320/390/768/1024/1440, incluidos estados y expansiones. La revisión detectó el KDA dividido en tablet: se ajustó la grilla tablet a 3+2+2 y se agregó una aserción geométrica para que las cifras quepan en una línea. Desktop conserva 3+4. [Capturas y comparación](release04-captures/t04-10-3/README.md): 19 imágenes nuevas, sin sustituir las anteriores. Cabecera completa a 1440px: 416→223px. Axe sin infracciones detectadas, con contraste parcialmente inconcluso; evaluación manual/asistiva y aprobación visual del PO pendientes. El SHA final y su CI se registran en PR #97.
+
+[Propuesta publicitaria](../T04_10_3_AD_PLACEMENT_PROPOSAL.md) exclusivamente documental. No se implementa monetización, slot ni reserva visual artificial.
+
+**Artefactos:** la imagen web `project-echo-release04-web:b551f43` no contiene T04.10.3 y queda como candidata histórica/comparativa; no reutilizarla para publicar este refinamiento. Será necesario construir la web desde el SHA finalmente aprobado antes de cualquier despliegue autorizado. La API no cambió: su candidata anterior y la matriz aditiva/orden API→web se conservan, sujetos a comparar árboles al preparar la ejecución. Los tags e imágenes anteriores de rollback no se eliminan ni modifican.
+
+Estado **READY_FOR_REVIEW**, #97 continúa Draft. El servidor de prueba fue exclusivo de localhost y no utilizó Riot real. Esta tarea no modifica servicios de producción, Redis, secretos o main; no fusiona ni despliega. Las secciones previas conservan evidencias históricas de RELEASE-04 y no sustituyen esta revisión web.

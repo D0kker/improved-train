@@ -428,7 +428,7 @@ test("dashboard highlights identity, region, initial metrics and one clear actio
   assert.ok(identity);
   assert.equal(
     screen
-      .getByText("Región · Latinoamérica Norte (LAN) · LA1")
+      .getByText("Latinoamérica Norte (LAN)")
       .getAttribute("class")
       ?.includes("ui-badge"),
     true,
@@ -650,4 +650,56 @@ test("historical shared-match links are backed by deduplicated match evidence", 
     /Rivales/,
   );
   assert.equal(calls, 2);
+});
+
+test("refined dashboard keeps historical profile, compact region, date and seven metrics", async () => {
+  const fixture = result(["LA1_0", "LA1_1", "LA1_2", "LA1_3", "LA1_4"]);
+  fixture.player.profileIconId = 29;
+  fixture.player.profileIconObservedAt = fixture.summary.dataUpdatedAt;
+  const calls: string[] = [];
+  globalThis.fetch = async (input) => {
+    calls.push(String(input));
+    return Response.json(
+      String(input).includes("active-game") ? null : fixture,
+    );
+  };
+  const user = userEvent.setup();
+  render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
+  const region = await screen.findByText("Latinoamérica Norte (LAN)");
+  assert.equal(region.textContent, "Latinoamérica Norte (LAN)");
+  const icon = await screen.findByRole("img", { name: /invocador observado/ });
+  assert.equal(icon.getAttribute("width"), "88");
+  assert.ok(screen.getByText("Ícono histórico"));
+  const date = document.querySelector(".profile-freshness time")!;
+  assert.equal(date.getAttribute("datetime"), fixture.summary.dataUpdatedAt);
+  assert.match(date.textContent!, /oct/);
+  assert.equal(
+    document.querySelectorAll(".competitive-performance-metrics dl").length,
+    7,
+  );
+  const champions = screen.getByRole("heading", {
+    level: 3,
+    name: "Campeones más jugados",
+  });
+  assert.ok(champions);
+  assert.ok(screen.getByText("Según las partidas cargadas"));
+  for (const card of document.querySelectorAll(".competitive-champion-card")) {
+    assert.ok(card.querySelector(".competitive-champion-copy h4"));
+    // This existing JSDOM harness uses champion fallback fixtures; actual
+    // Next/Image rendering and dimensions are verified in Chromium.
+    assert.equal(
+      card.querySelector<HTMLElement>(".champion-icon-fallback")?.style.width,
+      "72px",
+    );
+  }
+  assert.equal(
+    screen.getByRole("link", { name: /Ver historial/ }).getAttribute("href"),
+    "#matches-title",
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Actualizar cinco partidas" }),
+  );
+  await waitFor(() => assert.equal(calls.length, 4));
+  assert.ok(calls.every((path) => path.includes("platformRegion=la1")));
+  assert.equal(document.querySelectorAll(".match-card").length, 5);
 });

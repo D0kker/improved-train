@@ -35,3 +35,8 @@ No hay dependencias nuevas en el proyecto. Se instalaron Playwright 1.64.1 y axe
 El script intercepta las APIs y assets con fixtures y bloquea peticiones a otros orígenes. No sirve como prueba end-to-end de Riot. `CAPTURE_DIR` permite cambiar el destino sin sobrescribir estas referencias. Sus aserciones fallan ante overflow, errores JavaScript, solicitudes externas, cambios de métricas por filtros o navegación insegura en los casos incluidos. Los hallazgos de axe quedan registrados para revisión; no se convierten en una declaración automática de conformidad.
 
 Pendiente: aprobación visual del Product Owner, evaluación asistiva y contraste manual donde axe devuelve `incomplete`; revisión con assets autorizados reales cuando se permita acceso al proveedor.
+
+
+## Refinamiento posterior T04.10.3
+
+Estas capturas se conservan como comparación anterior. El [nuevo índice antes/después](t04-10-3/README.md) contiene la presentación refinada, mediciones y 19 capturas adicionales; no implica aprobación visual del PO.

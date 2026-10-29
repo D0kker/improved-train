@@ -60,18 +60,20 @@ export function CompetitivePerformance({
               {stats.rate === null ? "—" : number(stats.rate) + "%"}
             </text>
           </svg>
-          <strong>Win rate</strong>
-          <p>
-            {stats.wins} victorias · {stats.losses} derrotas
-          </p>
-          {stats.count > stats.wins + stats.losses && (
+          <div className="competitive-ring-copy">
+            <strong>Win rate</strong>
             <p>
-              Resultados sin clasificar:{" "}
-              {stats.count - stats.wins - stats.losses}
+              {stats.wins} victorias · {stats.losses} derrotas
             </p>
-          )}
+            {stats.count > stats.wins + stats.losses && (
+              <p>
+                Resultados sin clasificar:{" "}
+                {stats.count - stats.wins - stats.losses}
+              </p>
+            )}
+          </div>
         </Card>
-        <div className="competitive-metrics">
+        <div className="competitive-metrics competitive-performance-metrics">
           {[
             ["Partidas analizadas", stats.count],
             ["Victorias", stats.wins],
@@ -89,19 +91,24 @@ export function CompetitivePerformance({
           ))}
         </div>
       </div>
-      <h3>Top campeones de la muestra</h3>
+      <header className="competitive-subsection">
+        <h3>Campeones más jugados</h3>
+        <p>Según las partidas cargadas</p>
+      </header>
       <div className="competitive-champions">
         {stats.champions.map((c) => (
-          <Card key={c.id}>
-            <ChampionIcon championId={c.id} championName={c.name} />
-            <h4>{c.name}</h4>
-            <p>
-              {c.count} partidas · {c.wins} V / {c.losses} D
-            </p>
-            <p>
-              Win rate: {number(c.rate)}
-              {c.rate !== null ? "%" : ""}
-            </p>
+          <Card key={c.id} className="competitive-champion-card">
+            <ChampionIcon championId={c.id} championName={c.name} size={72} />
+            <div className="competitive-champion-copy">
+              <h4>{c.name}</h4>
+              <p>
+                {c.count} partidas · {c.wins} V / {c.losses} D
+              </p>
+              <p>
+                Win rate: {number(c.rate)}
+                {c.rate !== null ? "%" : ""}
+              </p>
+            </div>
           </Card>
         ))}
       </div>

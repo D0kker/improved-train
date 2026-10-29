@@ -17,9 +17,10 @@ import {
   recentMatchesPath,
   matchDetailPath,
 } from "@/src/api";
+import { formatDashboardDate } from "@/src/dashboard-presentation";
 import { formatDate, formatDuration, queueLabel } from "@/src/format";
 import { ChampionIcon } from "@/src/champion-icon";
-import { platformRegionLabel } from "@/src/platform-region";
+import { platformRegionName } from "@/src/platform-region";
 import {
   canContinueRecentMatches,
   isCurrentPlayerRequest,
@@ -286,28 +287,25 @@ export function PlayerDashboard({
           <div className="competitive-header">
             <section className="player-heading" aria-labelledby="player-title">
               <Card variant="elevated" className="player-identity-card">
-                <div className="player-identity-copy">
+                <div className="competitive-profile-main">
                   <ProfileIcon
                     id={data?.player.profileIconId}
                     observedAt={data?.player.profileIconObservedAt}
                   />
-                  <p className="eyebrow">Perfil del jugador</p>
-                  <h1 id="player-title">
-                    {data?.summary.gameName || gameName}
-                    <span className="player-tag">
-                      #{data?.summary.tagLine || tagLine}
-                    </span>
-                  </h1>
-                  <Badge variant="info" className="profile-region">
-                    Región ·{" "}
-                    {platformRegionLabel(
-                      data?.player.platformRegion || platformRegion,
-                    )}
-                  </Badge>
-                  <p className="muted-copy">
-                    Consulta de partidas terminadas. El rendimiento utiliza
-                    todas las partidas válidas cargadas.
-                  </p>
+                  <div className="player-identity-copy">
+                    <p className="eyebrow">Perfil del jugador</p>
+                    <h1 id="player-title">
+                      {data?.summary.gameName || gameName}
+                      <span className="player-tag">
+                        #{data?.summary.tagLine || tagLine}
+                      </span>
+                    </h1>
+                    <Badge variant="info" className="profile-region">
+                      {platformRegionName(
+                        data?.player.platformRegion || platformRegion,
+                      )}
+                    </Badge>
+                  </div>
                 </div>
                 <div className="profile-actions">
                   <Button
@@ -320,9 +318,16 @@ export function PlayerDashboard({
                   </Button>
                   {data ? (
                     <p className="profile-freshness">
-                      {data.summary.matchesAnalyzed > 0
-                        ? `${isStale ? "Consulta anterior. " : ""}Partida más reciente: ${formatDate(data.summary.dataUpdatedAt)}`
-                        : "Sin partidas recuperadas"}
+                      {data.summary.matchesAnalyzed > 0 ? (
+                        <>
+                          {isStale ? "Consulta anterior. " : ""}Última partida:{" "}
+                          <time dateTime={data.summary.dataUpdatedAt}>
+                            {formatDashboardDate(data.summary.dataUpdatedAt)}
+                          </time>
+                        </>
+                      ) : (
+                        "Sin partidas recuperadas"
+                      )}
                     </p>
                   ) : null}
                 </div>
@@ -376,14 +381,19 @@ export function PlayerDashboard({
                         });
                     }}
                   />
-                  <p>
-                    {isLoading
-                      ? "Actualizando consulta…"
-                      : isStale
-                        ? "Consulta anterior conservada"
-                        : "Consulta disponible"}{" "}
-                    · {data.matches.items.length} partidas cargadas
-                  </p>
+                  <div className="competitive-session-meta">
+                    <p>
+                      {isLoading
+                        ? "Actualizando consulta…"
+                        : isStale
+                          ? "Consulta anterior conservada"
+                          : "Consulta disponible"}
+                    </p>
+                    <a href="#matches-title">
+                      <span>{data.matches.items.length} partidas cargadas</span>
+                      <span>Ver historial →</span>
+                    </a>
+                  </div>
                 </>
               ) : (
                 <p>Esperando resultados del jugador…</p>
