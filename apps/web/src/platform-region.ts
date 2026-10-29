@@ -22,3 +22,10 @@ export function platformRegionLabel(value?: string): string {
   if (!region) return "Región no disponible";
   return `${platformNames[region.toLowerCase()] ?? "Región configurada"} · ${region.toUpperCase()}`;
 }
+
+/** Display name only; routing continues using the platform code. */
+export function platformRegionName(value?: string): string {
+  const region = value?.trim();
+  if (!region) return "Región no disponible";
+  return platformNames[region.toLowerCase()] ?? "Región configurada";
+}

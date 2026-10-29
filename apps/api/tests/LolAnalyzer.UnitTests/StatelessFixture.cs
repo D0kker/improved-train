@@ -15,6 +15,7 @@ public sealed class StatelessFixture : IRiotApiClient
     private static readonly string[] FutureIds = ["LA1_FUTURE"];
     private int accountCalls;
     public static DateTimeOffset TargetTime { get; } = DateTimeOffset.UnixEpoch.AddDays(20_000);
+    public int? ProfileIconId { get; set; }
     public int DelayMilliseconds { get; set; }
     public bool SeparateHistories { get; set; }
     public bool InjectFuture { get; set; }
@@ -61,7 +62,8 @@ public sealed class StatelessFixture : IRiotApiClient
         await DelayAsync(cancellationToken);
         if (riotMatchId == FailingMatch) throw new RiotApiException(System.Net.HttpStatusCode.ServiceUnavailable);
         if (riotMatchId == "missing") return null;
-        return Match(riotMatchId);
+        var match = Match(riotMatchId);
+        return match with { Participants = match.Participants.Select(p => p with { ProfileIconId = ProfileIconId }).ToArray() };
     }
 
     public static RiotMatchData Match(string id)

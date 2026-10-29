@@ -1,6 +1,26 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-10-27
+Última actualización: 2026-10-29
+
+## T04.10.3 — refinamiento visual pendiente de aprobación
+
+Sobre PR #97 se optimiza cabecera, fecha/región, grilla de siete métricas y campeones horizontales, conservando lógica y contratos. [Informe](T04_10_3_DASHBOARD_VISUAL_REFINEMENT.md), [comparación visual](releases/release04-captures/t04-10-3/README.md) y [publicidad futura documental](T04_10_3_AD_PLACEMENT_PROPOSAL.md). 59 pruebas frontend, lint/tipos/build y audit producción cero; validación Chromium con fixtures en cinco anchos. Se corrigió una cifra dividida en tablet y se añadió comprobación de una línea para valores. READY_FOR_REVIEW, PR Draft; aprobación visual del PO y contraste/asistiva pendientes. La imagen web b551f43 es anterior al refinamiento y deberá reconstruirse antes de un futuro despliegue autorizado. Sin cambios de backend, main, secretos ni servicios.
+
+## T04.10.2 — candidata lista para revisión del PO
+
+Se realizó validación real Chromium/Playwright aislada con datos/assets sintéticos en 320/390/768/1024/1440, sin Riot ni cambios de producción. Cabecera, rendimiento 5→10, relaciones, filtros, expansiones, cobertura y reintentos comprobados; 16 capturas en [índice visual](releases/release04-captures/README.md). Pruebas repetidas: 130 .NET (3 opt-in omitidas), 55 frontend, builds, formato, lint, tipos y audit producción cero. Axe sin infracciones detectadas, con contraste incompleto pendiente de revisión manual. [Plan actualizado](releases/ECHO_RELEASE_04_PLAN.md): READY_FOR_REVIEW; #97 sigue Draft esperando aprobación visual del PO. Sin correcciones funcionales demostrables, merge a main ni despliegue. Las notas anteriores de preparación se conservan debajo como historial.
+
+## RELEASE-04 — candidata integrada, revisión visual pendiente
+
+PR #98 se fusionó únicamente en T04.10 mediante `b551f4312b63af66717de6b6271ec2c190154729`; PR #97 sigue abierto/Draft hacia main. Se repitieron pruebas combinadas (130 .NET y 55 frontend) y una matriz DOM adicional de cuatro combinaciones API/web. Despliegue recomendado API primero por contrato aditivo. Plan y evidencias: [RELEASE-04](releases/ECHO_RELEASE_04_PLAN.md). Estado REVIEW_REQUIRED: no hay navegador disponible y la revisión visual del PO sigue pendiente. No se hizo merge a main, despliegue ni reinicio de servicios. La información anterior de T04.10/T04.10.1 que sigue abajo conserva su contexto histórico de implementación.
+
+## T04.10.1 — contratos aditivos de dashboard
+
+Rama hija `feature/t04-10-1-dashboard-data-contracts`, desde PR #97 `d010b98`, aún abierto/draft. Match-V5 ya disponible alimenta evidencia por fila y el ícono histórico del owner; no agrega llamadas Riot API. Relaciones deduplicadas por Match ID/PUUID con enlaces compartidos reales. Detalle, compatibilidad y pruebas en [T04.10.1](T04_10_1_DASHBOARD_DATA_CONTRACTS.md). No hay merge ni cambios de servicios/secrets.
+
+## T04.10 — implementación para revisión
+
+Rama `feature/t04-10-competitive-dashboard`, base `main` `2c67fe5`. El PO aprobó cambiar el rendimiento del dashboard a todas las partidas válidas cargadas. No cambia el resumen del backend ni el análisis profundo. Relaciones por ventanas disjuntas disponibles; asociación jugador→Match IDs ausente, pendiente de contrato futuro. Ver [informe](T04_10_COMPETITIVE_DASHBOARD.md). Validaciones: 49/49 pruebas, lint, tipos, build y audit de producción aprobados. Límites del contrato documentados; no se declara completada la navegación a partidas compartidas. Sin cambios de runtime; el registro inferior es histórico de la base.
 
 ## Estado vigente — RELEASE-02 / T04.5
 

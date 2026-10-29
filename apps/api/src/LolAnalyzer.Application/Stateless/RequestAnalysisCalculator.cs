@@ -23,6 +23,18 @@ public sealed class RequestAnalysisCalculator(
                     player.TeamId, player.ParticipantId, player.ChampionId, player.ChampionName,
                     player.TeamPosition, player.Kills, player.Deaths, player.Assists, player.Win)).ToArray())).ToArray());
 
+    public static DashboardMatchEvidence Evidence(RiotMatchData match, string ownerPuuid, string platform)
+    {
+        var participants = match.Participants.Where(p => !string.IsNullOrWhiteSpace(p.Puuid))
+            .GroupBy(p => p.Puuid, StringComparer.Ordinal).OrderBy(g => g.Key == ownerPuuid ? 0 : 1)
+            .ThenBy(g => g.Key, StringComparer.Ordinal).Take(10)
+            .Select(g => new DashboardParticipant(g.Key, g.First().GameName ?? "", g.First().TagLine ?? "",
+                g.Select(p => p.TeamId).Distinct().Count() == 1 && g.First().TeamId is 100 or 200 ? g.First().TeamId : null)).ToArray();
+        return new DashboardMatchEvidence(ownerPuuid, platform,
+            participants.Length == 10 && match.Participants.Count == 10 && participants.All(p => p.TeamId.HasValue)
+                && participants.Any(p => p.Puuid == ownerPuuid) ? "complete" : "partial", participants);
+    }
+
     public static PlayerSummary Summary(PlayerIdentity owner, IReadOnlyCollection<RiotMatchData> matches)
     {
         var own = matches.DistinctBy(match => match.RiotMatchId, StringComparer.Ordinal)

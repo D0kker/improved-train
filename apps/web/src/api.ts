@@ -1,4 +1,6 @@
 export interface PlayerLookup {
+  profileIconId?: number | null;
+  profileIconObservedAt?: string | null;
   puuid: string;
   gameName: string;
   tagLine: string;
@@ -51,7 +53,19 @@ export interface PlayerEncounter {
   lastSeenAt: string;
 }
 
+export interface DashboardMatchEvidence {
+  ownerPuuid: string;
+  platformRegion: string;
+  status: "complete" | "partial";
+  participants: {
+    puuid: string;
+    gameName: string;
+    tagLine: string;
+    teamId: number | null;
+  }[];
+}
 export interface MatchListItem {
+  evidence?: DashboardMatchEvidence | null;
   riotMatchId: string;
   queueId: number | null;
   gameStartTimestamp: string | null;
@@ -431,12 +445,14 @@ export async function fetchJson<T>(
 
 async function errorMessage(response: Response, path: string): Promise<string> {
   const isPlayerLookup = path.includes("/players/by-riot-id/");
-  const isMatchLookup = path.includes("/matches/") || path.startsWith("/match/");
+  const isMatchLookup =
+    path.includes("/matches/") || path.startsWith("/match/");
   switch (response.status) {
     case 400:
       return "No pudimos procesar la solicitud. Revisa los datos e inténtalo de nuevo.";
     case 404:
-      if (isPlayerLookup) return "No encontramos ese Riot ID en la región seleccionada.";
+      if (isPlayerLookup)
+        return "No encontramos ese Riot ID en la región seleccionada.";
       if (isMatchLookup) return "No encontramos la partida solicitada.";
       return "No encontramos la información solicitada.";
     case 429:

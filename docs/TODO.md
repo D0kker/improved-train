@@ -1,6 +1,6 @@
 # Roadmap
 
-Última actualización: 2026-10-27
+Última actualización: 2026-10-28
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
@@ -238,3 +238,34 @@ Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redi
 - [ ] Obtener el nivel de acceso Riot apropiado y registrar el producto.
 - [ ] Revisar políticas, privacidad, términos, disclaimer, HTTPS, seguridad, backups y observabilidad.
 - [ ] Decidir licencia, dominio e indexación pública.
+
+## T04.10 — dashboard competitivo
+
+- [x] Cabecera 60/40, partida activa independiente, rendimiento sobre muestra cargada, filtros y detalles locales; documentación en [T04.10](T04_10_COMPETITIVE_DASHBOARD.md).
+- [x] Relaciones con ventanas solapadas y partidas compartidas implementadas en T04.10.1, integrado mediante #98 en T04.10; aún pendiente de release a main.
+- [x] Validación visual automatizada en navegador con fixtures y capturas (T04.10.2).
+- [ ] Aprobación visual del PO y evaluación asistiva/contraste manual pendiente.
+
+## T04.10.1 — evidencia por partida
+
+- Contratos aditivos de icono histórico y participantes ligeros implementados en la rama hija de T04.10; validación y publicación registradas en [informe](T04_10_1_DASHBOARD_DATA_CONTRACTS.md).
+- La integración en T04.10 se realizó mediante #98; main y despliegue siguen pendientes de decisión del PO.
+
+
+## RELEASE-04 — preparación
+
+- [x] Integrar solo #98 en T04.10, validar ambas tareas y documentar compatibilidad API/web, seguridad y rollback.
+- [x] Repetir 130 pruebas .NET, 55 frontend y matriz DOM 4/4; builds, tipos, lint, formato, audit producción y Compose aprobados.
+- [x] T04.10.2: recorrido real de navegador en 320/390/768/1024/1440 con fixtures y 16 capturas; ver [plan](releases/ECHO_RELEASE_04_PLAN.md).
+- [ ] Aprobación visual del PO; contraste inconcluso de axe/evaluación asistiva y assets reales pendientes. PR #97 permanece Draft.
+- [ ] Autorización de merge de #97 y despliegue de API/web; ninguna de estas acciones se ejecuta en esta preparación.
+
+
+## T04.10.3 — refinamiento visual
+
+- [x] Cabecera compacta 60/40, icono histórico grande, región corta y fecha española; lógica de consultas intacta.
+- [x] Métricas equilibradas, cifras sin saltos en tablet y campeones horizontales; pruebas y capturas en [informe](T04_10_3_DASHBOARD_VISUAL_REFINEMENT.md).
+- [x] Propuesta documental de publicidad, sin integración ni slots.
+- [ ] Aprobación visual del PO y revisión manual/asistiva; #97 sigue Draft.
+- [ ] Futuro release autorizado: reconstruir web desde el SHA aprobado; imagen b551f43 no contiene este refinamiento.
+- [ ] Publicidad futura (baja prioridad): un emplazamiento reversible, condicionado a aprobación Riot/producto y proveedor; reserva responsive, rotulado, consentimiento aplicable y medición CLS. Criterios y límites en [propuesta](T04_10_3_AD_PLACEMENT_PROPOSAL.md); no habilitar anuncios por esta tarea.

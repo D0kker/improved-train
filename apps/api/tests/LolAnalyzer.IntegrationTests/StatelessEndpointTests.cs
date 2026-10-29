@@ -27,6 +27,14 @@ public sealed class StatelessEndpointTests
         Assert.NotNull(result);
         Assert.Equal(5, result.Matches.Items.Count);
         Assert.Equal(45, result.Summary.OtherPlayerParticipations);
+        Assert.All(result.Matches.Items, item =>
+        {
+            Assert.NotNull(item.Evidence);
+            Assert.Equal("owner", item.Evidence.OwnerPuuid);
+            Assert.Equal(10, item.Evidence.Participants.Count);
+            Assert.Equal("complete", item.Evidence.Status);
+        });
+        Assert.Equal(5, factory.Riot.Details.Count);
         Assert.Null(factory.Services.GetService<AnalysisJobService>());
         Assert.DoesNotContain(factory.Services.GetServices<IHostedService>(), service => service.GetType().Name.Contains("AnalysisJob", StringComparison.Ordinal));
         using var ready = await client.GetAsync("/health/ready", TestContext.Current.CancellationToken);
