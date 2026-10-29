@@ -2,6 +2,10 @@
 
 Última actualización: 2026-10-29
 
+## RELEASE-04 — desplegado por autorización del PO
+
+2026-10-29: main `22d115233738a1722c1ad6942426d0b6c4fcf1c0` (merge #97) desplegado en API y web ARM64, puerto 8081. Ambos healthy, Home/proxy 200, Redis/volumen intactos. Estado DEPLOYED_WITH_WARNINGS: validación propia con Riot simulado/smokes estructurales, no búsqueda Riot real; OpenAPI no describe DTOs de análisis y se conserva Development existente. [Registro con IDs, validaciones y rollback](releases/ECHO_RELEASE_04_DEPLOYMENT.md). Configuración/overrides sanitizados de operación en `backups/releases/release04-22d1152/` del checkout runtime, excluido de Git; credenciales no se copiaron ni cambiaron. Las imágenes anteriores se conservaron y el rollback no fue necesario. Las notas inferiores son historial previo al despliegue. Publicación documental separada, sin merge automático.
+
 ## T04.10.3 — refinamiento visual pendiente de aprobación
 
 Sobre PR #97 se optimiza cabecera, fecha/región, grilla de siete métricas y campeones horizontales, conservando lógica y contratos. [Informe](T04_10_3_DASHBOARD_VISUAL_REFINEMENT.md), [comparación visual](releases/release04-captures/t04-10-3/README.md) y [publicidad futura documental](T04_10_3_AD_PLACEMENT_PROPOSAL.md). 59 pruebas frontend, lint/tipos/build y audit producción cero; validación Chromium con fixtures en cinco anchos. Se corrigió una cifra dividida en tablet y se añadió comprobación de una línea para valores. READY_FOR_REVIEW, PR Draft; aprobación visual del PO y contraste/asistiva pendientes. La imagen web b551f43 es anterior al refinamiento y deberá reconstruirse antes de un futuro despliegue autorizado. Sin cambios de backend, main, secretos ni servicios.
