@@ -243,7 +243,8 @@ Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redi
 
 - [x] Cabecera 60/40, partida activa independiente, rendimiento sobre muestra cargada, filtros y detalles locales; documentación en [T04.10](T04_10_COMPETITIVE_DASHBOARD.md).
 - [x] Relaciones con ventanas solapadas y partidas compartidas implementadas en T04.10.1, integrado mediante #98 en T04.10; aún pendiente de release a main.
-- [ ] Validación visual y asistiva en navegador, pendiente por disponibilidad del entorno.
+- [x] Validación visual automatizada en navegador con fixtures y capturas (T04.10.2).
+- [ ] Aprobación visual del PO y evaluación asistiva/contraste manual pendiente.
 
 ## T04.10.1 — evidencia por partida
 
@@ -255,5 +256,6 @@ Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redi
 
 - [x] Integrar solo #98 en T04.10, validar ambas tareas y documentar compatibilidad API/web, seguridad y rollback.
 - [x] Repetir 130 pruebas .NET, 55 frontend y matriz DOM 4/4; builds, tipos, lint, formato, audit producción y Compose aprobados.
-- [ ] Revisión visual en navegador: 320/390/768/1024/1440 y escenarios descritos en [plan](releases/ECHO_RELEASE_04_PLAN.md).
+- [x] T04.10.2: recorrido real de navegador en 320/390/768/1024/1440 con fixtures y 16 capturas; ver [plan](releases/ECHO_RELEASE_04_PLAN.md).
+- [ ] Aprobación visual del PO; contraste inconcluso de axe/evaluación asistiva y assets reales pendientes. PR #97 permanece Draft.
 - [ ] Autorización de merge de #97 y despliegue de API/web; ninguna de estas acciones se ejecuta en esta preparación.

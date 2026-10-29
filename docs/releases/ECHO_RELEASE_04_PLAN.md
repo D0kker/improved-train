@@ -1,7 +1,7 @@
 # RELEASE-04 — candidata de Dashboard Gaming Competitivo
 
 Fecha: 2026-10-28
-Estado: **REVIEW_REQUIRED** — pruebas automatizadas aprobadas; revisión visual pendiente. No autorizado para merge a main ni despliegue.
+Estado: **READY_FOR_REVIEW** — validación de navegador realizada en T04.10.2; pendiente aprobación visual del Product Owner. No autorizado para merge a main ni despliegue. Las secciones de preparación inicial se conservan como registro histórico; el cierre de T04.10.2 al final es el estado vigente.
 
 ## 1. Estado inicial y consolidación
 
@@ -145,4 +145,58 @@ Se retiraron exclusivamente los dos contenedores de validación y su red despué
 
 ## 13. Estado final
 
-**REVIEW_REQUIRED** por validación visual pendiente y comprobación de capacidad antes de operar. La integración de desarrollo está autorizada y realizada; PR #97 sigue disponible para revisión en Draft. **No se fusionó PR #97 a main ni se desplegó RELEASE-04.**
+**READY_FOR_REVIEW** tras la validación aislada documentada abajo, pendiente aprobación del PO y comprobación de capacidad antes de operar. La integración de desarrollo está autorizada y realizada; PR #97 sigue disponible para revisión en Draft. **No se fusionó PR #97 a main ni se desplegó RELEASE-04.**
+
+
+## 14. T04.10.2 — validación real de navegador y cierre para revisión
+
+### Revisiones y CI
+
+Se verificó `origin/main` y el HEAD publicado `749e0771921c5a24598abf209ab9017481cbef71`. #98 está fusionado mediante `b551f4312b63af66717de6b6271ec2c190154729`; su commit `f994e75` es ancestro de la candidata. CI del HEAD documental inicial: [run 40650209230](https://github.com/D0kker/improved-train/actions/runs/40650209230), success. La publicación de estas evidencias añade únicamente documentación, imágenes sintéticas y un runner opt-in de pruebas; no modifica código de aplicación, contratos, infraestructura ni dependencias. El SHA definitivo y su run de CI se registran en PR #97 y en el reporte de entrega para evitar una referencia autorreferencial dentro de este commit.
+
+Se reutilizó el worktree aislado de RELEASE-04, limpio y sin cambios remotos durante la revisión. Se revisó la descripción obsoleta de #97 y se actualizó para T04.10 + T04.10.1. Sigue abierto/Draft hacia main. Ningún otro PR se fusionó o cerró.
+
+### Navegador y aislamiento
+
+Playwright 1.64.1, Chromium 156.0.8078.4 ARM64 y axe-core 4.14.0, instalados exclusivamente bajo `/tmp`. El host Debian 11 ARM64 no está soportado directamente; el binario fallback Ubuntu 22.04 arrancó con bibliotecas descargadas y extraídas localmente. No se instaló software global, no se modificaron configuraciones de seguridad del host ni contenedores existentes.
+
+Servidor exclusivo `echo-release04-visual-web`, imagen candidata ARM64 `project-echo-release04-web:b551f43`, publicado solo en `127.0.0.1:3187`. Sin credenciales, con destino API inaccesible. Playwright suministró datos y assets sintéticos mediante interceptación; las conexiones externas se bloquearon. El servidor de prueba se retira al finalizar, conservando las imágenes candidatas y todas las imágenes de rollback. Producción API/web y Redis no se modifican.
+
+### Resultados por sección
+
+| Sección | Evidencia observada |
+|---|---|
+| Perfil | Identidad, región y fecha legibles; 60/40 real en 1024/1440, apilado en anchos menores; ícono histórico simulado con rótulo y fallback neutral; botón actualizar disponible |
+| Rendimiento | Anillo accesible, promedios/KDA y top 3; al ampliar 5→10 el win rate cambia 60→50%; filtrar derrotas conserva el resumen global |
+| Relaciones | Nueve jugadores únicos/recurrentes, 45 participaciones en cinco partidas; mismos jugadores alternan aliado/rival; expansión 5→9 sin API adicional, evidencia y enlaces disponibles |
+| Historial | Filtros Todas/Derrotas/Todas, detalles nativos, carga de cinco, fallo conservando cinco filas y reintento hasta diez |
+| Cobertura | Complete/partial/insufficient/error, detalles expandibles y advertencias próximas a las métricas; parcial usa tres filas disponibles, no cinco inventadas |
+| Partida activa | Presente, ausente y error con acción propia; historial y rendimiento siguen visibles |
+| Accesibilidad/responsive | Sin overflow en 320/390/768/1024/1440, también con expansiones/texto largo; skip link por teclado, apertura de summary con Enter y foco visible |
+
+[Índice de 16 capturas](release04-captures/README.md), [recorrido](release04-captures/results.json), [axe/teclado/texto largo](release04-captures/accessibility.json). Se inspeccionaron capturas reales de cabecera, rendimiento, móvil, parcial y partida activa. Los retratos DEMO no son assets reales de Riot ni demuestran su disponibilidad. No hubo errores JavaScript ni peticiones externas en el recorrido.
+
+Axe no encontró infracciones en los cinco anchos (28 reglas aprobadas por ejecución), pero dejó `color-contrast` como comprobación incompleta sobre parte del contenido. Se conserva ese resultado, sin convertirlo en aprobación completa de contraste o WCAG. Las superficies navy, cifras claras y acentos dorados resultan legibles en las capturas revisadas; la evaluación asistiva y los casos de contraste inconclusos quedan para revisión manual. Los controles expandibles tienen objetivo mínimo de 44 px por los estilos existentes; no se realizó una auditoría exhaustiva de todos los objetivos del producto.
+
+### Defectos y validaciones repetidas
+
+No se demostró un defecto de aplicación que requiriese corrección funcional. El primer runner buscó el nombre anterior del botón después de fallar una ventana; se corrigió el selector a «Reintentar este bloque de cinco» y el recorrido completo pasó. No se debilitó ninguna prueba existente.
+
+- .NET: restore, build Release (cero advertencias/errores), test y format verify aprobados en SDK 10.0.402 ARM64 aislado: 109 unitarias + 21 integración = **130 aprobadas**, 3 benchmarks/perfiles opt-in omitidos.
+- Web: `npm ci`, **55/55 pruebas**, lint, type-check y build Next 16.4.2 aprobados en Node 24.18.0/npm 11.16.0. Todas las rutas existentes compilan.
+- `npm audit --omit=dev`: **0 vulnerabilidades**; no se alteró lockfile ni versiones. El aviso de desarrollo previo no se considera remediado por este sprint.
+- Runner principal: cinco anchos y nueve comprobaciones agrupadas de escenarios; runner complementario: cinco anchos con expansión, teclado, texto largo y axe. Evidencias JSON conservadas.
+- `docker compose config --quiet` y `git diff --check` aprobados. No hubo cambios de API, web funcional, Docker ni secretos en T04.10.2.
+
+### Compatibilidad, rollback y recomendación
+
+Sigue vigente la matriz de la sección 4 y el plan API primero/web después; web nueva sobre API antigua mantiene fallback. Los IDs y tags candidatos/anteriores de las secciones operativas siguen siendo los artefactos de referencia, sin nuevos builds de imagen por esta publicación documental. Las limitaciones de memoria cgroup y espacio del host continúan siendo precondiciones operativas, no defectos resueltos aquí.
+
+Recomendación: **READY_FOR_REVIEW** del Product Owner con las capturas, manteniendo #97 Draft hasta aprobación visual. Revisión de contraste inconcluso/asistiva y assets reales claramente pendiente; no se afirma una certificación de accesibilidad. Cualquier merge a main y actualización de servicios exige autorización posterior explícita. **No se fusionó PR #97 a main ni se desplegó RELEASE-04.**
+
+
+### Observación final del runtime (solo lectura)
+
+El 2026-10-29 04:13 UTC se observaron recreaciones de los contenedores existentes **fuera de los comandos de esta validación**. Los IDs del inventario inicial son históricos; las imágenes no cambiaron. API: `0aeea556e0575a14396f60d50f3a8ed9ba0767676e8069c8f718bdee0d1e4276`, imagen `3676f4ef…`; web: `0dfbb8bcee76a36b7364bfc05b2cb1f94b1afa6d307b3f141c7c7bf766db8d23`, imagen `f141e5de…`. Se verificaron ambos healthy, `/` 200 y `/api/health` 200. No se investigaron ni modificaron secretos para atribuir esas recreaciones. Redis conserva el mismo ID/imagen y estado detenido. Esta tarea creó y eliminó exclusivamente `echo-release04-visual-web`; no recreó servicios de producción. Antes de cualquier release autorizado se debe volver a inventariar el runtime.
+
+Espacio final observado: aproximadamente 954 MiB libres (97% ocupado). El despliegue futuro requiere resolver/comprobar capacidad; esta validación no eliminó imágenes ni volúmenes para obtener espacio.

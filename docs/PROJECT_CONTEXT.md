@@ -2,6 +2,10 @@
 
 Última actualización: 2026-10-28
 
+## T04.10.2 — candidata lista para revisión del PO
+
+Se realizó validación real Chromium/Playwright aislada con datos/assets sintéticos en 320/390/768/1024/1440, sin Riot ni cambios de producción. Cabecera, rendimiento 5→10, relaciones, filtros, expansiones, cobertura y reintentos comprobados; 16 capturas en [índice visual](releases/release04-captures/README.md). Pruebas repetidas: 130 .NET (3 opt-in omitidas), 55 frontend, builds, formato, lint, tipos y audit producción cero. Axe sin infracciones detectadas, con contraste incompleto pendiente de revisión manual. [Plan actualizado](releases/ECHO_RELEASE_04_PLAN.md): READY_FOR_REVIEW; #97 sigue Draft esperando aprobación visual del PO. Sin correcciones funcionales demostrables, merge a main ni despliegue. Las notas anteriores de preparación se conservan debajo como historial.
+
 ## RELEASE-04 — candidata integrada, revisión visual pendiente
 
 PR #98 se fusionó únicamente en T04.10 mediante `b551f4312b63af66717de6b6271ec2c190154729`; PR #97 sigue abierto/Draft hacia main. Se repitieron pruebas combinadas (130 .NET y 55 frontend) y una matriz DOM adicional de cuatro combinaciones API/web. Despliegue recomendado API primero por contrato aditivo. Plan y evidencias: [RELEASE-04](releases/ECHO_RELEASE_04_PLAN.md). Estado REVIEW_REQUIRED: no hay navegador disponible y la revisión visual del PO sigue pendiente. No se hizo merge a main, despliegue ni reinicio de servicios. La información anterior de T04.10/T04.10.1 que sigue abajo conserva su contexto histórico de implementación.
