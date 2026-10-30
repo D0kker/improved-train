@@ -2281,3 +2281,296 @@ td > span,
     max-height: 4rem;
   }
 }
+
+/* T04.11: secondary ranked profile and compact historical relationships. */
+.competitive-profile-main:has(.player-ranked) {
+  grid-template-columns: 5.5rem minmax(0, 1fr) minmax(10rem, 12rem);
+}
+.player-ranked {
+  display: grid;
+  align-content: center;
+  gap: var(--echo-space-2);
+  min-width: 0;
+  padding-inline-start: var(--echo-space-3);
+  border-inline-start: 1px solid var(--echo-border);
+}
+.player-ranked p {
+  margin: 0;
+  color: var(--echo-text-muted);
+  font-size: var(--echo-font-size-sm);
+}
+.player-ranked select {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--echo-control-size);
+  border: 1px solid var(--echo-border);
+  border-radius: var(--echo-radius-sm);
+  padding-inline: var(--echo-space-2);
+  color: var(--echo-text);
+  background: var(--echo-ink-900);
+  font: inherit;
+  font-size: var(--echo-font-size-sm);
+}
+.player-ranked select:focus-visible {
+  outline: 3px solid var(--echo-focus);
+  outline-offset: 3px;
+}
+.ranked-value {
+  display: flex;
+  align-items: center;
+  gap: var(--echo-space-2);
+  min-width: 0;
+}
+.ranked-value img,
+.rank-emblem-fallback {
+  flex: 0 0 3.5rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  object-fit: contain;
+}
+.rank-emblem-fallback {
+  display: grid;
+  place-items: center;
+  color: var(--echo-text-muted);
+  border: 1px solid var(--echo-border);
+  border-radius: var(--echo-radius-sm);
+}
+.ranked-value > div {
+  display: grid;
+  min-width: 0;
+  gap: var(--echo-space-1);
+}
+.ranked-value strong {
+  color: var(--echo-gold);
+  font-size: var(--echo-font-size-md);
+  overflow-wrap: anywhere;
+}
+.ranked-value span {
+  font-size: var(--echo-font-size-sm);
+  color: var(--echo-text-muted);
+}
+.recurrent-explanation {
+  color: var(--echo-text-muted);
+  margin-block: var(--echo-space-2) var(--echo-space-3);
+  font-size: var(--echo-font-size-sm);
+}
+.competitive-recurrent {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--echo-space-3);
+  margin-block: var(--echo-space-3);
+}
+.competitive-recurrent > .recurrent-player {
+  display: block;
+  min-width: 0;
+  align-self: start;
+  padding: var(--echo-space-3);
+  border: 1px solid var(--echo-border);
+  border-radius: var(--echo-radius-md);
+  background: var(--echo-ink-900);
+}
+.recurrent-main {
+  display: grid;
+  gap: var(--echo-space-3);
+}
+.recurrent-identity {
+  display: grid;
+  min-width: 0;
+  gap: var(--echo-space-1);
+}
+.recurrent-identity strong {
+  font-size: var(--echo-font-size-md);
+  overflow-wrap: anywhere;
+}
+.recurrent-identity span,
+.recurrent-identity small {
+  color: var(--echo-text-muted);
+}
+.recurrent-identity strong a {
+  display: inline-block;
+  padding-block: var(--echo-space-1);
+}
+.recurrent-mini-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--echo-space-2);
+  margin: 0;
+}
+.recurrent-mini-stats > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--echo-space-1);
+  padding: var(--echo-space-2);
+  background: var(--echo-ink-850);
+  border-radius: var(--echo-radius-sm);
+}
+.recurrent-mini-stats dt {
+  font-size: var(--echo-font-size-xs);
+  color: var(--echo-text-muted);
+}
+.recurrent-mini-stats dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--echo-font-size-lg);
+  font-weight: 800;
+}
+.recurrent-shared {
+  margin-top: var(--echo-space-2);
+}
+.recurrent-shared summary {
+  font-size: var(--echo-font-size-sm);
+}
+.recurrent-shared ul {
+  list-style: none;
+  padding: var(--echo-space-2);
+  margin: 0;
+  background: var(--echo-ink-950);
+  border-radius: var(--echo-radius-sm);
+}
+.recurrent-shared li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--echo-space-2);
+  padding: var(--echo-space-2);
+  align-items: center;
+}
+.recurrent-shared li > div {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: var(--echo-space-1);
+}
+.recurrent-shared li strong {
+  font-size: var(--echo-font-size-sm);
+}
+.recurrent-shared small,
+.shared-side {
+  color: var(--echo-text-muted);
+  font-size: var(--echo-font-size-xs);
+}
+.shared-side--ally {
+  color: var(--echo-info);
+}
+.shared-side--enemy {
+  color: var(--echo-danger);
+}
+.recurrent-shared a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--echo-control-size);
+  font-size: var(--echo-font-size-sm);
+  font-weight: 700;
+  color: var(--echo-gold);
+}
+.recurrent-no-evidence {
+  font-size: var(--echo-font-size-xs);
+  color: var(--echo-text-muted);
+  margin-block: var(--echo-space-2) 0;
+}
+.player-dashboard-shell .match-card {
+  grid-template-columns:
+    auto minmax(0, 1.25fr) minmax(7rem, 0.9fr) minmax(8.5rem, 1fr)
+    auto;
+  padding: var(--echo-space-3) var(--echo-space-4);
+  gap: var(--echo-space-3);
+}
+.player-dashboard-shell .match-kda-ratio {
+  color: var(--echo-gold);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 901px) and (max-width: 1200px) {
+  .competitive-profile-main:has(.player-ranked) {
+    grid-template-columns: 5.5rem minmax(0, 1fr);
+  }
+  .player-ranked {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    padding: var(--echo-space-2) 0 0;
+    border-inline-start: 0;
+    border-top: 1px solid var(--echo-border);
+  }
+}
+@media (max-width: 1050px) {
+  .player-dashboard-shell .match-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "champion result" "kda meta" "action action";
+  }
+  .player-dashboard-shell .match-card .result-badge {
+    grid-area: result;
+  }
+  .player-dashboard-shell .match-card .match-champion {
+    grid-area: champion;
+  }
+  .player-dashboard-shell .match-card .kda {
+    grid-area: kda;
+  }
+  .player-dashboard-shell .match-card .match-meta {
+    grid-area: meta;
+  }
+  .player-dashboard-shell .match-card .card-action {
+    grid-area: action;
+  }
+}
+@media (max-width: 600px) {
+  .competitive-profile-main:has(.player-ranked) {
+    grid-template-columns: 4rem minmax(0, 1fr);
+  }
+  .player-ranked {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(5.5rem, 0.75fr) minmax(0, 1.25fr);
+    align-items: center;
+    border-inline-start: 0;
+    border-top: 1px solid var(--echo-border);
+    padding: var(--echo-space-2) 0 0;
+  }
+  .player-ranked[aria-busy="true"] p {
+    grid-column: 1 / -1;
+  }
+  .ranked-value img,
+  .rank-emblem-fallback {
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-basis: 2.5rem;
+  }
+  .competitive-recurrent {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .player-dashboard-shell .match-card {
+    grid-template-areas: "champion result" "kda kda" "meta meta" "action action";
+  }
+  .player-dashboard-shell .match-card .match-champion {
+    min-width: 0;
+  }
+  .player-dashboard-shell .match-champion .champion-icon,
+  .player-dashboard-shell .match-champion .champion-icon-fallback {
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-basis: 2.5rem;
+  }
+  .player-dashboard-shell .match-card .kda {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--echo-space-1) var(--echo-space-2);
+  }
+  .player-dashboard-shell .match-card .match-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--echo-space-2);
+  }
+  .player-dashboard-shell .match-card .card-action {
+    justify-self: start;
+  }
+}
+
+/* Expanded evidence uses the row instead of leaving a tall empty neighbour. */
+@media (min-width: 769px) {
+  .competitive-recurrent > .recurrent-player:has(details[open]) {
+    grid-column: 1 / -1;
+  }
+  .recurrent-shared[open] ul {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--echo-space-3);
+  }
+}

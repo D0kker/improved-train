@@ -1,0 +1,119 @@
+{
+  "synthetic": true,
+  "checks": [
+    "expanded keyboard, focus, long text, axe: 320",
+    "expanded keyboard, focus, long text, axe: 390",
+    "expanded keyboard, focus, long text, axe: 768",
+    "expanded keyboard, focus, long text, axe: 1024",
+    "refresh and recurrent profile navigation",
+    "Home search renders and production gallery remains hidden",
+    "expanded keyboard, focus, long text, axe: 1440"
+  ],
+  "viewports": [],
+  "errors": [],
+  "requests": [
+    "/api/v1/players/by-riot-id/Echo%20Demo/TEST/analysis?platformRegion=la1",
+    "/api/v1/players/synthetic-owner/active-game?platformRegion=la1",
+    "/api/assets/profile-icons/29",
+    "/api/assets/champions/22",
+    "/api/assets/champions/103",
+    "/api/assets/champions/99",
+    "/api/v1/players/synthetic-owner/ranked?platformRegion=la1",
+    "/api/v1/players/by-riot-id/Echo%20Demo/TEST/analysis?platformRegion=la1",
+    "/api/v1/players/synthetic-owner/active-game?platformRegion=la1",
+    "/api/assets/profile-icons/29",
+    "/api/assets/champions/22",
+    "/api/assets/champions/103",
+    "/api/assets/champions/99",
+    "/api/v1/players/synthetic-owner/ranked?platformRegion=la1",
+    "/api/v1/players/by-riot-id/Echo%20Demo/TEST/analysis?platformRegion=la1",
+    "/api/v1/players/synthetic-owner/active-game?platformRegion=la1",
+    "/api/assets/profile-icons/29",
+    "/api/assets/champions/22",
+    "/api/assets/champions/103",
+    "/api/assets/champions/99",
+    "/api/v1/players/synthetic-owner/ranked?platformRegion=la1",
+    "/api/v1/players/by-riot-id/Echo%20Demo/TEST/analysis?platformRegion=la1",
+    "/api/v1/players/synthetic-owner/active-game?platformRegion=la1",
+    "/api/assets/profile-icons/29",
+    "/api/assets/champions/22",
+    "/api/assets/champions/103",
+    "/api/assets/champions/99",
+    "/api/v1/players/synthetic-owner/ranked?platformRegion=la1",
+    "/api/v1/players/by-riot-id/Echo%20Demo/TEST/analysis?platformRegion=la1",
+    "/api/v1/players/synthetic-owner/active-game?platformRegion=la1",
+    "/api/assets/profile-icons/29",
+    "/api/assets/champions/22",
+    "/api/assets/champions/103",
+    "/api/assets/champions/99",
+    "/api/v1/players/synthetic-owner/ranked?platformRegion=la1",
+    "/api/v1/players/by-riot-id/Echo%20Demo/TEST/analysis?platformRegion=la1",
+    "/api/v1/players/synthetic-owner/active-game?platformRegion=la1",
+    "/api/v1/players/synthetic-owner/ranked?platformRegion=la1",
+    "/api/v1/players/by-riot-id/Jugador%20de%20demostraci%C3%B3n%201/DEMO/analysis?platformRegion=la1",
+    "/api/v1/players/synthetic-owner/active-game?platformRegion=la1",
+    "/api/v1/players/synthetic-owner/ranked?platformRegion=la1"
+  ],
+  "accessibility": [
+    {
+      "width": 320,
+      "focus": {
+        "style": "auto",
+        "width": "1px"
+      },
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ],
+      "passes": 30
+    },
+    {
+      "width": 390,
+      "focus": {
+        "style": "auto",
+        "width": "1px"
+      },
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ],
+      "passes": 30
+    },
+    {
+      "width": 768,
+      "focus": {
+        "style": "auto",
+        "width": "1px"
+      },
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ],
+      "passes": 30
+    },
+    {
+      "width": 1024,
+      "focus": {
+        "style": "auto",
+        "width": "1px"
+      },
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ],
+      "passes": 30
+    },
+    {
+      "width": 1440,
+      "focus": {
+        "style": "auto",
+        "width": "1px"
+      },
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ],
+      "passes": 30
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PlayerRanked } from "@/src/player-ranked";
 import { ProfileIcon } from "@/src/profile-icon";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -293,7 +294,6 @@ export function PlayerDashboard({
                     observedAt={data?.player.profileIconObservedAt}
                   />
                   <div className="player-identity-copy">
-                    <p className="eyebrow">Perfil del jugador</p>
                     <h1 id="player-title">
                       {data?.summary.gameName || gameName}
                       <span className="player-tag">
@@ -306,6 +306,9 @@ export function PlayerDashboard({
                       )}
                     </Badge>
                   </div>
+                  {data && !isStale ? (
+                    <PlayerRanked player={data.player} />
+                  ) : null}
                 </div>
                 <div className="profile-actions">
                   <Button
@@ -496,9 +499,14 @@ function ActiveGameStatus({
           <p className="muted-copy">
             {isLoading
               ? "Comprobando si hay una partida en curso…"
-              : (error ??
-                "No se detectó una partida en curso en la última consulta.")}
+              : (error ?? "No se detectó una partida en curso")}
           </p>
+          {!isLoading && !error ? (
+            <span className="sr-only">
+              Este estado corresponde a la última consulta y no indica que el
+              jugador esté desconectado.
+            </span>
+          ) : null}
         </div>
         {error ? (
           <Button
@@ -698,27 +706,19 @@ function MatchHistory({
                     {match.kills} / {match.deaths} / {match.assists}
                   </strong>
                   <span>K / D / A</span>
+                  <span className="match-kda-ratio">
+                    KDA{" "}
+                    {Number.isFinite(kda(match)) ? kda(match).toFixed(2) : "—"}
+                  </span>
                 </div>
                 <div className="match-meta">
                   <span>{formatDuration(match.gameDurationSeconds)}</span>
-                  <span>{formatDate(match.gameStartTimestamp)}</span>
+                  <span>{formatDashboardDate(match.gameStartTimestamp)}</span>
                 </div>
                 <span className="card-action">
                   Analizar encuentros <span aria-hidden="true">→</span>
                 </span>
               </Link>
-              <details>
-                <summary>Ver detalles de {match.championName}</summary>
-                <p>
-                  Ratio KDA: {kda(match).toFixed(2)} ·{" "}
-                  {queueLabel(match.queueId)}
-                </p>
-                <p>Partida: {match.riotMatchId}</p>
-                <p>
-                  {formatDuration(match.gameDurationSeconds)} ·{" "}
-                  {formatDate(match.gameStartTimestamp)}
-                </p>
-              </details>
             </article>
           ))}
         </div>

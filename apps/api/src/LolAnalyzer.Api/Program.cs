@@ -65,7 +65,7 @@ builder.Services.AddHttpClient<IRiotApiClient, RiotApiClient>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(riotOptions.RequestTimeoutSeconds);
     client.MaxResponseContentBufferSize = 1024 * 1024;
-});
+}).RemoveAllLoggers();
 builder.Services.AddHealthChecks().AddCheck("stateless-runtime", () =>
     Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), tags: ["ready"]);
 
@@ -188,6 +188,8 @@ app.MapGet("/api/v1/matches/{matchId}", async Task<IResult> (
 app.MapGet("/api/v1/players/{puuid}/active-game", async Task<IResult> (
     string puuid, string? platformRegion, IRiotApiClient riot, RiotOptions configuration, CancellationToken token) =>
     Results.Ok(await riot.ForPlatform(platformRegion ?? configuration.PlatformRegion).GetActiveGameAsync(puuid, token).ConfigureAwait(false)));
+
+app.MapRankedEndpoint();
 
 // Compatibility reads fetch their entire window independently from Riot.
 app.MapGet("/api/v1/players/{puuid}/summary", async (string puuid, OnDemandAnalysisService service, RiotOptions configuration, CancellationToken token) =>

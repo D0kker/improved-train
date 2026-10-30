@@ -18,6 +18,8 @@ public sealed class CacheOptions
 
     public int PlayerIdentityTtlSeconds { get; set; } = 1800;
 
+    public int RankedTtlSeconds { get; set; } = 300;
+
     public int AnalysisResultTtlSeconds { get; set; } = 900;
 
     public int MaxMemoryEntries { get; set; } = 4096;
@@ -48,6 +50,9 @@ public sealed class CacheOptions
         {
             throw new InvalidOperationException("Riot cache TTL values are outside the allowed range.");
         }
+
+        if (RankedTtlSeconds is < 1 or > 900)
+            throw new InvalidOperationException("Ranked cache TTL must be between 1 and 900 seconds.");
 
         if (MaxMemoryEntries is < 128 or > 100000)
         {

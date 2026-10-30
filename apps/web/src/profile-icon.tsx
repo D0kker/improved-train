@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Fixed-size same-origin PNG already cached and bounded by our asset proxy. */
-import { useState } from "react";
+import { useId, useState } from "react";
+import { formatDashboardDate } from "./dashboard-presentation";
 import { profileIconPath } from "./data-dragon";
 export function ProfileIcon({
   id,
@@ -9,6 +10,7 @@ export function ProfileIcon({
   id?: number | null;
   observedAt?: string | null;
 }) {
+  const descriptionId = useId();
   const [failedSource, setFailedSource] = useState<string | null>(null),
     source = profileIconPath(id);
   return (
@@ -17,7 +19,12 @@ export function ProfileIcon({
         <img
           src={source}
           alt="Ícono de invocador observado en su última partida disponible"
-          title={observedAt ? `Observado en partida: ${observedAt}` : undefined}
+          aria-describedby={descriptionId}
+          title={
+            observedAt
+              ? `Ícono observado en partida: ${formatDashboardDate(observedAt)}`
+              : "Ícono de la última partida disponible"
+          }
           className="profile-icon__image"
           width={88}
           height={88}
@@ -32,7 +39,13 @@ export function ProfileIcon({
           E
         </span>
       )}
-      {source && failedSource !== source && <small>Ícono histórico</small>}
+      {source && failedSource !== source && (
+        <span className="sr-only" id={descriptionId}>
+          Ícono observado en la última partida disponible
+          {observedAt ? `, ${formatDashboardDate(observedAt)}` : ""}; puede
+          diferir del avatar actual.
+        </span>
+      )}
     </div>
   );
 }
