@@ -2,6 +2,12 @@
 
 Última actualización: 2026-10-29
 
+## RELEASE-05 — T04.11 desplegada por autorización del PO
+
+`main` y runtime aprobado: `16b00eb343c5f43496fb55571084e119b84d6d49` (PR100). API y web RELEASE-05 ARM64 healthy en8081, con rango secundario League-V4 y refinamiento UX. [Registro completo](releases/ECHO_RELEASE_05_DEPLOYMENT.md): **DEPLOYED_WITH_WARNINGS**, sin rollback; imágenes RELEASE-04 conservadas. CI main63,166 pruebas.NET y68 frontend aprobadas, builds/formato/lint/tipos/Compose y audit producción cero. Browser con fixtures sobre candidatas en cinco anchos y sobre web desplegada en390/1440; Riot real sin verificar porque no se recibió cuenta de prueba.
+
+Se preservó la configuración efectiva vigente tras detectar una recreación externa durante los builds (mismas imágenes previas; guardia detuvo la primera actualización antes de mutar). No se modificaron secretos. Redis no tenía contenedor en el inventario inicial; su volumen permanece intacto. API Development y aviso high de Zod transitivo de desarrollo conservan backlog. Esta rama publica únicamente documentación, sin merge automático. Las secciones inferiores son históricas.
+
 ## T04.11 — refinamiento UX y clasificación (rama de revisión)
 
 Desde main `22d1152`, rama `feature/t04-11-dashboard-ux-ranked`, se añade consulta League-V4 por PUUID independiente, caché temporal de cinco minutos y degradación segura. Perfil compacto, recurrentes con miniestadísticas y partidas compartidas legibles, KDA visible en historial sin expansión redundante. Fórmulas, métricas y campeones aprobados permanecen. [Informe T04.11](T04_11_DASHBOARD_UX_RANKED.md). Validación local:166 pruebas.NET y68 frontend aprobadas, builds/formato/lint/tipos/Compose; audit producción cero. Capturas y axe en cinco anchos sin infracciones detectadas (contraste incompleto/manual pendiente). Un aviso high transitivo de desarrollo en Zod queda en TODO. Sin merge ni despliegue. Las secciones inferiores conservan el contexto histórico previo a la integración de RELEASE-04.

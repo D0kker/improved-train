@@ -9,8 +9,8 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Implementar presentación compacta de perfil, recurrentes e historial conservando cálculos.
 - [x] Integrar League-V4 por PUUID como consulta secundaria protegida, con colas Solo/Dúo y Flex y estados sin clasificación/no disponible distintos.
 - [x] Validación local:166 pruebas.NET,68 frontend, builds, formato/lint/tipos, Compose y audit producción; capturas en cinco anchos.
-- [ ] Verificar CI del PR sobre el HEAD publicado y aprobación del PO.
-- [ ] Aprobación visual y autorización posterior de merge/despliegue (fuera de esta tarea).
+- [x] CI del PR y de main aprobadas; aprobación visual del PO recibida y PR100 fusionado por el propietario.
+- [x] Autorización posterior de RELEASE-05 ejecutada: API/web healthy, rollback disponible; ver registro de despliegue.
 
 ## T04.3 — design system Cyber Arcade
 
