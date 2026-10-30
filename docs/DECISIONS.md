@@ -347,3 +347,12 @@ Vigente para el runtime del checkout: **D-042 — stateless, sin base de datos n
 - Razón: controlar memoria y trabajo pendiente ante sobrecarga, evitar particiones de clientes ilimitadas y spoofing de identidad, sin nueva infraestructura ni autenticación.
 - Consecuencias: usuarios detrás de Next/NAT comparten cuota hasta diseñar ingress confiable. Se conservan objetos locales y ventanas cinco/tres. El limiter Riot existente conserva un único singleton y añade ventanas preventivas configurables y observación app/método; puede esperar de forma conservadora más de lo mínimo conocido. Las cotas de caché/estructuras no son un techo de RSS. Escalar réplicas requiere resolver cuotas agregadas; no se implementa coordinación distribuida.
 - Evidencia y límites: `docs/T03_6_RESOURCE_PROTECTION.md`. Cargas exclusivamente simuladas, aisladas y opt-in; sin despliegue ni reinicio de servicios.
+
+## D-044 — Clasificación secundaria por PUUID con snapshot temporal
+
+- Fecha: 2026-10-29
+- Estado: implementada en T04.11, pendiente de revisión y sin despliegue.
+- Decisión: consultar League-V4 por PUUID en la plataforma del owner mediante un endpoint aditivo independiente; ambas colas comparten caché acotada con TTL predeterminado 300 s y single-flight. Presupuesto propio de hasta cinco segundos después de admisión global; el frontend cancela a los doce segundos. Se reutilizan límites de T03.6 sin ampliar ventanas históricas ni consultar clasificación de participantes.
+- Razón: Account-V1/Match-V5 no proporcionan rango actual. El PO lo solicita como dato secundario que no debe bloquear historial o análisis profundo. Un vacío exitoso y un fallo upstream tienen semánticas distintas.
+- Consecuencias: una llamada nominal adicional por miss, con posibles reintentos existentes dentro del presupuesto. Snapshot con fecha, degradación a «Rango no disponible» y reintento manual; ninguna persistencia funcional. API anterior mantiene dashboard nuevo sin rango. Emblemas oficiales del mismo origen, fallback neutral y atribución. No autoriza despliegue.
+- Evidencia: `docs/T04_11_DASHBOARD_UX_RANKED.md`; catálogo oficial League-V4 consultado el 2026-10-29.

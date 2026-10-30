@@ -4,6 +4,14 @@
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
+## T04.11 — UX y rango competitivo
+
+- [x] Implementar presentación compacta de perfil, recurrentes e historial conservando cálculos.
+- [x] Integrar League-V4 por PUUID como consulta secundaria protegida, con colas Solo/Dúo y Flex y estados sin clasificación/no disponible distintos.
+- [x] Validación local:166 pruebas.NET,68 frontend, builds, formato/lint/tipos, Compose y audit producción; capturas en cinco anchos.
+- [ ] Verificar CI del PR sobre el HEAD publicado y aprobación del PO.
+- [ ] Aprobación visual y autorización posterior de merge/despliegue (fuera de esta tarea).
+
 ## T04.3 — design system Cyber Arcade
 
 - [x] Definir tokens semánticos en `apps/web/src/design-system.css`, incluyendo colores, tipografía, spacing, radios, sombras, motion, controles, capas y aliases Tailwind 4.
@@ -269,3 +277,7 @@ Las secciones siguientes conservan hitos históricos. Sus referencias a EF, Redi
 - [ ] Aprobación visual del PO y revisión manual/asistiva; #97 sigue Draft.
 - [ ] Futuro release autorizado: reconstruir web desde el SHA aprobado; imagen b551f43 no contiene este refinamiento.
 - [ ] Publicidad futura (baja prioridad): un emplazamiento reversible, condicionado a aprobación Riot/producto y proveedor; reserva responsive, rotulado, consentimiento aplicable y medición CLS. Criterios y límites en [propuesta](T04_10_3_AD_PLACEMENT_PROPOSAL.md); no habilitar anuncios por esta tarea.
+
+## Mantenimiento detectado en T04.11
+
+- [ ] **P1 — Zod transitivo de desarrollo:** revisar GHSA-mrhx-c7xc-m3w5 y actualización compatible a versión corregida (4.6.6+). Alcance: lockfile/toolchain frontend; aceptación: audit completo sin ese aviso y pruebas/lint/tipos/build aprobados. Depende de revisar el consumidor transitivo; sin cambios mayores, `audit fix --force` ni ampliación funcional. Producción actualmente conserva cero vulnerabilidades.

@@ -12,6 +12,8 @@ public sealed class RiotOptions
 
     public int RequestTimeoutSeconds { get; set; } = 10;
 
+    public int RankedRequestTimeoutSeconds { get; set; } = 5;
+
     public int RequestConcurrency { get; set; } = 3;
 
     public int ShortWindowRequests { get; set; } = 20;
@@ -35,6 +37,8 @@ public sealed class RiotOptions
         {
             throw new InvalidOperationException("Riot quota windows require 1–10000 requests and 1–3600 seconds.");
         }
+        if (RankedRequestTimeoutSeconds is < 1 or > 5)
+            throw new InvalidOperationException("Ranked request timeout must be between 1 and 5 seconds.");
         if (RequestTimeoutSeconds <= 0)
         {
             throw new InvalidOperationException("Riot request timeout must be positive.");

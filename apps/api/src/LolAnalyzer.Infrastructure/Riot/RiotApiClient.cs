@@ -26,6 +26,7 @@ public sealed class RiotApiClient(
             PlatformRegion = platformRegion.Trim().ToLowerInvariant(),
             RegionalRouting = RiotRouting.Regional(platformRegion),
             RequestTimeoutSeconds = options.RequestTimeoutSeconds,
+            RankedRequestTimeoutSeconds = options.RankedRequestTimeoutSeconds,
             RequestConcurrency = options.RequestConcurrency,
             ShortWindowRequests = options.ShortWindowRequests,
             ShortWindowSeconds = options.ShortWindowSeconds,
@@ -51,6 +52,50 @@ public sealed class RiotApiClient(
             token => FetchAccountByRiotIdAsync(gameName, tagLine, token),
             cancellationToken);
     }
+
+    public async Task<RiotRankedProfile> GetRankedAsync(string puuid, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(puuid);
+        if (!RankedPlatforms.IsSupported(options.PlatformRegion))
+            throw new ArgumentException("Ranked information is not supported on this platform.");
+        var value = await responseCache.GetOrCreateAsync(
+            $"{options.PlatformRegion.Trim().ToLowerInvariant()}:{RiotCacheKeys.Ranked(puuid)}",
+            TimeSpan.FromSeconds(cacheOptions.RankedTtlSeconds), "riot-ranked",
+            token => FetchRankedAsync(puuid, token), cancellationToken).ConfigureAwait(false);
+        return value ?? throw new RiotApiException(HttpStatusCode.BadGateway);
+    }
+
+    private async Task<RiotRankedProfile?> FetchRankedAsync(string puuid, CancellationToken cancellationToken)
+    {
+        var path = $"lol/league/v4/entries/by-puuid/{Uri.EscapeDataString(puuid)}";
+        using var response = await SendGetAsync(path, "ranked", cancellationToken, options.GetPlatformBaseUri()).ConfigureAwait(false);
+        if (!response.IsSuccessStatusCode) throw new RiotApiException(response.StatusCode);
+        try
+        {
+            var payload = await response.Content.ReadFromJsonAsync<List<RankedResponse?>>(cancellationToken: cancellationToken).ConfigureAwait(false);
+            if (payload is null) throw new RiotApiException(HttpStatusCode.BadGateway);
+            var entries = new List<RiotRankedEntry>();
+            foreach (var item in payload)
+            {
+                if (item is null || item.QueueType is not ("RANKED_SOLO_5x5" or "RANKED_FLEX_SR")
+                    || item.Tier is not ("IRON" or "BRONZE" or "SILVER" or "GOLD" or "PLATINUM" or "EMERALD" or "DIAMOND" or "MASTER" or "GRANDMASTER" or "CHALLENGER")
+                    || item.Rank is not ("I" or "II" or "III" or "IV") || !item.LeaguePoints.HasValue
+                    || (!string.IsNullOrEmpty(item.Puuid) && !string.Equals(item.Puuid, puuid, StringComparison.Ordinal))
+                    || entries.Any(entry => entry.QueueType == item.QueueType))
+                    throw new RiotApiException(HttpStatusCode.BadGateway);
+                entries.Add(new RiotRankedEntry(item.QueueType, item.Tier, item.Rank, item.LeaguePoints.Value));
+            }
+            return new RiotRankedProfile(entries.OrderBy(entry => entry.QueueType == "RANKED_SOLO_5x5" ? 0 : 1).ToArray(), timeProvider.GetUtcNow());
+        }
+        catch (JsonException) { throw new RiotApiException(HttpStatusCode.BadGateway); }
+    }
+
+    private sealed record RankedResponse(
+        [property: JsonPropertyName("queueType")] string? QueueType,
+        [property: JsonPropertyName("tier")] string? Tier,
+        [property: JsonPropertyName("rank")] string? Rank,
+        [property: JsonPropertyName("leaguePoints")] int? LeaguePoints,
+        [property: JsonPropertyName("puuid")] string? Puuid);
 
     private async Task<RiotAccount?> FetchAccountByRiotIdAsync(
         string gameName,

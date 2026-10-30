@@ -437,10 +437,8 @@ test("dashboard highlights identity, region, initial metrics and one clear actio
   const summary = await screen.findByRole("region", {
     name: "Rendimiento competitivo",
   });
-  assert.match(
-    summary.textContent ?? "",
-    /Todas las partidas válidas cargadas: 5/,
-  );
+  assert.equal(within(summary).queryByText(/Todas las partidas válidas/), null);
+  assert.ok(screen.getByText(/los filtros solo cambian el historial/i));
   assert.ok(within(summary).getByText("Win rate"));
   assert.ok(within(summary).getByRole("img", { name: /Win rate: 80%/ }));
   assert.ok(within(summary).getByText("Victorias"));
@@ -505,11 +503,7 @@ test("dashboard shows history before a pending active-game request resolves", as
     /Comprobando/,
   );
   resolveActiveGame?.(Response.json(null));
-  assert.ok(
-    await screen.findByText(
-      "No se detectó una partida en curso en la última consulta.",
-    ),
-  );
+  assert.ok(await screen.findByText("No se detectó una partida en curso"));
 });
 
 test("competitive filters and expansion use loaded data without changing performance", async () => {
@@ -532,12 +526,10 @@ test("competitive filters and expansion use loaded data without changing perform
   );
   assert.ok(screen.getByRole("img", { name: /Win rate: 100%/ }));
   await user.click(within(history).getByRole("button", { name: "Todas" }));
-  const detail = within(history).getAllByText("Ver detalles de Annie")[0];
-  detail.focus();
-  assert.equal(document.activeElement, detail);
-  await user.click(detail);
-  assert.ok(detail.closest("details")?.hasAttribute("open"));
-  assert.equal(requests, 2);
+  assert.equal(within(history).queryByText(/Ver detalles de/), null);
+  assert.equal(history.querySelectorAll("details").length, 0);
+  assert.equal(history.querySelectorAll(".match-kda-ratio").length, 2);
+  assert.equal(requests, 3);
 });
 
 test("recurrent players expand locally and link only complete identities", async () => {
@@ -580,7 +572,7 @@ test("recurrent players expand locally and link only complete identities", async
     6,
   );
   assert.equal(screen.queryByRole("link", { name: "Nombre 5" }), null);
-  assert.equal(calls, 2);
+  assert.equal(calls, 3);
 });
 
 test("active game failure is independent and can be retried manually into a live link", async () => {
@@ -639,17 +631,22 @@ test("historical shared-match links are backed by deduplicated match evidence", 
   };
   const user = userEvent.setup();
   render(<PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />);
-  const summary = await screen.findByText("Partidas compartidas (2)");
+  const summary = await screen.findByText("Ver partidas (2)");
   await user.click(summary);
-  const link = screen.getByRole("link", { name: "Analizar LA1_0" });
+  const link = screen.getByRole("link", {
+    name: "Analizar partida compartida 1 con Other#TEST",
+  });
   assert.match(link.getAttribute("href")!, /ownerPuuid=owner-puuid/);
   assert.match(link.closest("li")!.textContent!, /Aliados/);
   assert.match(
-    screen.getByRole("link", { name: "Analizar LA1_2" }).closest("li")!
-      .textContent!,
+    screen
+      .getByRole("link", {
+        name: "Analizar partida compartida 2 con Other#TEST",
+      })
+      .closest("li")!.textContent!,
     /Rivales/,
   );
-  assert.equal(calls, 2);
+  assert.equal(calls, 3);
 });
 
 test("refined dashboard keeps historical profile, compact region, date and seven metrics", async () => {
@@ -669,7 +666,9 @@ test("refined dashboard keeps historical profile, compact region, date and seven
   assert.equal(region.textContent, "Latinoamérica Norte (LAN)");
   const icon = await screen.findByRole("img", { name: /invocador observado/ });
   assert.equal(icon.getAttribute("width"), "88");
-  assert.ok(screen.getByText("Ícono histórico"));
+  assert.equal(screen.queryByText("Ícono histórico"), null);
+  assert.ok(icon.getAttribute("aria-describedby"));
+  assert.equal(screen.queryByText("PERFIL DEL JUGADOR"), null);
   const date = document.querySelector(".profile-freshness time")!;
   assert.equal(date.getAttribute("datetime"), fixture.summary.dataUpdatedAt);
   assert.match(date.textContent!, /oct/);
@@ -699,7 +698,36 @@ test("refined dashboard keeps historical profile, compact region, date and seven
   await user.click(
     screen.getByRole("button", { name: "Actualizar cinco partidas" }),
   );
-  await waitFor(() => assert.equal(calls.length, 4));
+  await waitFor(() => assert.equal(calls.length, 6));
   assert.ok(calls.every((path) => path.includes("platformRegion=la1")));
   assert.equal(document.querySelectorAll(".match-card").length, 5);
+});
+
+test("pending rank never blocks history, active game or loaded performance", async () => {
+  let rankSignal: AbortSignal | undefined;
+  globalThis.fetch = async (input, init) => {
+    const path = String(input);
+    if (path.includes("/ranked")) {
+      rankSignal = init!.signal!;
+      return new Promise<Response>((_resolve, reject) => {
+        init!.signal!.addEventListener(
+          "abort",
+          () => reject(new DOMException("Cancelled", "AbortError")),
+          { once: true },
+        );
+      });
+    }
+    if (path.includes("/active-game")) return Response.json(null);
+    if (path.includes("/analysis?")) return Response.json(result(["LA1_0"]));
+    throw new Error("Unexpected fixture route");
+  };
+  const view = render(
+    <PlayerDashboard gameName="Ana" tagLine="LAN" platformRegion="la1" />,
+  );
+  await screen.findByText("Consultando rango…");
+  assert.ok(screen.getByRole("region", { name: "Rendimiento competitivo" }));
+  assert.equal(document.querySelectorAll(".match-card").length, 1);
+  await screen.findByText("No se detectó una partida en curso");
+  view.unmount();
+  assert.ok(rankSignal!.aborted);
 });

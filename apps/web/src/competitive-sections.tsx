@@ -1,10 +1,12 @@
 "use client";
 import Link from "next/link";
+import { formatDashboardDate } from "./dashboard-presentation";
+import { queueLabel } from "./format";
+import { platformRegionName } from "./platform-region";
 import { matchDetailPath } from "./api";
 import { useState } from "react";
 import { ChampionIcon } from "./champion-icon";
 import { Card, StatCard, SectionHeader, Button } from "./design-system";
-import { coverageTitle } from "./coverage";
 import {
   coverageStatus,
   loadedMatches,
@@ -27,14 +29,9 @@ export function CompetitivePerformance({
       <SectionHeader
         title="Rendimiento competitivo"
         titleId="performance-title"
-        description={`Todas las partidas válidas cargadas: ${stats.count}. Los filtros solo cambian el historial.`}
       />
-      <p className="competitive-coverage" role="status">
-        {coverageTitle(status)} · La ventana recuperada no equivale al historial
-        completo.
-      </p>
       {status !== "complete" && (
-        <p className="warning-banner">
+        <p className="warning-banner" role="status">
           Los datos disponibles pueden no representar toda la muestra
           solicitada.
         </p>
@@ -127,6 +124,9 @@ export function CompetitiveRelationships({
 }) {
   const [expanded, setExpanded] = useState(false),
     stats = relationships(windows, owner);
+  const matches = new Map(
+    loadedMatches(windows).map((match) => [match.riotMatchId, match]),
+  );
   const regions = [
     "br1",
     "eun1",
@@ -150,10 +150,9 @@ export function CompetitiveRelationships({
       <SectionHeader
         title="Relaciones entre jugadores"
         titleId="relationships-title"
-        description="Coincidencias en las partidas recuperadas. Recurrencia no confirma un premade."
       />
-      <p className="competitive-coverage">
-        {coverageTitle(coverageStatus(windows))} · Solo evidencia disponible.
+      <p className="recurrent-explanation">
+        La recurrencia no confirma que los jugadores sean premades.
       </p>
       {stats && stats.incompleteMatches > 0 && (
         <p className="warning-banner">
@@ -179,59 +178,103 @@ export function CompetitiveRelationships({
               />
             ))}
           </div>
-          <p>
-            Una persona puede aparecer como aliado y rival; los conjuntos no se
-            suman.
-          </p>
           <h3>Jugadores recurrentes</h3>
           <ul className="competitive-recurrent">
             {stats.players.slice(0, expanded ? undefined : 5).map((p) => (
-              <li key={p.puuid}>
-                <strong>
-                  {p.name?.trim() &&
-                  p.tag?.trim() &&
-                  region &&
-                  regions.includes(region.toLowerCase()) ? (
-                    <Link
-                      href={`/player/${encodeURIComponent(p.name)}/${encodeURIComponent(p.tag)}?platformRegion=${encodeURIComponent(region)}`}
-                    >
-                      {p.name}#{p.tag}
-                    </Link>
-                  ) : (
-                    p.name || "Identidad no disponible"
-                  )}
-                </strong>
-                <span>
-                  {p.total} partidas compartidas · {p.ally} como aliados ·{" "}
-                  {p.enemy} como rivales
-                </span>
-                {p.sharedMatches.length > 0 && (
-                  <details>
+              <li key={p.puuid} className="recurrent-player">
+                <div className="recurrent-main">
+                  <div className="recurrent-identity">
+                    <strong>
+                      {p.name?.trim() &&
+                      p.tag?.trim() &&
+                      region &&
+                      regions.includes(region.toLowerCase()) ? (
+                        <Link
+                          href={`/player/${encodeURIComponent(p.name)}/${encodeURIComponent(p.tag)}?platformRegion=${encodeURIComponent(region)}`}
+                        >
+                          {p.name}
+                          <span>#{p.tag}</span>
+                        </Link>
+                      ) : (
+                        <>
+                          {p.name || "Identidad no disponible"}
+                          {p.tag ? <span>#{p.tag}</span> : null}
+                        </>
+                      )}
+                    </strong>
+                    {region && regions.includes(region.toLowerCase()) ? (
+                      <small>{platformRegionName(region)}</small>
+                    ) : null}
+                  </div>
+                  <dl className="recurrent-mini-stats">
+                    {[
+                      ["Compartidas", p.total],
+                      ["Aliados", p.ally],
+                      ["Rivales", p.enemy],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <dt>{label}</dt>
+                        <dd>{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+                {p.sharedMatches.length > 0 ? (
+                  <details className="recurrent-shared">
                     <summary>
-                      Partidas compartidas ({p.sharedMatches.length})
+                      Ver partidas ({p.sharedMatches.length})
+                      <span className="sr-only">
+                        {" "}
+                        de {p.name || "jugador sin identidad"}
+                        {p.tag ? `#${p.tag}` : ""}
+                      </span>
                     </summary>
                     <ul>
-                      {p.sharedMatches.map((m) => (
-                        <li key={m.id}>
-                          {regions.includes(m.platform.toLowerCase()) ? (
-                            <Link
-                              href={matchDetailPath(m.id, owner, m.platform)}
+                      {p.sharedMatches.map((m, index) => {
+                        const match = matches.get(m.id);
+                        return (
+                          <li key={m.id}>
+                            <div>
+                              <strong>
+                                Partida {index + 1}
+                                {match ? ` · ${queueLabel(match.queueId)}` : ""}
+                              </strong>
+                              {match ? (
+                                <small>
+                                  {formatDashboardDate(
+                                    match.gameStartTimestamp,
+                                  )}
+                                </small>
+                              ) : null}
+                            </div>
+                            <span
+                              className={`shared-side shared-side--${m.side}`}
                             >
-                              Analizar {m.id}
-                            </Link>
-                          ) : (
-                            <span>{m.id}</span>
-                          )}{" "}
-                          ·{" "}
-                          {m.side === "ally"
-                            ? "Aliados"
-                            : m.side === "enemy"
-                              ? "Rivales"
-                              : "Equipo no disponible"}
-                        </li>
-                      ))}
+                              {m.side === "ally"
+                                ? "Aliados"
+                                : m.side === "enemy"
+                                  ? "Rivales"
+                                  : "Equipo no disponible"}
+                            </span>
+                            {regions.includes(m.platform.toLowerCase()) ? (
+                              <Link
+                                href={matchDetailPath(m.id, owner, m.platform)}
+                                aria-label={`Analizar partida compartida ${index + 1} con ${p.name || "jugador sin identidad"}${p.tag ? `#${p.tag}` : ""}`}
+                              >
+                                Analizar <span aria-hidden="true">→</span>
+                              </Link>
+                            ) : (
+                              <span>Análisis no disponible</span>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                   </details>
+                ) : (
+                  <p className="recurrent-no-evidence">
+                    Partidas compartidas no disponibles
+                  </p>
                 )}
               </li>
             ))}
@@ -258,11 +301,6 @@ export function CompetitiveRelationships({
           exactitud; los conteos acumulados no están disponibles.
         </p>
       )}
-      <p className="muted-copy">
-        Las partidas compartidas se muestran cuando la respuesta contiene
-        evidencia por partida; respuestas antiguas solo permiten conteos
-        agregados.
-      </p>
     </section>
   );
 }
@@ -280,6 +318,17 @@ export function CompetitiveCoverage({
       <p>
         {loadedMatches(windows).length} partidas válidas únicas utilizadas en
         estadísticas · {windows.length} ventanas consultadas.
+      </p>
+      <p>
+        El rendimiento utiliza todas las partidas válidas cargadas; los filtros
+        solo cambian el historial. La ventana recuperada no equivale al
+        historial completo del jugador y depende de los datos disponibles de
+        Riot.
+      </p>
+      <p>
+        Una persona puede aparecer como aliado y rival; esos conjuntos no se
+        suman. Las partidas compartidas se muestran cuando existe evidencia por
+        partida; respuestas antiguas solo permiten conteos agregados.
       </p>
       <p>
         Los contadores de cada ventana no son sumas de partidas únicas: pueden

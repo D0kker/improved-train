@@ -26,6 +26,9 @@ public interface IRiotApiClient
         string riotMatchId,
         CancellationToken cancellationToken);
 
+    Task<RiotRankedProfile> GetRankedAsync(string puuid, CancellationToken cancellationToken) =>
+        Task.FromException<RiotRankedProfile>(new NotSupportedException("Ranked information is unavailable for this client."));
+
     Task<RiotActiveGame?> GetActiveGameAsync(
         string puuid,
         CancellationToken cancellationToken) =>

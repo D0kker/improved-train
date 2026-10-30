@@ -2,6 +2,10 @@
 
 Última actualización: 2026-10-29
 
+## T04.11 — refinamiento UX y clasificación (rama de revisión)
+
+Desde main `22d1152`, rama `feature/t04-11-dashboard-ux-ranked`, se añade consulta League-V4 por PUUID independiente, caché temporal de cinco minutos y degradación segura. Perfil compacto, recurrentes con miniestadísticas y partidas compartidas legibles, KDA visible en historial sin expansión redundante. Fórmulas, métricas y campeones aprobados permanecen. [Informe T04.11](T04_11_DASHBOARD_UX_RANKED.md). Validación local:166 pruebas.NET y68 frontend aprobadas, builds/formato/lint/tipos/Compose; audit producción cero. Capturas y axe en cinco anchos sin infracciones detectadas (contraste incompleto/manual pendiente). Un aviso high transitivo de desarrollo en Zod queda en TODO. Sin merge ni despliegue. Las secciones inferiores conservan el contexto histórico previo a la integración de RELEASE-04.
+
 ## T04.10.3 — refinamiento visual pendiente de aprobación
 
 Sobre PR #97 se optimiza cabecera, fecha/región, grilla de siete métricas y campeones horizontales, conservando lógica y contratos. [Informe](T04_10_3_DASHBOARD_VISUAL_REFINEMENT.md), [comparación visual](releases/release04-captures/t04-10-3/README.md) y [publicidad futura documental](T04_10_3_AD_PLACEMENT_PROPOSAL.md). 59 pruebas frontend, lint/tipos/build y audit producción cero; validación Chromium con fixtures en cinco anchos. Se corrigió una cifra dividida en tablet y se añadió comprobación de una línea para valores. READY_FOR_REVIEW, PR Draft; aprobación visual del PO y contraste/asistiva pendientes. La imagen web b551f43 es anterior al refinamiento y deberá reconstruirse antes de un futuro despliegue autorizado. Sin cambios de backend, main, secretos ni servicios.
