@@ -1,0 +1,100 @@
+{
+  "synthetic": true,
+  "viewports": [
+    {
+      "width": 320,
+      "viewport": 320,
+      "scroll": 320,
+      "focus": {
+        "focused": true,
+        "outline": "solid",
+        "width": "3px",
+        "shadow": "none"
+      }
+    },
+    {
+      "width": 390,
+      "viewport": 390,
+      "scroll": 390,
+      "focus": {
+        "focused": true,
+        "outline": "solid",
+        "width": "3px",
+        "shadow": "none"
+      }
+    },
+    {
+      "width": 768,
+      "viewport": 768,
+      "scroll": 768,
+      "focus": {
+        "focused": true,
+        "outline": "solid",
+        "width": "3px",
+        "shadow": "none"
+      }
+    },
+    {
+      "width": 1024,
+      "viewport": 1024,
+      "scroll": 1024,
+      "focus": {
+        "focused": true,
+        "outline": "solid",
+        "width": "3px",
+        "shadow": "none"
+      }
+    },
+    {
+      "width": 1440,
+      "viewport": 1440,
+      "scroll": 1440,
+      "focus": {
+        "focused": true,
+        "outline": "solid",
+        "width": "3px",
+        "shadow": "none"
+      }
+    }
+  ],
+  "checks": [
+    "cinco secciones, cobertura por teclado y overflow 320",
+    "cinco secciones, cobertura por teclado y overflow 390",
+    "cinco secciones, cobertura por teclado y overflow 768",
+    "cinco secciones, cobertura por teclado y overflow 1024",
+    "cinco secciones, cobertura por teclado y overflow 1440",
+    "partial",
+    "empty",
+    "error y reintento",
+    "long"
+  ],
+  "errors": [],
+  "requests": [
+    "/api/v1/matches/LA1_FIXTURE/analyze",
+    "/api/v1/matches/LA1_FIXTURE/analyze",
+    "/api/v1/matches/LA1_FIXTURE/analyze",
+    "/api/v1/matches/LA1_FIXTURE/analyze",
+    "/api/v1/matches/LA1_FIXTURE/analyze",
+    "/api/v1/matches/LA1_FIXTURE/analyze",
+    "/api/v1/matches/LA1_FIXTURE/analyze",
+    "/api/v1/matches/LA1_FIXTURE/analyze",
+    "/api/v1/matches/LA1_FIXTURE/analyze",
+    "/api/v1/matches/LA1_FIXTURE/analyze"
+  ],
+  "accessibility": [
+    {
+      "width": 390,
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ]
+    },
+    {
+      "width": 1440,
+      "violations": [],
+      "incomplete": [
+        "color-contrast"
+      ]
+    }
+  ]
+}
