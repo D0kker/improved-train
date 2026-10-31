@@ -8,7 +8,8 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 
 - [x] Implementar las cinco secciones con relaciones de backend, cobertura y navegación existentes.
 - [x] Completar validación visual local con Chromium/fixtures a 320/390/768/1024/1440, estados parciales/insuficientes/error y pruebas DOM; capturas en [índice T04.6](releases/t04-6-captures/README.md).
-- [ ] Obtener CI del HEAD publicado, revisión visual del PO y evaluación manual de contraste/tecnologías asistivas.
+- [x] CI #66 aprobó frontend, .NET y contenedores para el SHA funcional publicado; el seguimiento documental no cambia el código validado.
+- [ ] Revisión visual del PO y evaluación manual de contraste/tecnologías asistivas.
 - [ ] Autorizar merge y despliegue en una tarea posterior; no comenzar T04.7 antes del cierre.
 
 ## T04.11 — UX y rango competitivo

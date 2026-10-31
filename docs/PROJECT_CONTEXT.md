@@ -4,7 +4,7 @@
 
 ## T04.6 — análisis de partida para revisión
 
-La rama `feature/t04-6-match-analysis-implementation`, basada en `main` `16b00eb343c5f43496fb55571084e119b84d6d49`, implementa resumen, equipos, pares históricos, grupos prudentes y cobertura con los contratos stateless existentes; no cambia backend, cuotas ni dashboard. Validación local: 81 pruebas frontend, lint, TypeScript, build, audit de producción (0), Compose y diff-check aprobados. Chromium con fixtures recorrió cinco anchos y estados parciales, insuficientes, error/reintento y textos largos; Axe sin infracciones detectadas y contraste incompleto pendiente de evaluación manual. Capturas: [índice T04.6](releases/t04-6-captures/README.md). Estado `READY_FOR_REVIEW`; CI del PR y aprobación visual del PO pendientes. No se fusionó ni desplegó.
+La rama `feature/t04-6-match-analysis-implementation`, basada en `main` `16b00eb343c5f43496fb55571084e119b84d6d49`, implementa resumen, equipos, pares históricos, grupos prudentes y cobertura con los contratos stateless existentes; no cambia backend, cuotas ni dashboard. Validación local: 81 pruebas frontend, lint, TypeScript, build, audit de producción (0), Compose y diff-check aprobados. Chromium con fixtures recorrió cinco anchos y estados parciales, insuficientes, error/reintento y textos largos; Axe sin infracciones detectadas y contraste incompleto pendiente de evaluación manual. Capturas: [índice T04.6](releases/t04-6-captures/README.md). CI #66 pasó en el SHA funcional `2c0c4ff`; el PR #103 está abierto. Estado `READY_FOR_REVIEW`; falta aprobación visual del PO y evaluación manual de contraste/tecnologías asistivas. No se fusionó ni desplegó.
 
 ## T04.11 — refinamiento UX y clasificación (rama de revisión)
 

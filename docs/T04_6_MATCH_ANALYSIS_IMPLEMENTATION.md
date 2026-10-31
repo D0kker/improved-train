@@ -1,6 +1,6 @@
 # T04.6 — Implementación del análisis de partida
 
-Estado: **READY_FOR_REVIEW**, validación local completa; CI del HEAD publicado y aprobación visual del PO pendientes. La estructura y contenido fueron aprobados por el PO. Base `main` `16b00eb343c5f43496fb55571084e119b84d6d49`. La [propuesta de diseño del PR #102](https://github.com/D0kker/improved-train/pull/102) se consultó sin fusionarla.
+Estado: **READY_FOR_REVIEW**. Validación local completa; el CI #66 pasó en el commit funcional `2c0c4ffa699f454a87943ed070a5b84173ecb342` (restore/build/tests/formato .NET; instalación/lint/tests/type-check/build web; Compose y build de contenedores). La aprobación visual del PO sigue pendiente. La estructura y contenido fueron aprobados por el PO. Base `main` `16b00eb343c5f43496fb55571084e119b84d6d49`. La [propuesta de diseño del PR #102](https://github.com/D0kker/improved-train/pull/102) se consultó sin fusionarla.
 
 ## Composición y componentes
 
@@ -27,4 +27,4 @@ La carga es una petición única y no inventa progreso de fases. Se mantienen re
 - Chromium con fixtures sintéticos interceptó las rutas API y assets; no hubo tráfico a Riot. Verificó secciones y ausencia de overflow en 320, 390, 768, 1024 y 1440 px, teclado/foco, estados parcial, insuficiente, error/reintento y texto largo. Axe no detectó infracciones en 390/1440; su auditoría de contraste quedó incompleta y requiere revisión manual. Esto no certifica WCAG.
 - Capturas e índice: [resultados](releases/t04-6-captures/README.md), vista completa [desktop](releases/t04-6-captures/01-desktop.png) y [móvil](releases/t04-6-captures/02-mobile.png). La primera inspección visual detectó el margen vertical global heredado; se acotó el estilo para esta página y se repitió la matriz final sin errores.
 
-Un análisis de participantes incompletos o ventanas limitadas sigue siendo parcial; no se exponen IDs o detalles internos de errores al usuario. Falta revisión visual del PO, evaluación manual de contraste/tecnologías asistivas y CI sobre el SHA publicado.
+Un análisis de participantes incompletos o ventanas limitadas sigue siendo parcial; no se exponen IDs o detalles internos de errores al usuario. Falta revisión visual del PO y evaluación manual de contraste/tecnologías asistivas. El CI del commit funcional está aprobado; un seguimiento documental no altera el código validado.
