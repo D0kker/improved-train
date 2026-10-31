@@ -1,8 +1,16 @@
 # Roadmap
 
-Última actualización: 2026-10-28
+Última actualización: 2026-10-31
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
+
+## T04.6 — análisis de partida
+
+- [x] Implementar las cinco secciones con relaciones de backend, cobertura y navegación existentes.
+- [x] Completar validación visual local con Chromium/fixtures a 320/390/768/1024/1440, estados parciales/insuficientes/error y pruebas DOM; capturas en [índice T04.6](releases/t04-6-captures/README.md).
+- [x] CI #66 aprobó frontend, .NET y contenedores para el SHA funcional publicado; el seguimiento documental no cambia el código validado.
+- [ ] Revisión visual del PO y evaluación manual de contraste/tecnologías asistivas.
+- [ ] Autorizar merge y despliegue en una tarea posterior; no comenzar T04.7 antes del cierre.
 
 ## T04.11 — UX y rango competitivo
 
