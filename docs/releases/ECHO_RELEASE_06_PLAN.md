@@ -39,7 +39,7 @@ Se ejecutó el runner existente `scripts/visual/t04-6.mjs` con Chromium ARM64/Pl
 - Cinco secciones presentes, los dos equipos, detalles de cobertura operables por teclado y foco visible de 3 px.
 - Escenarios `complete`, `partial`, `insufficient`/sin relaciones, error con reintento y nombres largos aprobados; sin errores de página ni solicitudes inesperadas.
 - axe en 390 y 1440 px: 0 violaciones detectadas; `color-contrast` quedó como incomplete y requiere evaluación manual. Esto no certifica WCAG.
-- Home → búsqueda → dashboard → selección → análisis → regreso no se ejecutó como un único recorrido E2E de navegador. Los pasos de búsqueda/dashboard/análisis/regreso están cubiertos por pruebas DOM existentes; la pantalla de análisis sí se ejecutó en navegador con fixture. No se utilizó Riot real.
+- Home → búsqueda → dashboard → selección → análisis → regreso pasó como recorrido Playwright con respuestas simuladas. Se verificaron Riot ID/tag/región en la ruta, owner PUUID y plataforma en el POST de análisis, Match ID del enlace y regreso al perfil. Las rutas de active-game/ranked también recibieron respuestas sintéticas; no hubo solicitudes externas. No se utilizó Riot real.
 
 Capturas nuevas y reporte: [índice de validación](t04-6-validation-captures/README.md). Son datos ficticios. Las capturas anteriores de PR #103 siguen en [evidencia de implementación](t04-6-captures/README.md).
 
