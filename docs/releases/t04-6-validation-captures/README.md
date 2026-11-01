@@ -1,5 +1,7 @@
 # T04.6.1 — Capturas de validación
 
+> **Vigencia:** estas capturas corresponden a `ec0419cebf96f8f97818504e2d3a157926c804a8`. No incluyen el tinte azul/coral añadido en `b331627` y no sirven para revisar ese cambio. La actualización T04.6.2 no pudo regenerarlas porque no había navegador local, el CDN no resolvía por DNS y Docker no estaba accesible. Consultar [el plan RELEASE-06](../ECHO_RELEASE_06_PLAN.md) antes de usarlas para aprobación visual.
+
 Capturas generadas el 2026-10-31 con Chromium ARM64, datos sintéticos y la implementación candidata `ec0419cebf96f8f97818504e2d3a157926c804a8`. No se consultó Riot API.
 
 - `01-desktop.png`: vista completa de escritorio.

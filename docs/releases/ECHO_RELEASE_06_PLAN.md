@@ -1,14 +1,17 @@
 # RELEASE-06 — Plan de validación y despliegue candidato
 
 **Estado:** `REVIEW_REQUIRED`  
-**Fecha de validación:** 2026-10-31  
-**Candidato de código:** `ec0419cebf96f8f97818504e2d3a157926c804a8` (`feature/t04-6-match-analysis-implementation`)  
+**Fecha de actualización:** 2026-11-01 UTC
+
+**Candidato actual de código:** `b331627cebf948b473b2132839fcf5426f3b2f19` (`feature/t04-6-match-analysis-implementation`)
 **Base observada:** `main` en `16b00eb343c5f43496fb55571084e119b84d6d49`
+
+> La validación de navegador y las capturas de las secciones 2–4 corresponden al HEAD anterior `ec0419c`; no incluyen el tinte de equipos añadido en `b331627`. La actualización T04.6.2 al final de este documento refleja el estado vigente y prevalece ante diferencias.
 
 ## 1. PR y alcance
 
 - [PR #102 — propuesta UX de análisis](https://github.com/D0kker/improved-train/pull/102): abierto, no fusionado, base `main`, HEAD `df983d643abc51108e2bdd358b8a55c581bfd182`, fusionable. Solo documentación y wireframes textuales.
-- [PR #103 — implementación T04.6](https://github.com/D0kker/improved-train/pull/103): abierto, no fusionado, base `main`, HEAD `ec0419cebf96f8f97818504e2d3a157926c804a8`, fusionable y no draft. CI del SHA exacto: workflow `ci`, run #67, `success` (web, .NET y contenedores).
+- [PR #103 — implementación T04.6](https://github.com/D0kker/improved-train/pull/103): abierto, no fusionado, base `main`, HEAD `b331627cebf948b473b2132839fcf5426f3b2f19`, fusionable y no draft. CI del SHA exacto: workflow `ci`, run #70, `success` (web, .NET y contenedores).
 - T04.6 implementa resumen, equipos y participantes, parejas con evidencia histórica, grupos con coincidencias históricas y cobertura. No modifica API/backend, algoritmos, contratos, caché, seguridad, solicitudes Riot ni el dashboard de RELEASE-05.
 - La propuesta #102 y la implementación #103 son consistentes. La pantalla conserva la lista de parejas recomendada, la terminología cautelosa y la semántica de cobertura; la implementación sigue las decisiones aprobadas posteriormente por el Product Owner.
 
@@ -23,17 +26,17 @@ En el worktree limpio de #103, Node `v24.18.0`, npm `11.16.0`:
 | `npm run lint` | Aprobado. |
 | `npm run type-check` | Aprobado. |
 | `npm run build` | Aprobado; rutas de Home, jugador, partida, partida activa y galería compilan. |
-| `npm audit --omit=dev` | 0 vulnerabilidades de producción. |
+| `npm audit --omit=dev` | No verificable en esta actualización: el endpoint de auditoría no resolvió por DNS. El resultado anterior fue 0 vulnerabilidades de producción para el árbol sin cambios de dependencias; no se considera una auditoría del HEAD vigente. |
 | `docker compose config --quiet` | Aprobado. |
 | `git diff --check` | Aprobado; worktree de implementación permanece limpio. |
 
-`dotnet` no se ejecutó localmente: el diff de #103 no incluye cambios de backend o contratos. Los checks web, .NET y contenedores de CI #67 pasaron para el HEAD candidato; la CI ejecutó la validación de servidor correspondiente. La instalación informa además findings en el árbol completo de desarrollo (16 moderate, 1 high); no afectan el resultado de auditoría de producción y no se modificaron dependencias.
+`dotnet` no se ejecutó localmente: el diff de #103 no incluye cambios de backend o contratos. Los checks web, .NET y contenedores de CI #70 pasaron para el HEAD vigente; la CI ejecutó la validación de servidor correspondiente. `npm ci` informa 16 moderate y 1 high en el árbol completo; al no poder consultar el endpoint de auditoría, no se atribuye aquí alcance de producción a esos avisos. No se modificaron dependencias.
 
 Los tests DOM cubren las cinco secciones, identidades incompletas, relaciones ordenadas de forma determinista, ausencia de datos, equipos parciales, carga fallida/reintento, cancelación, respuestas tardías, regreso a búsqueda y KDA finito. El cliente realiza una solicitud stateless de análisis de partida; esta tarea no añade llamadas Riot.
 
 ## 3. Validación de navegador
 
-Se ejecutó el runner existente `scripts/visual/t04-6.mjs` con Chromium ARM64/Playwright aislado y datos sintéticos, servido desde `127.0.0.1:3217`. Todas las solicitudes fuera del origen de prueba se bloquearon.
+La ejecución registrada se hizo sobre `ec0419c` con Chromium ARM64/Playwright aislado y datos sintéticos, servido desde `127.0.0.1:3217`. Todas las solicitudes fuera del origen de prueba se bloquearon. Es evidencia válida de la estructura previa de T04.6, pero no de los estilos añadidos después en `b331627`.
 
 - Viewports: **320, 390, 768, 1024 y 1440 px**; `scrollWidth` coincide con el ancho en cada uno.
 - Cinco secciones presentes, los dos equipos, detalles de cobertura operables por teclado y foco visible de 3 px.
@@ -41,11 +44,11 @@ Se ejecutó el runner existente `scripts/visual/t04-6.mjs` con Chromium ARM64/Pl
 - axe en 390 y 1440 px: 0 violaciones detectadas; `color-contrast` quedó como incomplete y requiere evaluación manual. Esto no certifica WCAG.
 - Home → búsqueda → dashboard → selección → análisis → regreso pasó como recorrido Playwright con respuestas simuladas. Se verificaron Riot ID/tag/región en la ruta, owner PUUID y plataforma en el POST de análisis, Match ID del enlace y regreso al perfil. Las rutas de active-game/ranked también recibieron respuestas sintéticas; no hubo solicitudes externas. No se utilizó Riot real.
 
-Capturas nuevas y reporte: [índice de validación](t04-6-validation-captures/README.md). Son datos ficticios. Las capturas anteriores de PR #103 siguen en [evidencia de implementación](t04-6-captures/README.md).
+Capturas nuevas y reporte de la revisión anterior: [índice de validación](t04-6-validation-captures/README.md). Son datos ficticios. Las capturas de implementación de PR #103 están en el [repositorio, rama de T04.6](https://github.com/D0kker/improved-train/tree/feature/t04-6-match-analysis-implementation/docs/releases/t04-6-captures).
 
 ## 4. Hallazgos y correcciones
 
-No se encontró un defecto reproducible que justificara cambios de código. Se ejecutó Chromium con permisos locales después de que el sandbox impidiera abrir sockets de Chromium; el servidor Next de prueba se limitó a loopback y se detuvo tras las capturas. No se modificaron fuentes, backend ni servicios activos durante esta validación.
+La validación anterior no encontró defectos funcionales reproducibles. T04.6.2 no pudo repetir Chromium: no hay ejecutable ni caché local de navegador; el CDN de Playwright y npm registry fallan al resolver por DNS; el daemon Docker responde con permiso denegado al socket. El host es ARM64 (`aarch64`) con 5.9 GB libres, pero no se inició una descarga sin conectividad ni se intentó modificar el sistema. No se generaron capturas nuevas ni se probaron servicios activos.
 
 No se afirma prueba con Riot real, evaluación asistiva completa ni conformidad WCAG. La aprobación visual final corresponde al Product Owner.
 
@@ -92,7 +95,46 @@ Conservar API actual sin cambios. Ante fallo exclusivo de la web, apuntar el ove
 - Revisión visual por el Product Owner pendiente; axe dejó contraste como incompleto y falta evaluación manual/asistiva.
 - No se realizó recorrido E2E completo en navegador ni consulta con cuenta Riot real; los pasos están cubiertos por DOM tests y la vista por fixtures.
 - La compatibilidad descrita se aplica a API RELEASE-05 identificada; no se certifican APIs de versiones anteriores.
-- Los findings de dependencias de desarrollo permanecen; audit de producción informa cero.
+- El audit de producción no pudo repetirse en el HEAD vigente por fallo DNS; no se declara aprobado en esta actualización.
 - No hay correcciones funcionales pendientes identificadas. Los PR #102 y #103 continúan abiertos; ninguno se fusionó.
 
 **Estado final: `REVIEW_REQUIRED`.** T04.6 pasa las validaciones automatizadas y visuales sintéticas para revisión; requiere aprobación visual del Product Owner y revisión manual de contraste/asistencia antes de que otra tarea autorice el release. RELEASE-06 no se fusionó a `main`, no se desplegó y no modificó el runtime.
+
+## 10. T04.6.2 — validación del tinte y estado vigente
+
+### GitHub
+
+- PR #102 está abierto, no fusionado, base `main`, HEAD `df983d643abc51108e2bdd358b8a55c581bfd182`, fusionable.
+- PR #103 está abierto, no fusionado, base `main`, HEAD `b331627cebf948b473b2132839fcf5426f3b2f19`, fusionable y no Draft. GitHub Actions `ci`, run #70, concluyó `success` para ese SHA.
+- PR #104 permanece abierto como Draft, base `main`, y contiene el plan documental de RELEASE-06.
+- PR #97 está fusionado en `main`; no se modifica ni se despliega nada en esta tarea.
+
+### Cambio cromático comprobado en código
+
+El commit `b331627` aplica a `.analysis-team--blue` y `.analysis-team--red` un gradiente 145° que mezcla al 9% el token semántico azul o coral con `--surface`, y vuelve a la superficie oscura a 74%. Se conserva borde y estructura. El renglón owner usa una mezcla opaca dorada del 9% sobre `--surface`, así el acento del equipo no se superpone visualmente al resaltado del jugador consultado. El rótulo textual del owner continúa presente.
+
+Una estimación matemática sRGB a partir de los tokens actuales da aproximadamente `#13243b` (azul), `#201f2f` (rojo) y `#1f272e` (resaltado owner); el contraste calculado de texto principal es mayor a 13:1. Es una estimación de los valores CSS, no una medición de píxeles ni una validación WCAG en navegador. La diferenciación azul/coral y el contraste real quedan sin inspección visual en esta actualización.
+
+### Entorno de navegador
+
+- Arquitectura observada: `aarch64`; espacio libre: 5.9 GB.
+- No se encontró Chromium/Chrome ni caché de Playwright en rutas locales habituales; el paquete Playwright no estaba presente en el entorno externo de captura.
+- `cdn.playwright.dev` y `registry.npmjs.org` no resolvieron por DNS. El socket de Docker devolvió `permission denied`, así que no se pudo usar un contenedor temporal.
+- No se descargaron binarios, no se instalaron herramientas globales y no se modificaron servicios.
+- Las capturas enlazadas en `t04-6-validation-captures/README.md` siguen siendo de `ec0419c`. No se presentan como evidencia del tinte de `b331627`; falta regenerar desktop, móvil y detalle de los dos equipos cuando haya navegador disponible.
+
+### Validaciones locales del HEAD
+
+- `npm ci`: aprobado; la instalación informa 16 avisos moderate y 1 high en el árbol total.
+- `npm test`: 81/81 aprobadas.
+- `npm run lint`, `npm run type-check`, `npm run build`, `docker compose config --quiet`, `git diff --check` y `npx prettier --check app/globals.css`: aprobados.
+- `npm audit --omit=dev`: no pudo consultar advisories por error DNS (`EAI_AGAIN registry.npmjs.org`); no se declara un resultado de auditoría.
+- No hay cambios de backend, contrato, dependencias ni llamadas Riot en `b331627`. El CI del HEAD sí ejecutó las comprobaciones web, .NET y contenedores.
+
+### Preparación de RELEASE-06
+
+- Compatibilidad: T04.6 no modifica API ni sus contratos; el plan de solo web contra API RELEASE-05 sigue siendo válido, sujeto a revalidar configuración y SHA antes de un despliegue autorizado.
+- Rollback: se conserva el tag/ID de imagen web RELEASE-05 ya documentado en la sección 8; API permanece sin cambios. No se inspeccionaron ni cambiaron producción, Redis o volúmenes durante T04.6.2.
+- No hay defectos visuales reproducidos porque no fue posible renderizar la candidata actual. La confirmación de tinte, responsive a 320/390/768/1024/1440, capturas actuales y revisión manual de contraste permanecen pendientes.
+
+**Clasificación T04.6.2: `REVIEW_REQUIRED`.** El código y CI están aprobados, pero RELEASE-06 no debe considerarse listo para aprobación visual final hasta contar con capturas de `b331627` y revisar el contraste/render real. Ningún PR se fusionó y no hubo despliegue.

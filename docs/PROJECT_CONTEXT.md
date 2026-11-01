@@ -1,6 +1,10 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-10-29
+Última actualización: 2026-11-01
+
+## T04.6.2 — validación visual pendiente
+
+PR #103 de T04.6 continúa abierto hacia `main`, en `b331627cebf948b473b2132839fcf5426f3b2f19`; CI #70 aprobó web, .NET y contenedores. El commit añade gradientes tenues azul/coral con tokens existentes y mantiene el resaltado dorado del owner. Pruebas locales: 81/81, lint, TypeScript, build, Compose, Prettier y diff-check aprobados. No se pudo abrir Chromium: no hay binario/caché, el CDN/npm registry fallan DNS y Docker socket está denegado. Las capturas existentes corresponden a `ec0419c`, antes del tinte. `npm audit --omit=dev` tampoco pudo consultar el servicio; no se declara auditoría actual. RELEASE-06 queda `REVIEW_REQUIRED` hasta regenerar capturas y revisar render/contraste; no se modificó ni desplegó producción. Plan actualizado en [RELEASE-06](releases/ECHO_RELEASE_06_PLAN.md).
 
 ## T04.11 — refinamiento UX y clasificación (rama de revisión)
 

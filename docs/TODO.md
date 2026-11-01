@@ -1,8 +1,18 @@
 # Roadmap
 
-Última actualización: 2026-10-28
+Última actualización: 2026-11-01
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
+
+## T04.6 — análisis de partida
+
+- [x] Implementar las cinco secciones con relaciones de backend, cobertura y navegación existentes.
+- [x] Validar con Chromium/fixtures la candidata previa `ec0419c` a 320/390/768/1024/1440, estados parciales/insuficientes/error y pruebas DOM; sus capturas están en [índice T04.6](releases/t04-6-validation-captures/README.md).
+- [x] Ajustar el fondo de equipos en `b331627` con tinte azul/coral tenue y mantener independiente el resaltado dorado del owner; no cambia estructura ni lógica.
+- [x] CI #70 aprobó frontend, .NET y contenedores para el HEAD actual `b331627`.
+- [ ] Regenerar capturas y validar en Chromium el tinte de `b331627` a 320/390/768/1024/1440. No se pudo iniciar navegador en T04.6.2: CDN sin resolución DNS, sin caché local y Docker socket denegado; las imágenes actuales no contienen el tinte.
+- [ ] Revisión visual del PO y evaluación manual de contraste/tecnologías asistivas.
+- [ ] Autorizar merge y despliegue en una tarea posterior; no comenzar T04.7 antes del cierre.
 
 ## T04.11 — UX y rango competitivo
 
