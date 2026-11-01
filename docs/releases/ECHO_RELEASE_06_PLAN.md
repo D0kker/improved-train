@@ -104,7 +104,7 @@ Conservar API actual sin cambios. Ante fallo exclusivo de la web, apuntar el ove
 
 - PR #102 está abierto, no fusionado, base `main`, HEAD `df983d643abc51108e2bdd358b8a55c581bfd182`, fusionable.
 - PR #103 está abierto, no fusionado, base `main`, HEAD `57835f14003007008975836cd74685a430eae0de`, fusionable y no Draft. El commit de evidencia contiene capturas/index y una línea de runner. GitHub Actions `ci`, run #73, concluyó `success` para el HEAD final; run #70 también aprobó el código funcional `b331627`.
-- PR #104 permanece abierto como Draft, base `main`; HEAD observado antes de T04.6.3: `ebf3e00ac6298124a7aa3ebaae03ae75fc6a67c1`, CI #76 success. Esta actualización documental genera un nuevo HEAD y requiere consultar su CI antes de aprobar la rama de documentos.
+- PR #104 permanece abierto como Draft, base `main`; HEAD documental `9ea512ae6f5537cf34035fe67156a96caf100373`, CI #77 concluyó `success` en web, .NET y contenedores. Este cierre añade una actualización documental posterior, cuyo check de CI debe confirmarse en su nuevo HEAD.
 - PR #97 está fusionado en `main`; no se modifica ni se despliega nada en esta tarea.
 
 ### Cambio cromático comprobado en código
@@ -168,7 +168,7 @@ Estos ratios se calcularon a partir de los valores CSS opacos/compuestos y los e
 - `npm audit --omit=dev`: éxito con **0 vulnerabilidades**. El primer intento restringido devolvió `EAI_AGAIN`; el `npm config get registry` confirmado fue `https://registry.npmjs.org/`, `.npmrc` no existía en proyecto/usuario y el reintento aprobado resolvió DNS y terminó correctamente. No se cambiaron registry ni dependencias.
 - En el HEAD `57835f1`: `npm test` 81/81; lint, TypeScript, build, Compose y diff-check aprobados. TypeScript se reejecutó después del build para evitar carrera con los tipos `.next` generados.
 - `node --check scripts/visual/t04-6.mjs` pasó. Prettier pasa para CSS e índice Markdown; el runner continúa mostrando la advertencia que ya mostraba su archivo base, sin formatearlo masivamente por ser un script preexistente fuera de estilo.
-- CI #73 del HEAD de implementación y CI #76 del HEAD documental previo (`ebf3e00`) concluyeron success en web, .NET y contenedores; el commit documental T04.6.3 requiere verificar el run generado para su nuevo HEAD.
+- CI #73 del HEAD de implementación (`57835f1`) y CI #77 del HEAD documental (`9ea512a`) concluyeron success en web, .NET y contenedores. La revisión documental posterior debe esperar su propio check; no se presume que el resultado anterior cubra cambios posteriores.
 
 ### Secuencia recomendada de integración (no ejecutada)
 
