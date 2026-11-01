@@ -11,7 +11,7 @@
 ## 1. PR y alcance
 
 - [PR #102 — propuesta UX de análisis](https://github.com/D0kker/improved-train/pull/102): abierto, no fusionado, base `main`, HEAD `df983d643abc51108e2bdd358b8a55c581bfd182`, fusionable. Solo documentación y wireframes textuales.
-- [PR #103 — implementación T04.6](https://github.com/D0kker/improved-train/pull/103): abierto, no fusionado, base `main`, HEAD `57835f14003007008975836cd74685a430eae0de`, fusionable y no draft. CI del commit de evidencia #73 estaba en curso al actualizar este plan; CI #70 aprobó el código funcional `b331627` (web, .NET y contenedores).
+- [PR #103 — implementación T04.6](https://github.com/D0kker/improved-train/pull/103): abierto, no fusionado, base `main`, HEAD `57835f14003007008975836cd74685a430eae0de`, fusionable y no draft. CI `ci`, run #73, concluyó `success` en web, .NET y contenedores.
 - T04.6 implementa resumen, equipos y participantes, parejas con evidencia histórica, grupos con coincidencias históricas y cobertura. No modifica API/backend, algoritmos, contratos, caché, seguridad, solicitudes Riot ni el dashboard de RELEASE-05.
 - La propuesta #102 y la implementación #103 son consistentes. La pantalla conserva la lista de parejas recomendada, la terminología cautelosa y la semántica de cobertura; la implementación sigue las decisiones aprobadas posteriormente por el Product Owner.
 
@@ -103,7 +103,7 @@ Conservar API actual sin cambios. Ante fallo exclusivo de la web, apuntar el ove
 ### GitHub
 
 - PR #102 está abierto, no fusionado, base `main`, HEAD `df983d643abc51108e2bdd358b8a55c581bfd182`, fusionable.
-- PR #103 está abierto, no fusionado, base `main`, HEAD `57835f14003007008975836cd74685a430eae0de`, fusionable y no Draft. El commit de evidencia contiene las capturas/index y una línea de runner; CI #73 se debe confirmar antes de dar por validado el HEAD final. GitHub Actions `ci`, run #70, concluyó `success` para el código funcional `b331627`.
+- PR #103 está abierto, no fusionado, base `main`, HEAD `57835f14003007008975836cd74685a430eae0de`, fusionable y no Draft. El commit de evidencia contiene capturas/index y una línea de runner. GitHub Actions `ci`, run #73, concluyó `success` para el HEAD final; run #70 también aprobó el código funcional `b331627`.
 - PR #104 permanece abierto como Draft, base `main`, y contiene el plan documental de RELEASE-06.
 - PR #97 está fusionado en `main`; no se modifica ni se despliega nada en esta tarea.
 
