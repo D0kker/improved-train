@@ -93,7 +93,7 @@ Conservar API actual sin cambios. Ante fallo exclusivo de la web, apuntar el ove
 ## 9. Riesgos y estado
 
 - Revisión visual por el Product Owner pendiente; axe dejó contraste como incompleto y falta evaluación manual/asistiva.
-- No se realizó recorrido E2E completo en navegador ni consulta con cuenta Riot real; los pasos están cubiertos por DOM tests y la vista por fixtures.
+- El recorrido Home → búsqueda → dashboard → análisis → regreso sí se ejecutó en navegador con APIs simuladas, como se detalla en la sección 3. No se consultó una cuenta Riot real.
 - La compatibilidad descrita se aplica a API RELEASE-05 identificada; no se certifican APIs de versiones anteriores.
 - El audit de producción no pudo repetirse en el HEAD vigente por fallo DNS; no se declara aprobado en esta actualización.
 - No hay correcciones funcionales pendientes identificadas. Los PR #102 y #103 continúan abiertos; ninguno se fusionó.
