@@ -127,6 +127,7 @@ Una estimación matemática sRGB a partir de los tokens actuales da aproximadame
 - `npm ci`: aprobado; la instalación informa 16 avisos moderate y 1 high en el árbol total.
 - `npm test`: 81/81 aprobadas.
 - `npm run lint`, `npm run type-check`, `npm run build`, `docker compose config --quiet`, `git diff --check` y `npx prettier --check app/globals.css`: aprobados.
+- El runner visual modificado pasa `node --check`. Prettier sobre el runner da warning tanto en la versión base como en la actual por el formato preexistente del archivo; la única línea añadida conserva ese estilo. El índice Markdown sí pasa Prettier.
 - `npm audit --omit=dev`: no pudo consultar advisories por error DNS (`EAI_AGAIN registry.npmjs.org`); no se declara un resultado de auditoría.
 - No hay cambios de backend, contrato, dependencias ni llamadas Riot en `b331627`. El CI del HEAD sí ejecutó las comprobaciones web, .NET y contenedores.
 
