@@ -2677,6 +2677,20 @@ td > span,
   overflow: hidden;
   min-width: 0;
 }
+.analysis-team--blue {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--echo-blue-team) 9%, var(--surface)) 0%,
+    var(--surface) 74%
+  );
+}
+.analysis-team--red {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--echo-red-team) 9%, var(--surface)) 0%,
+    var(--surface) 74%
+  );
+}
 .analysis-team > header {
   display: flex;
   flex-wrap: wrap;
@@ -2712,7 +2726,7 @@ td > span,
   border-bottom: 0;
 }
 .analysis-team li.analysis-owner-row {
-  background: color-mix(in srgb, var(--echo-gold) 10%, transparent);
+  background: color-mix(in srgb, var(--echo-gold) 9%, var(--surface));
 }
 .analysis-participant {
   display: grid;
