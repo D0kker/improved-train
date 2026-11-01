@@ -76,6 +76,7 @@ try {
    await shot(page,'01-desktop');
    await shot(page,'03-resumen','[aria-labelledby="match-summary-title"]');
    await shot(page,'04-equipos','[aria-labelledby="match-teams-title"]');
+   await shot(page,'04-owner-team','.analysis-team--blue');
    await shot(page,'05-relaciones','[aria-labelledby="match-relationships-title"]');
    await shot(page,'06-grupos','[aria-labelledby="match-groups-title"]');
    await shot(page,'07-cobertura','[aria-labelledby="match-coverage-title"]');
