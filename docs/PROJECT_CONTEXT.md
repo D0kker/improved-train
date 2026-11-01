@@ -2,9 +2,9 @@
 
 Última actualización: 2026-11-01
 
-## T04.6.2 — validación visual pendiente
+## T04.6.3 — calidad cerrada, pendiente aprobación del PO
 
-PR #103 de T04.6 continúa abierto hacia `main`, en `b331627cebf948b473b2132839fcf5426f3b2f19`; CI #70 aprobó web, .NET y contenedores. El commit añade gradientes tenues azul/coral con tokens existentes y mantiene el resaltado dorado del owner. Pruebas locales: 81/81, lint, TypeScript, build, Compose, Prettier y diff-check aprobados. No se pudo abrir Chromium: no hay binario/caché, el CDN/npm registry fallan DNS y Docker socket está denegado. Las capturas existentes corresponden a `ec0419c`, antes del tinte. `npm audit --omit=dev` tampoco pudo consultar el servicio; no se declara auditoría actual. RELEASE-06 queda `REVIEW_REQUIRED` hasta regenerar capturas y revisar render/contraste; no se modificó ni desplegó producción. Plan actualizado en [RELEASE-06](releases/ECHO_RELEASE_06_PLAN.md).
+PR #103 de T04.6 continúa abierto hacia `main`, HEAD `57835f14003007008975836cd74685a430eae0de`; CI #73 aprobó web, .NET y contenedores. Capturas sintéticas vigentes en cinco anchos confirman tintes azul/coral discretos, legibilidad y owner diferenciado; sin overflow ni errores. Cálculo focalizado de contraste pasa: mínimo texto 7.62:1 y foco 3.06:1. Axe deja `color-contrast` incomplete, así que no se afirma WCAG integral. `npm audit --omit=dev` aprobó con cero vulnerabilidades de producción tras un reintento al registry oficial; el árbol completo informó 16 moderate y 1 high. RELEASE-06 está `READY_FOR_PO_APPROVAL`; falta revisión visual del PO. No se modificó ni desplegó producción. Plan: [RELEASE-06](releases/ECHO_RELEASE_06_PLAN.md). Capturas: [índice T04.6.2](https://github.com/D0kker/improved-train/blob/feature/t04-6-match-analysis-implementation/docs/releases/t04-6-captures/README.md).
 
 ## T04.11 — refinamiento UX y clasificación (rama de revisión)
 
