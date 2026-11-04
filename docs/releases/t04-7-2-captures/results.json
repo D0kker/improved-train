@@ -1,0 +1,74 @@
+{
+  "synthetic": true,
+  "revision": "d79f54b2c3f8d724327ee58d3278e9fa21f666d4",
+  "matrix": [
+    {
+      "locale": "es",
+      "width": 390,
+      "screens": ["home", "dashboard", "match", "live"]
+    },
+    {
+      "locale": "es",
+      "width": 768,
+      "screens": ["home", "dashboard", "match", "live"]
+    },
+    {
+      "locale": "es",
+      "width": 1440,
+      "screens": ["home", "dashboard", "match", "live"]
+    },
+    {
+      "locale": "en",
+      "width": 390,
+      "screens": ["home", "dashboard", "match", "live"]
+    },
+    {
+      "locale": "en",
+      "width": 768,
+      "screens": ["home", "dashboard", "match", "live"]
+    },
+    {
+      "locale": "en",
+      "width": 1440,
+      "screens": ["home", "dashboard", "match", "live"]
+    },
+    {
+      "locale": "pt-BR",
+      "width": 390,
+      "screens": ["home", "dashboard", "match", "live"]
+    },
+    {
+      "locale": "pt-BR",
+      "width": 768,
+      "screens": ["home", "dashboard", "match", "live"]
+    },
+    {
+      "locale": "pt-BR",
+      "width": 1440,
+      "screens": ["home", "dashboard", "match", "live"]
+    },
+    {
+      "locale": "es",
+      "width": 320,
+      "screens": ["match"]
+    },
+    {
+      "locale": "es",
+      "width": 1024,
+      "screens": ["match"]
+    }
+  ],
+  "scenarios": [
+    "es-partial",
+    "en-partial",
+    "pt-BR-partial",
+    "es-empty",
+    "es-long",
+    "es-error",
+    "es-overlap",
+    "locale-switch-cookie-navigation-reload-focus",
+    "unsupported-browser-fallback"
+  ],
+  "errors": [],
+  "unexpectedRequests": []
+}

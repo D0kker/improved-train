@@ -4,6 +4,16 @@
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
+## T04.7.3 / RELEASE-07 — candidata integrada
+
+- [x] Integrar PR #106 (i18n) y #107 (relaciones inline) en `integration/t04-7-2-i18n-relationships`, manteniendo los commits fuente y resolviendo vistas/docs compartidas.
+- [x] Localizar grupos, historial con owner, estados de evidencia y plurales en ES/EN/PT-BR; preservar K/D/A y semántica backend.
+- [x] Repetir `npm ci --offline`, 94/94 tests, lint, TypeScript, build, audit producción cero, Compose y Prettier dirigido.
+- [x] Chromium con fixtures: Home/dashboard/análisis/partida activa en 390/768/1440 y análisis 320/1024; selector, persistencia, recarga, fallback, parcial, vacío, error/reintento, nombres largos y solapamientos sin overflow ni solicitudes externas inesperadas.
+- [x] Documentar contraste focalizado, capturas vigentes, compatibilidad web/API, plan de despliegue web-only y referencia de rollback RELEASE-06.
+- [ ] Publicar rama y PR integrado; revisar CI del HEAD publicado. No fusionar ni desplegar sin autorización.
+- Evidencia: [T04.7.2](T04_7_2_INTEGRATION_REPORT.md), [capturas](releases/t04-7-2-captures/README.md), [plan RELEASE-07](releases/ECHO_RELEASE_07_PLAN.md).
+
 ## T04.7 — internacionalización
 
 - [x] Crear `feature/t04-7-i18n` desde `origin/main` sin modificar otros worktrees.
@@ -11,16 +21,16 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Traducir las rutas activas y mensajes compartidos; conservar nombres/IDs de Riot y la semántica prudente de coincidencias.
 - [x] Añadir formatos regionales y pruebas de negociación, cookie, selector, plurales, formatos y paridad de catálogos.
 - [x] Validar instalación limpia (`npm ci --offline` por DNS), 88/88 tests, lint, TypeScript, build, audit producción cero, Compose, diff-check y formato dirigido de los archivos modificados.
-- [ ] Validar visualmente los tres idiomas a 390/768/1440 px con navegador y fixtures; navegador no disponible en la validación actual.
-- [x] Publicar `feature/t04-7-i18n` y abrir PR #106 en Draft a main; CI `41781834674` aprobada. PR sigue Draft pendiente de revisión visual con navegador; no hacer merge/despliegue.
+- [x] Validar visualmente los tres idiomas a 390/768/1440 px con Chromium y fixtures sintéticos en la rama integrada.
+- [x] Publicar `feature/t04-7-i18n` y abrir PR #106 en Draft a main; CI `41781834674` aprobada. PR #106 sigue Draft/original y no debe fusionarse además del PR integrado.
 - Evidencia y límites: [T04.7](T04_7_INTERNATIONALIZATION.md).
 
 ## T04.6.4 — relaciones visibles en equipos
 
 - [x] Mostrar grupos del contrato y conteos de pareja relativos al owner con cobertura explícita.
 - [x] Validar 86 pruebas, lint, tipos, build, audit producción y Compose; capturas sintéticas sin overflow en cinco anchos.
-- [ ] Completar revisión de contraste que axe dejó inconclusa y aprobación visual del PO.
-- [ ] Revisar el PR contra main y completar la aprobación visual; no fusionar ni desplegar.
+- [x] Revisión focalizada de contraste y captura en la rama integrada; axe sigue incompleto y no se declara conformidad WCAG integral.
+- [ ] Aprobación visual del PO e integración final; PR #107 continúa abierto como origen, no fusionar además del PR integrado.
 
 ## T04.6 — análisis de partida
 

@@ -2,6 +2,10 @@
 
 Última actualización: 2026-11-04
 
+## T04.7.3 / RELEASE-07 — candidata integrada
+
+La rama aislada `integration/t04-7-2-i18n-relationships`, desde `origin/main` `6b45220`, integra PR #106 (T04.7) y #107 (T04.6.4) conservando sus historias. HEAD `d79f54b2c3f8d724327ee58d3278e9fa21f666d4`. Las etiquetas de grupos y el historial con owner están localizados en ES/EN/PT-BR; fixtures Chromium/Playwright recorrieron Home, dashboard, análisis y partida activa en 390/768/1440, además de análisis 320/1024. 94 pruebas frontend, lint, TypeScript, build, audit producción cero, Compose y Prettier dirigido pasaron. Contraste focalizado documentado; no se declara conformidad WCAG integral. Capturas: [índice T04.7.2](releases/t04-7-2-captures/README.md). Plan: [RELEASE-07](releases/ECHO_RELEASE_07_PLAN.md), informe [T04.7.2](T04_7_2_INTEGRATION_REPORT.md). No existen cambios backend, main ni runtime; #105, #106 y #107 siguen abiertos; no hay PR de integración todavía.
+
 ## T04.6.4 — relaciones visibles en equipos
 
 Trabajo aislado `feature/t04-6-4-inline-relationships` desde `origin/main` `6b452208a3aa0ed9b8ea7a94fe51b7ca32cd50bb`. Las filas presentan grupos aportados por el contrato, coincidencias relativas al owner y aliados anteriores, conservando cobertura e identidades ambiguas. No modifica backend ni consultas Riot. Validación: 86 pruebas, lint, tipos, build, audit producción cero y Compose; Chromium con fixtures en cinco anchos sin overflow. Axe dejó contraste inconcluso, pendiente de revisión adicional. Detalle: [T04.6.4](T04_6_4_INLINE_RELATIONSHIPS.md) y [capturas](releases/t04-6-4-captures/README.md).
