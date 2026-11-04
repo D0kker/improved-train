@@ -12,7 +12,7 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Añadir formatos regionales y pruebas de negociación, cookie, selector, plurales, formatos y paridad de catálogos.
 - [x] Validar instalación limpia (`npm ci --offline` por DNS), 88/88 tests, lint, TypeScript, build, audit producción cero, Compose, diff-check y formato dirigido de los archivos modificados.
 - [ ] Validar visualmente los tres idiomas a 390/768/1440 px con navegador y fixtures; navegador no disponible en la validación actual.
-- [ ] Publicar rama y abrir PR a main después de cerrar las validaciones; no hacer merge/despliegue.
+- [x] Publicar `feature/t04-7-i18n` y abrir PR #106 en Draft a main; CI `41781834674` aprobada. PR sigue Draft pendiente de revisión visual con navegador; no hacer merge/despliegue.
 - Evidencia y límites: [T04.7](T04_7_INTERNATIONALIZATION.md).
 
 ## T04.6 — análisis de partida

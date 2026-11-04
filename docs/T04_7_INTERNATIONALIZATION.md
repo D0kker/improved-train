@@ -2,7 +2,7 @@
 
 ## Estado
 
-Implementación en `feature/t04-7-i18n`, basada en `origin/main` SHA `6b452208a3aa0ed9b8ea7a94fe51b7ca32cd50bb`. Estado `REVIEW_REQUIRED`: validaciones automatizadas aprobadas; revisión visual real y capturas pendientes por falta de navegador disponible. No se ha fusionado ni desplegado.
+Implementación en `feature/t04-7-i18n`, basada en `origin/main` SHA `6b452208a3aa0ed9b8ea7a94fe51b7ca32cd50bb`. Código en `2c655659b9133819e61ff25115ceff26423c7cc8`, PR [#106](https://github.com/D0kker/improved-train/pull/106) Draft hacia `main`; CI run [41781834674](https://github.com/D0kker/improved-train/actions/runs/41781834674) aprobó `dotnet`, `web` y `containers`. Estado `REVIEW_REQUIRED`: validaciones automatizadas aprobadas; revisión visual real y capturas pendientes por falta de navegador disponible. No se ha fusionado ni desplegado.
 
 ## Arquitectura
 
