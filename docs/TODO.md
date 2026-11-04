@@ -1,16 +1,20 @@
 # Roadmap
 
-Última actualización: 2026-10-31
+Última actualización: 2026-11-03
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
 ## T04.6 — análisis de partida
 
-- [x] Implementar las cinco secciones con relaciones de backend, cobertura y navegación existentes.
-- [x] Completar validación visual local con Chromium/fixtures a 320/390/768/1024/1440, estados parciales/insuficientes/error y pruebas DOM; capturas en [índice T04.6](releases/t04-6-captures/README.md).
-- [x] CI #66 aprobó frontend, .NET y contenedores para el SHA funcional publicado; el seguimiento documental no cambia el código validado.
-- [ ] Revisión visual del PO y evaluación manual de contraste/tecnologías asistivas.
-- [ ] Autorizar merge y despliegue en una tarea posterior; no comenzar T04.7 antes del cierre.
+- [x] Implementar y fusionar diseño #102 e implementación #103 a main (commits `97b1c20`, `61bf116`).
+- [x] Validar Chromium/fixtures 320/390/768/1024/1440, estados parciales/error, sin overflow; [capturas T04.6.2](releases/t04-6-captures/t04-6.2/).
+- [x] Tinte azul/coral tenue por equipo y owner dorado independiente.
+- [x] CI #73 aprobada en HEAD `57835f1`; 81 pruebas frontend, lint, TypeScript, build y Compose.
+- [x] Contraste focalizado mínimo texto 7.62:1, foco 3.06:1; axe dejó color-contrast incompleto, sin certificar WCAG integral.
+- [x] `npm audit --omit=dev`: 0 vulnerabilidades de producción; árbol total reportó 16 moderate y 1 high.
+- [ ] Evaluación asistiva integral y aceptación visual final de la interfaz en producción.
+- [ ] RELEASE-06: despliegue web autorizado por separado, smoke tests y comprobación de rollback; API y Redis no se modifican.
+- [ ] Comenzar T04.7 después del cierre de RELEASE-06.
 
 ## T04.11 — UX y rango competitivo
 

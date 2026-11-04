@@ -1,10 +1,10 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-10-31
+Última actualización: 2026-11-03
 
-## T04.6 — análisis de partida para revisión
+## T04.6 — integrada a main; RELEASE-06 pendiente de despliegue
 
-La rama `feature/t04-6-match-analysis-implementation`, basada en `main` `16b00eb343c5f43496fb55571084e119b84d6d49`, implementa resumen, equipos, pares históricos, grupos prudentes y cobertura con los contratos stateless existentes; no cambia backend, cuotas ni dashboard. Validación local: 81 pruebas frontend, lint, TypeScript, build, audit de producción (0), Compose y diff-check aprobados. Chromium con fixtures recorrió cinco anchos y estados parciales, insuficientes, error/reintento y textos largos; Axe sin infracciones detectadas y contraste incompleto pendiente de evaluación manual. Capturas: [índice T04.6](releases/t04-6-captures/README.md). CI #66 pasó en el SHA funcional `2c0c4ff`; el PR #103 está abierto. Estado `READY_FOR_REVIEW`; falta aprobación visual del PO y evaluación manual de contraste/tecnologías asistivas. No se fusionó ni desplegó.
+El PO autorizó integrar los PR #102, #103 y #104, pero **no autorizó el despliegue**. PR #102 (diseño) fue integrado mediante `97b1c20`; PR #103 (implementación) mediante `61bf116`. La implementación incluye resumen, equipos tintados azul/coral, owner dorado, relaciones históricas, grupos prudentes y cobertura. Compatible con API RELEASE-05; sin cambios en backend ni contratos. T04.6.2: Chromium con fixtures en 320/390/768/1024/1440, sin overflow; contraste focalizado texto mínimo 7.62:1 y foco 3.06:1, sin certificar WCAG integral. CI del HEAD de implementación aprobada, 81 pruebas frontend; auditoría de producción sin vulnerabilidades, con 16 moderadas y 1 alta en árbol completo de desarrollo. Capturas actuales: [T04.6.2](releases/t04-6-captures/t04-6.2/). El release aún requiere despliegue autorizado y smoke tests. Plan: [RELEASE-06](releases/ECHO_RELEASE_06_PLAN.md).
 
 ## T04.11 — refinamiento UX y clasificación (rama de revisión)
 
