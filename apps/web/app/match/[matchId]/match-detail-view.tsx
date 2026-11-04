@@ -1,7 +1,5 @@
 "use client";
 
-import { useRequestLifetime } from "@/src/use-request-lifetime";
-
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -10,26 +8,41 @@ import {
   fetchJson,
   analyzeSelectedMatch,
   type MatchDetail,
-  type MatchKnownPlayer,
-  type MatchPremadeGroup,
-  type MatchParticipant,
+  type MatchAnalysisResult,
   type AnalysisCoverage,
 } from "@/src/api";
-import { formatDate, formatDuration, queueLabel } from "@/src/format";
-import {
-  groupCode,
-  groupLabel,
-  groupTone,
-  groupsForParticipant,
-} from "@/src/premade-groups";
+import { formatDuration, queueLabel } from "@/src/format";
+import { formatDashboardDate } from "@/src/dashboard-presentation";
+import { coverageTitle, coverageDescription } from "@/src/coverage";
+import { CoverageSummary } from "@/src/coverage-summary";
 import { ChampionIcon } from "@/src/champion-icon";
 import { PlayerProfileLink } from "@/src/player-profile-link";
-import { familiarityMessage, type HistoryAnalysisStatus } from "@/src/echo";
-import { CoverageSummary } from "@/src/coverage-summary";
 import { SiteHeader } from "@/src/site-header";
-import { platformRegionLabel } from "@/src/platform-region";
+import { Button, Card } from "@/src/design-system";
+import { platformRegionName } from "@/src/platform-region";
+import { familiarityMessage } from "@/src/echo";
+import { useRequestLifetime } from "@/src/use-request-lifetime";
+import { presentMatchRelations } from "@/src/match-relations";
 
-export function MatchDetailView({
+type MatchDetailProps = {
+  matchId: string;
+  ownerPuuid?: string;
+  platformRegion?: string;
+  returnProfile?: { gameName: string; tagLine: string };
+};
+export function MatchDetailView(props: MatchDetailProps) {
+  return (
+    <MatchDetailContent
+      key={JSON.stringify([
+        props.matchId,
+        props.ownerPuuid,
+        props.platformRegion,
+      ])}
+      {...props}
+    />
+  );
+}
+function MatchDetailContent({
   matchId,
   ownerPuuid,
   platformRegion,
@@ -42,17 +55,17 @@ export function MatchDetailView({
 }) {
   const beginRequest = useRequestLifetime();
   const [match, setMatch] = useState<MatchDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [coverage, setCoverage] = useState<AnalysisCoverage | null>(null);
+  const [relationships, setRelationships] = useState<
+    MatchAnalysisResult["relationships"] | null
+  >(null);
+  const [error, setError] = useState<string | null>(null);
   const [isStale, setIsStale] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [historyStatus, setHistoryStatus] =
-    useState<HistoryAnalysisStatus>("insufficient");
-
   const hasPreviousMatch = useRef(false);
   const load = useCallback(
-    async (signal?: AbortSignal) => {
-      signal = beginRequest(signal);
+    async (parent?: AbortSignal) => {
+      const signal = beginRequest(parent);
       setIsLoading(true);
       setError(null);
       setIsStale(hasPreviousMatch.current);
@@ -64,12 +77,10 @@ export function MatchDetailView({
             platformRegion,
             signal,
           );
-          if (signal?.aborted) return;
+          if (signal.aborted) return;
           setMatch(result.match);
-          hasPreviousMatch.current = true;
           setCoverage(result.coverage);
-          setHistoryStatus(result.coverage.status);
-          setIsStale(false);
+          setRelationships(result.relationships ?? null);
         } else {
           const loaded = await fetchJson<MatchDetail>(
             apiPath("matches", matchId) +
@@ -78,389 +89,467 @@ export function MatchDetailView({
                 : ""),
             { signal },
           );
-          if (!signal?.aborted) {
-            setMatch(loaded);
-            hasPreviousMatch.current = true;
-            setCoverage(null);
-            setIsStale(false);
-          }
+          if (signal.aborted) return;
+          setMatch(loaded);
+          setCoverage(null);
+          setRelationships(null);
         }
+        hasPreviousMatch.current = true;
+        setIsStale(false);
       } catch (requestError) {
-        if (signal?.aborted) return;
-        setIsStale(true);
-        setError(requestError instanceof ApiError ? requestError.message : "No se pudo cargar la partida. Comprueba la conexión e inténtalo de nuevo.");
+        if (signal.aborted) return;
+        setIsStale(hasPreviousMatch.current);
+        setError(
+          requestError instanceof ApiError
+            ? requestError.message
+            : "No se pudo cargar la partida. Comprueba la conexión e inténtalo de nuevo.",
+        );
       } finally {
-        if (!signal?.aborted) {
-          setIsLoading(false);
-        }
+        if (!signal.aborted) setIsLoading(false);
       }
     },
     [matchId, ownerPuuid, platformRegion, beginRequest],
   );
-
   useEffect(() => {
-    let isCurrentEffect = true;
+    let current = true;
     queueMicrotask(() => {
-      if (isCurrentEffect) void load();
+      if (current) void load();
     });
     return () => {
-      isCurrentEffect = false;
+      current = false;
     };
   }, [load]);
-
+  const owner = ownerPuuid
+    ? match?.teams
+        .flatMap((team) => team.participants)
+        .find((p) => p.puuid === ownerPuuid)
+    : undefined;
+  const combatValid =
+    owner &&
+    [owner.kills, owner.deaths, owner.assists].every(
+      (n) => typeof n === "number" && Number.isFinite(n) && n >= 0,
+    );
+  const kda =
+    combatValid && owner
+      ? ((owner.kills + owner.assists) / Math.max(1, owner.deaths)).toFixed(2)
+      : null;
+  const pairs =
+    match && relationships
+      ? presentMatchRelations(relationships, match.teams)
+      : [];
   return (
     <main className="dashboard-shell" id="main-content" tabIndex={-1}>
       <SiteHeader />
-
-      <div className="dashboard-content detail-content">
-        <Link className="back-link" href={returnProfile
-          ? `/player/${encodeURIComponent(returnProfile.gameName)}/${encodeURIComponent(returnProfile.tagLine)}${platformRegion ? `?platformRegion=${encodeURIComponent(platformRegion)}` : ""}`
-          : "/"}>
+      <div className="dashboard-content detail-content match-analysis">
+        <Link
+          className="back-link"
+          href={
+            returnProfile
+              ? `/player/${encodeURIComponent(returnProfile.gameName)}/${encodeURIComponent(returnProfile.tagLine)}${platformRegion ? `?platformRegion=${encodeURIComponent(platformRegion)}` : ""}`
+              : "/"
+          }
+        >
           {returnProfile ? "← Volver al perfil" : "← Volver a la búsqueda"}
         </Link>
-
-        {isLoading && !match ? <MatchLoading refreshingHistory={Boolean(ownerPuuid)} /> : null}
-        {error ? (
+        {isLoading && !match && (
+          <section className="loading-panel" role="status">
+            <span className="spinner" aria-hidden="true" />
+            <div>
+              <h1>
+                {ownerPuuid
+                  ? "Analizando partida e historial anterior…"
+                  : "Cargando participantes…"}
+              </h1>
+              <p>La consulta puede tardar unos momentos.</p>
+            </div>
+          </section>
+        )}
+        {error && (
           <section className="message-panel error-panel" role="alert">
             <div>
-              <p className="eyebrow">Detalle no disponible</p>
-              <h1>{error}</h1>
-              <p>{isStale && match ? "Se conserva el resultado de la consulta anterior." : "Puedes volver al perfil o a la búsqueda e intentarlo de nuevo."}</p>
+              {match ? <h2>{error}</h2> : <h1>{error}</h1>}
+              <p>
+                {match && isStale
+                  ? "Se conserva el resultado de la consulta anterior."
+                  : "Puedes volver al perfil o a la búsqueda e intentarlo de nuevo."}
+              </p>
             </div>
-            <button className="secondary-button" onClick={() => void load()}>
+            <Button
+              variant="secondary"
+              onClick={() => void load()}
+              disabled={isLoading}
+            >
               Reintentar
-            </button>
+            </Button>
           </section>
-        ) : null}
-
-        {match ? (
+        )}
+        {match && (
           <>
-            {isStale ? <p className="warning-banner" role="status">Se conserva la información de la consulta anterior.</p> : null}
-            {coverage ? <CoverageSummary coverage={coverage} title="Historial anterior a esta partida" /> : null}
-            <section className="match-heading">
-              <div>
-                <p className="eyebrow">Detalle de partida</p>
-                <h1>Resultado de la partida</h1>
-                <p className="muted-copy">
-                  {queueLabel(match.queueId)} ·{" "}
-                  {formatDate(match.gameStartTimestamp)}
+            {isLoading && (
+              <p role="status" className="warning-banner">
+                Actualizando el análisis…
+              </p>
+            )}
+            {isStale && (
+              <p className="warning-banner" role="status">
+                Se conserva la información de la consulta anterior.
+              </p>
+            )}
+            <section
+              aria-labelledby="match-summary-title"
+              className="match-summary-section"
+            >
+              <header className="analysis-section-heading">
+                <div>
+                  <p className="eyebrow">Análisis de partida</p>
+                  <h1 id="match-summary-title">Resumen de partida</h1>
+                </div>
+                {coverage ? (
+                  <a
+                    className={`analysis-coverage analysis-coverage--${coverage.status}`}
+                    href="#match-coverage"
+                  >
+                    {coverageTitle(coverage.status)}
+                  </a>
+                ) : (
+                  <span className="analysis-coverage">
+                    Análisis histórico no solicitado
+                  </span>
+                )}
+              </header>
+              {coverage && coverage.status !== "complete" && (
+                <p role="status" className="warning-banner">
+                  {coverageDescription(coverage.status)} Las coincidencias
+                  disponibles pueden estar incompletas.
                 </p>
-                {ownerPuuid && returnProfile ? <p className="muted-copy">Jugador consultado: {returnProfile.gameName} #{returnProfile.tagLine}</p> : null}
-                {platformRegion ? <p className="muted-copy">Región: {platformRegionLabel(platformRegion)}</p> : null}
-              </div>
-              <div className="duration-pill">
-                <span>Duración</span>
-                <strong>{formatDuration(match.gameDurationSeconds)}</strong>
-              </div>
-            </section>
-
-            <FamiliaritySummary
-              familiarity={match.familiarity}
-              historyStatus={historyStatus}
-            />
-
-            <PremadeSummary
-              groups={match.premadeGroups}
-              knownPlayers={match.familiarity?.knownPlayerDetails ?? []}
-              platformRegion={platformRegion}
-            />
-
-            <div className="teams-grid">
-              {match.teams.map((team, index) => (
-                <TeamCard
-                  key={team.teamId}
-                  participants={team.participants}
-                  premadeGroups={match.premadeGroups.filter(
-                    (group) => group.teamId === team.teamId,
+              )}
+              <Card className="analysis-match-summary">
+                <div className="analysis-owner">
+                  {owner && (
+                    <ChampionIcon
+                      championId={owner.championId}
+                      championName={
+                        owner.championName || "Campeón no disponible"
+                      }
+                    />
                   )}
-                  knownPlayers={match.familiarity?.knownPlayerDetails ?? []}
-                  ownerPuuid={ownerPuuid}
-                  teamId={team.teamId}
-                  title={teamName(team.teamId, index)}
-                  platformRegion={platformRegion}
-                />
-              ))}
-            </div>
+                  <div>
+                    <strong>
+                      {owner
+                        ? owner.championName || "Campeón no disponible"
+                        : "Jugador consultado no disponible"}
+                    </strong>
+                    {owner && (
+                      <PlayerProfileLink
+                        gameName={owner.gameName}
+                        tagLine={owner.tagLine}
+                        platformRegion={platformRegion}
+                        compact
+                      />
+                    )}
+                    <span>
+                      {owner?.win === true
+                        ? "Victoria"
+                        : owner?.win === false
+                          ? "Derrota"
+                          : "Resultado no disponible"}
+                    </span>
+                  </div>
+                </div>
+                <div className="analysis-summary-stats">
+                  <div>
+                    <span>K / D / A</span>
+                    <strong>
+                      {combatValid && owner
+                        ? `${owner.kills} / ${owner.deaths} / ${owner.assists}`
+                        : "—"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>KDA</span>
+                    <strong>{kda ?? "—"}</strong>
+                  </div>
+                  <div>
+                    <span>Duración</span>
+                    <strong>
+                      {typeof match.gameDurationSeconds === "number" &&
+                      Number.isFinite(match.gameDurationSeconds)
+                        ? formatDuration(match.gameDurationSeconds)
+                        : "—"}
+                    </strong>
+                  </div>
+                </div>
+                <p>
+                  {queueLabel(match.queueId)} ·{" "}
+                  {formatDashboardDate(match.gameStartTimestamp)}
+                  {platformRegion
+                    ? ` · ${platformRegionName(platformRegion)}`
+                    : ""}
+                </p>
+              </Card>
+            </section>
+            <section aria-labelledby="match-teams-title">
+              <header className="analysis-section-heading">
+                <div>
+                  <p className="eyebrow">Participantes</p>
+                  <h2 id="match-teams-title">Equipos y participantes</h2>
+                </div>
+              </header>
+              {match.teams.length ? (
+                <div className="analysis-teams-grid">
+                  {match.teams.map((team, index) => {
+                    const outcomes = new Set(
+                      team.participants.map((p) => p.win),
+                    );
+                    const result =
+                      outcomes.size === 1 &&
+                      team.participants.every((p) => typeof p.win === "boolean")
+                        ? outcomes.has(true)
+                          ? "Victoria"
+                          : "Derrota"
+                        : "Resultado no disponible";
+                    return (
+                      <section
+                        className={`analysis-team analysis-team--${team.teamId === 100 ? "blue" : team.teamId === 200 ? "red" : "neutral"}`}
+                        key={team.teamId}
+                        aria-label={
+                          team.teamId === 100
+                            ? "Equipo azul"
+                            : team.teamId === 200
+                              ? "Equipo rojo"
+                              : `Equipo ${index + 1}`
+                        }
+                      >
+                        <header>
+                          <h3>
+                            {team.teamId === 100
+                              ? "Equipo azul"
+                              : team.teamId === 200
+                                ? "Equipo rojo"
+                                : `Equipo ${index + 1}`}
+                          </h3>
+                          <span>{result}</span>
+                        </header>
+                        {team.participants.length ? (
+                          <ol>
+                            {team.participants.map((p, i) => (
+                              <li
+                                key={p.puuid || `${p.championId}-${i}`}
+                                className={
+                                  p.puuid && p.puuid === ownerPuuid
+                                    ? "analysis-owner-row"
+                                    : undefined
+                                }
+                              >
+                                <ChampionIcon
+                                  championId={p.championId}
+                                  championName={
+                                    p.championName || "Campeón no disponible"
+                                  }
+                                />
+                                <div className="analysis-participant">
+                                  <strong>
+                                    {p.championName || "Campeón no disponible"}
+                                  </strong>
+                                  <PlayerProfileLink
+                                    gameName={p.gameName}
+                                    tagLine={p.tagLine}
+                                    platformRegion={platformRegion}
+                                    compact
+                                  />
+                                  {p.puuid && p.puuid === ownerPuuid && (
+                                    <span>Jugador consultado</span>
+                                  )}
+                                </div>
+                                <div className="analysis-player-kda">
+                                  <strong>
+                                    {[p.kills, p.deaths, p.assists].every(
+                                      (n) =>
+                                        typeof n === "number" &&
+                                        Number.isFinite(n) &&
+                                        n >= 0,
+                                    )
+                                      ? `${p.kills} / ${p.deaths} / ${p.assists}`
+                                      : "—"}
+                                  </strong>
+                                  <span>K / D / A</span>
+                                </div>
+                              </li>
+                            ))}
+                          </ol>
+                        ) : (
+                          <p>No hay participantes disponibles.</p>
+                        )}
+                      </section>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p>No hay equipos disponibles.</p>
+              )}
+            </section>
+            <section aria-labelledby="match-relationships-title">
+              <header className="analysis-section-heading">
+                <div>
+                  <p className="eyebrow">Evidencia anterior</p>
+                  <h2 id="match-relationships-title">Relaciones históricas</h2>
+                </div>
+              </header>
+              <p>
+                Coincidencias en las partidas anteriores disponibles; no
+                representan todo el historial.
+              </p>
+              {match.familiarity && coverage && (
+                <p>
+                  {familiarityMessage(match.familiarity, coverage.status)}
+                  {coverage.status === "complete" &&
+                  match.familiarity.status === "Available"
+                    ? ` Familiaridad: ${match.familiarity.familiarityPercentage}%.`
+                    : ""}
+                </p>
+              )}
+              {coverage && coverage.status !== "complete" && (
+                <p className="warning-banner" role="status">
+                  La información es incompleta; la ausencia de coincidencias no
+                  es concluyente.
+                </p>
+              )}
+              {relationships === null ? (
+                <p>No hay análisis histórico disponible para esta partida.</p>
+              ) : pairs.length === 0 ? (
+                <p>
+                  {coverage?.status === "complete"
+                    ? "No se encontraron coincidencias en las partidas disponibles."
+                    : "No hay información suficiente para confirmar coincidencias."}
+                </p>
+              ) : (
+                <ul className="analysis-relationships">
+                  {pairs.map((pair) => (
+                    <li key={pair.key}>
+                      <div>
+                        <strong>{pair.first.label}</strong>
+                        <span aria-hidden="true"> ↔ </span>
+                        <strong>{pair.second.label}</strong>
+                      </div>
+                      <dl>
+                        <div>
+                          <dt>Encuentros</dt>
+                          <dd>{pair.matchesTogether}</dd>
+                        </div>
+                        <div>
+                          <dt>Aliados</dt>
+                          <dd>{pair.allyMatches}</dd>
+                        </div>
+                        <div>
+                          <dt>Rivales</dt>
+                          <dd>{pair.enemyMatches}</dd>
+                        </div>
+                      </dl>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+            <section aria-labelledby="match-groups-title">
+              <header className="analysis-section-heading">
+                <div>
+                  <p className="eyebrow">Interpretación prudente</p>
+                  <h2 id="match-groups-title">
+                    Grupos con coincidencias históricas
+                  </h2>
+                </div>
+              </header>
+              <p>
+                La recurrencia no confirma que los jugadores sean premades ni
+                que hayan entrado juntos.
+              </p>
+              {match.premadeGroups.length ? (
+                <ul className="analysis-groups">
+                  {match.premadeGroups.map((group) => (
+                    <li key={`${group.teamId}-${group.groupNumber}`}>
+                      <strong>
+                        {group.teamId === 100
+                          ? "Equipo azul"
+                          : group.teamId === 200
+                            ? "Equipo rojo"
+                            : "Equipo"}
+                      </strong>
+                      <span>
+                        {group.classification === "LikelyPremade"
+                          ? "Evidencia histórica alta"
+                          : "Coincidencias históricas"}
+                      </span>
+                      <div>
+                        {group.members.map((member, i) => (
+                          <span key={member.puuid}>
+                            {i > 0 && " · "}
+                            <PlayerProfileLink
+                              compact
+                              gameName={member.gameName}
+                              tagLine={member.tagLine}
+                              platformRegion={platformRegion}
+                            />
+                          </span>
+                        ))}
+                      </div>
+                      {presentMatchRelations(
+                        (relationships ?? []).filter(
+                          (r) =>
+                            group.members.some(
+                              (m) => m.puuid === r.firstPuuid,
+                            ) &&
+                            group.members.some(
+                              (m) => m.puuid === r.secondPuuid,
+                            ),
+                        ),
+                        match.teams,
+                      ).map((pair) => (
+                        <p key={pair.key}>
+                          {pair.first.label} y {pair.second.label}:{" "}
+                          {pair.allyMatches} como aliados · {pair.enemyMatches}{" "}
+                          como rivales
+                        </p>
+                      ))}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>
+                  {coverage?.status === "complete"
+                    ? "No se identificaron grupos en la muestra disponible."
+                    : "No hay información suficiente para identificar grupos."}
+                </p>
+              )}
+            </section>
+            <section id="match-coverage" aria-labelledby="match-coverage-title">
+              <header className="analysis-section-heading">
+                <div>
+                  <p className="eyebrow">Alcance del análisis</p>
+                  <h2 id="match-coverage-title">Cobertura y transparencia</h2>
+                </div>
+              </header>
+              <p>
+                Se consultan partidas anteriores a la seleccionada. La muestra
+                no representa todo el historial.
+              </p>
+              {coverage ? (
+                <details className="analysis-coverage-details">
+                  <summary>Ver detalle de cobertura</summary>
+                  <CoverageSummary
+                    coverage={coverage}
+                    title="Historial anterior a esta partida"
+                  />
+                </details>
+              ) : (
+                <p>
+                  El análisis histórico no se solicitó. Abre la partida desde el
+                  historial de un jugador.
+                </p>
+              )}
+            </section>
           </>
-        ) : null}
+        )}
       </div>
     </main>
   );
-}
-
-function FamiliaritySummary({
-  familiarity,
-  historyStatus,
-}: {
-  familiarity: MatchDetail["familiarity"];
-  historyStatus: HistoryAnalysisStatus;
-}) {
-  if (!familiarity) {
-    return (
-      <section className="familiarity-summary">
-        <p className="eyebrow">Familiaridad del lobby</p>
-        <h2>Contexto no disponible</h2>
-        <p className="muted-copy">
-          Abre la partida desde el historial de un jugador para comparar con su
-          evidencia anterior.
-        </p>
-      </section>
-    );
-  }
-
-  return (
-    <section
-      className="familiarity-summary"
-      aria-labelledby="familiarity-title"
-    >
-      <div>
-        <p className="eyebrow">Familiaridad</p>
-        <h2 id="familiarity-title">
-          {familiarityMessage(familiarity, historyStatus)}
-        </h2>
-        <p className="muted-copy">
-          Este análisis utiliza partidas anteriores a la seleccionada para identificar encuentros y posibles grupos habituales. No incluye la partida seleccionada ni partidas posteriores.
-        </p>
-      </div>
-      <div className="familiarity-value">
-        <strong>
-          {historyStatus === "complete" && familiarity.status === "Available"
-            ? `${familiarity.familiarityPercentage}%`
-            : "—"}
-        </strong>
-        <span>{familiarity.evaluablePlayers} jugadores evaluables</span>
-        <span>{familiarity.knownPlayers} con antecedentes detectados</span>
-      </div>
-    </section>
-  );
-}
-
-function MatchLoading({ refreshingHistory }: { refreshingHistory: boolean }) {
-  return (
-    <section className="loading-panel" role="status">
-      <span className="spinner" aria-hidden="true" />
-      <div>
-        <p className="eyebrow">Partida</p>
-        <h2>
-          {refreshingHistory
-            ? "Revisando el historial reciente…"
-            : "Cargando participantes…"}
-        </h2>
-      </div>
-    </section>
-  );
-}
-
-function TeamCard({
-  participants,
-  premadeGroups,
-  knownPlayers,
-  ownerPuuid,
-  teamId,
-  title,
-  platformRegion,
-}: {
-  participants: MatchParticipant[];
-  premadeGroups: MatchPremadeGroup[];
-  knownPlayers: MatchKnownPlayer[];
-  ownerPuuid?: string;
-  teamId: number;
-  title: string;
-  platformRegion?: string;
-}) {
-  const outcomes = new Set(participants.map((participant) => participant.win).filter((value) => value !== undefined));
-  const result = outcomes.size === 1 ? (outcomes.has(true) ? "win" : "loss") : "unknown";
-  return (
-    <section className={`team-card team-${teamId}`}>
-      <header>
-        <div>
-          <h2>{title}</h2>
-        </div>
-        {result === "unknown" ? <span className="team-result">Resultado no disponible</span> : (
-          <span className={`team-result ${result}`}>{result === "win" ? "Victoria" : "Derrota"}</span>
-        )}
-      </header>
-      {participants.length === 0 ? (
-        <p className="muted-copy">No hay participantes disponibles.</p>
-      ) : (
-        <ol className="participant-list">
-          {participants.map((participant, index) => (
-            <ParticipantRow
-              key={participant.puuid || `${participant.championName}-${index}`}
-              groups={groupsForParticipant(premadeGroups, participant.puuid)}
-              participant={participant}
-              isObserved={participant.puuid === ownerPuuid}
-              platformRegion={platformRegion}
-              history={knownPlayers.find(
-                (player) => player.puuid === participant.puuid,
-              )}
-            />
-          ))}
-        </ol>
-      )}
-    </section>
-  );
-}
-
-function ParticipantRow({
-  groups,
-  history,
-  isObserved,
-  participant,
-  platformRegion,
-}: {
-  groups: MatchPremadeGroup[];
-  history?: MatchKnownPlayer;
-  isObserved: boolean;
-  participant: MatchParticipant;
-  platformRegion?: string;
-}) {
-  return (
-    <li className={isObserved ? "observed-player" : undefined}>
-      <div className="participant-identity">
-        <ChampionIcon
-          championId={participant.championId}
-          championName={participant.championName}
-        />
-        <div>
-          <strong>{participant.championName}</strong>
-          <PlayerProfileLink
-            gameName={participant.gameName}
-            tagLine={participant.tagLine}
-            platformRegion={platformRegion}
-          />
-          {isObserved ? <span className="observed-badge">Jugador consultado</span> : null}
-          {history ? <HistoryBadge player={history} /> : null}
-          {groups.length > 0 ? (
-            <span className="premade-memberships">
-              {groups.map((group) => (
-                <span
-                  className={`premade-code tone-${groupTone(group.groupNumber)}`}
-                  aria-label={`Grupo ${groupCode(group.groupNumber)}: ${groupLabel(group)}`}
-                  key={group.groupNumber}
-                  title={groupLabel(group)}
-                >
-                  {groupCode(group.groupNumber)}
-                </span>
-              ))}
-            </span>
-          ) : null}
-        </div>
-      </div>
-      <p>
-        <strong>
-          {participant.kills} / {participant.deaths} / {participant.assists}
-        </strong>
-        <span>K / D / A</span>
-      </p>
-    </li>
-  );
-}
-
-function PremadeSummary({
-  groups,
-  knownPlayers,
-  platformRegion,
-}: {
-  groups: MatchPremadeGroup[];
-  knownPlayers: MatchKnownPlayer[];
-  platformRegion?: string;
-}) {
-  return (
-    <section className="premade-summary" aria-labelledby="premade-title">
-      <div className="section-title-row">
-        <div>
-          <p className="eyebrow">Inferencia histórica</p>
-          <h2 id="premade-title">Posibles premades en esta partida</h2>
-        </div>
-        <p className="section-note">No confirma que hayan entrado juntos.</p>
-      </div>
-      {groups.length === 0 ? (
-        <p className="muted-copy">
-          No hay evidencia suficiente para señalar un grupo recurrente.
-        </p>
-      ) : (
-        <ul className="premade-group-list">
-          {groups.map((group) => (
-            <li key={group.groupNumber}>
-              <span
-                className={`premade-code tone-${groupTone(group.groupNumber)}`}
-              >
-                {groupCode(group.groupNumber)}
-              </span>
-              <div>
-                <strong>{groupLabel(group)}</strong>
-                <span>Equipo {group.teamId}</span>
-                <span className="premade-member-links">
-                  {group.members.map((member) => (
-                    <PlayerProfileLink
-                      compact
-                      gameName={member.gameName}
-                      key={member.puuid}
-                      tagLine={member.tagLine}
-                      platformRegion={platformRegion}
-                    />
-                  ))}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-      {knownPlayers.length > 0 ? (
-        <div className="history-evidence">
-          <strong>Jugadores conocidos</strong>
-          <div className="history-evidence-grid">
-            {knownPlayers.map((player) => (
-              <article className="history-evidence-card" key={player.puuid}>
-                <PlayerProfileLink
-                  compact
-                  gameName={player.gameName}
-                  tagLine={player.tagLine}
-                  platformRegion={platformRegion}
-                />
-                <HistoryBadge player={player} />
-                <span>
-                  {player.allyMatches} como equipo · {player.enemyMatches} como
-                  rival
-                </span>
-              </article>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function HistoryBadge({ player }: { player: MatchKnownPlayer }) {
-  const playedTogether = player.allyMatches > 0;
-  const playedAgainst = player.enemyMatches > 0;
-  const label =
-    playedTogether && playedAgainst
-      ? "Aliado y rival"
-      : playedTogether
-        ? "Ya jugó junto"
-        : "Ya jugó en contra";
-  const tone =
-    playedTogether && playedAgainst
-      ? "mixed"
-      : playedTogether
-        ? "ally"
-        : "opponent";
-
-  return (
-    <span
-      className={`history-badge ${tone}`}
-      title={`${label}: ${player.winsAgainst}V / ${player.lossesAgainst}D contra el owner`}
-    >
-      {label}
-    </span>
-  );
-}
-
-function teamName(teamId: number, index: number): string {
-  if (teamId === 100) return "Equipo azul";
-  if (teamId === 200) return "Equipo rojo";
-  return `Equipo ${index + 1}`;
 }
