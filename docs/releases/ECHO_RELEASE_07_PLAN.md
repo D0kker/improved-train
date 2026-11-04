@@ -38,7 +38,7 @@ Release futura: reconstruir y actualizar solo `web` en ARM64, conservar la API R
 - Revisión focalizada de contraste, con mezcla sRGB y composición de alfa sobre fondos calculados: texto normal muestreado mínimo 5.84:1; borde del selector corregido a 6.51:1 con el interior y al menos 6.83:1 con el fondo exterior calculado. El anillo de foco genérico al 45% queda cerca de 3:1. No es auditoría integral ni certificación WCAG; tecnologías asistivas y contraste de todos los estados siguen fuera de alcance de esta muestra.
 - No se ejecutaron pruebas .NET: no hubo cambios de backend/contrato.
 
-CI GitHub del PR #108 (run [41923687044](https://github.com/D0kker/improved-train/actions/runs/41923687044)): aprobado tras reintentar únicamente el job .NET que falló transitoriamente en la primera pasada. El rerun terminó correctamente `dotnet test`/`format`, frontend y build de contenedores. El check del último commit que solo actualiza estos documentos debe confirmarse antes de aprobación final.
+CI GitHub del PR #108: la primera ejecución tuvo un fallo transitorio en un test de cancelación .NET; los jobs repetidos pasaron. La ejecución completa [41924673235](https://github.com/D0kker/improved-train/actions/runs/41924673235), sobre `f9d267b`, pasó dotnet restore/build/test/format, web lint/tests/type-check/build y containers config/build. Confirmar que los checks continúen verdes antes de cualquier futura integración.
 
 ## Riesgos y seguimiento
 

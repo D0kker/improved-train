@@ -24,7 +24,7 @@ Los conflictos se limitaron a `match-detail-view.tsx`, `PROJECT_CONTEXT.md` y `T
 - Prettier dirigido a los archivos de código modificados: aprobado.
 - `npm audit --omit=dev`: cero vulnerabilidades de producción.
 - `docker compose config --quiet` y `git diff --check`: aprobados antes de las actualizaciones documentales finales; volver a ejecutar al cerrar el diff.
-- CI del PR #108: el primer job .NET tuvo un fallo transitorio en `MalformedQuotaHeadersAreIgnoredWithoutUnboundedParsing` (esperó cancelación en 30 ms y no recibió excepción). Se repitieron los jobs fallidos; `dotnet test`, `dotnet format`, `web` (lint/tests/types/build) y `containers` completaron con éxito en run [41923687044](https://github.com/D0kker/improved-train/actions/runs/41923687044). No se cambió backend.
+- CI del PR #108: el primer job .NET de run [41923687044](https://github.com/D0kker/improved-train/actions/runs/41923687044) tuvo un fallo transitorio en `MalformedQuotaHeadersAreIgnoredWithoutUnboundedParsing` (esperó cancelación en 30 ms y no recibió excepción); al repetir los jobs, dotnet, web y containers pasaron. Una segunda ejecución completa, run [41924673235](https://github.com/D0kker/improved-train/actions/runs/41924673235) sobre `f9d267b`, aprobó restore, build, tests, format, lint, frontend, tipos y build de contenedores. No se cambió backend.
 - Sin pruebas .NET: no se modificó API ni contrato.
 
 ## Validación visual
