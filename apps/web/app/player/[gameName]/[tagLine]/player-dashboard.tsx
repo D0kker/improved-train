@@ -4,8 +4,9 @@ import Link from "next/link";
 import { PlayerRanked } from "@/src/player-ranked";
 import { ProfileIcon } from "@/src/profile-icon";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { apiErrorMessageKey, type ApiErrorMessageKey } from "@/src/i18n/errors";
 import {
-  ApiError,
   fetchJson,
   playerActiveGamePath,
   type ActiveGame,
@@ -65,17 +66,15 @@ interface DashboardData {
 }
 
 type LoadingStep = "lookup" | "sync" | "results";
-const loadingCopy: Record<LoadingStep, string> = {
-  lookup: "Resolviendo el Riot ID…",
-  sync: "Consultando tus últimas 5 partidas…",
-  results: "Construyendo el resumen…",
-};
-
 export function PlayerDashboard({
   gameName,
   tagLine,
   platformRegion,
 }: PlayerDashboardProps) {
+  const t = useTranslations("dashboard");
+  const common = useTranslations("common");
+  const errorT = useTranslations("errors");
+  const locale = useLocale();
   const [data, setData] = useState<DashboardData | null>(null);
   const [step, setStep] = useState<LoadingStep>("lookup");
   const [error, setError] = useState<string | null>(null);
@@ -162,10 +161,7 @@ export function PlayerDashboard({
         .catch((activeGameRequestError: unknown) => {
           if (!signal.aborted) {
             setActiveGameError(
-              messageFor(
-                activeGameRequestError,
-                "No se pudo comprobar si hay una partida en curso.",
-              ),
+              messageFor(activeGameRequestError, t("noActiveError"), errorT),
             );
           }
         })
@@ -175,11 +171,11 @@ export function PlayerDashboard({
     } catch (requestError) {
       if (signal?.aborted) return;
       setIsStale(true);
-      setError(messageFor(requestError, "No pudimos cargar este jugador."));
+      setError(messageFor(requestError, t("noPlayer"), errorT, "player"));
     } finally {
       if (!signal?.aborted) setIsLoading(false);
     }
-  }, [gameName, platformRegion, tagLine]);
+  }, [gameName, platformRegion, tagLine, t, errorT]);
 
   useEffect(() => {
     let isCurrentEffect = true;
@@ -263,9 +259,7 @@ export function PlayerDashboard({
       });
     } catch (requestError) {
       if (!controller.signal.aborted) {
-        setAdditionalError(
-          messageFor(requestError, "No se pudieron cargar más partidas."),
-        );
+        setAdditionalError(messageFor(requestError, t("moreError"), errorT));
         setRetryingMatchWindow(true);
       }
     } finally {
@@ -274,11 +268,11 @@ export function PlayerDashboard({
         historyRequestInFlight.current = false;
       }
     }
-  }, [data, hasMoreMatches, nextMatchStart]);
+  }, [data, errorT, hasMoreMatches, nextMatchStart, t]);
 
   return (
     <>
-      <SiteHeader actionLabel="Nueva búsqueda" />
+      <SiteHeader actionLabel={common("newSearch")} />
       <main
         className="dashboard-shell player-dashboard-shell"
         id="main-content"
@@ -303,6 +297,7 @@ export function PlayerDashboard({
                     <Badge variant="info" className="profile-region">
                       {platformRegionName(
                         data?.player.platformRegion || platformRegion,
+                        locale,
                       )}
                     </Badge>
                   </div>
@@ -317,19 +312,23 @@ export function PlayerDashboard({
                     loading={isLoading}
                     onClick={() => void load()}
                   >
-                    {isLoading ? "Actualizando…" : "Actualizar cinco partidas"}
+                    {isLoading ? t("updating") : t("update")}
                   </Button>
                   {data ? (
                     <p className="profile-freshness">
                       {data.summary.matchesAnalyzed > 0 ? (
                         <>
-                          {isStale ? "Consulta anterior. " : ""}Última partida:{" "}
+                          {isStale ? `${t("previous")} ` : ""}
+                          {t("lastMatch")}{" "}
                           <time dateTime={data.summary.dataUpdatedAt}>
-                            {formatDashboardDate(data.summary.dataUpdatedAt)}
+                            {formatDashboardDate(
+                              data.summary.dataUpdatedAt,
+                              locale,
+                            )}
                           </time>
                         </>
                       ) : (
-                        "Sin partidas recuperadas"
+                        t("noMatches")
                       )}
                     </p>
                   ) : null}
@@ -339,7 +338,7 @@ export function PlayerDashboard({
 
             <aside
               className="competitive-session"
-              aria-label="Estado de partida y consulta"
+              aria-label={t("sessionStatus")}
             >
               {data ? (
                 <>
@@ -374,7 +373,8 @@ export function PlayerDashboard({
                             setActiveGameError(
                               messageFor(
                                 activeError,
-                                "No se pudo comprobar si hay una partida en curso.",
+                                t("noActiveError"),
+                                errorT,
                               ),
                             );
                         })
@@ -387,19 +387,23 @@ export function PlayerDashboard({
                   <div className="competitive-session-meta">
                     <p>
                       {isLoading
-                        ? "Actualizando consulta…"
+                        ? t("loadingActive")
                         : isStale
-                          ? "Consulta anterior conservada"
-                          : "Consulta disponible"}
+                          ? t("staleKept")
+                          : t("available")}
                     </p>
                     <a href="#matches-title">
-                      <span>{data.matches.items.length} partidas cargadas</span>
-                      <span>Ver historial →</span>
+                      <span>
+                        {t("loadedMatches", {
+                          count: data.matches.items.length,
+                        })}
+                      </span>
+                      <span>{t("historyLink")}</span>
                     </a>
                   </div>
                 </>
               ) : (
-                <p>Esperando resultados del jugador…</p>
+                <p>{t("waiting")}</p>
               )}
             </aside>
           </div>
@@ -408,19 +412,13 @@ export function PlayerDashboard({
             <section className="message-panel error-panel" role="alert">
               <div>
                 <p className="eyebrow">
-                  {isStale && data
-                    ? "No se pudo actualizar"
-                    : "No se pudo completar la consulta"}
+                  {isStale && data ? t("updateFailed") : t("queryFailed")}
                 </p>
                 <h2>{error}</h2>
-                <p>
-                  {isStale && data
-                    ? "Se conserva la consulta anterior. La fecha mostrada corresponde a la partida más reciente, no al momento de esta actualización."
-                    : "Revisa el Riot ID y la región seleccionada; puedes volver a intentarlo."}
-                </p>
+                <p>{isStale && data ? t("staleDetails") : t("retryAdvice")}</p>
               </div>
               <Button variant="secondary" onClick={() => void load()}>
-                Reintentar
+                {common("retry")}
               </Button>
             </section>
           ) : null}
@@ -485,6 +483,8 @@ function ActiveGameStatus({
   platformRegion?: string;
   onRetry: () => void;
 }) {
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
   if (!game) {
     return (
       <section
@@ -494,18 +494,13 @@ function ActiveGameStatus({
       >
         <div>
           <h2 className="eyebrow" id="active-game-title">
-            Partida en curso
+            {t("activeGame")}
           </h2>
           <p className="muted-copy">
-            {isLoading
-              ? "Comprobando si hay una partida en curso…"
-              : (error ?? "No se detectó una partida en curso")}
+            {isLoading ? t("checkingActive") : (error ?? t("noActive"))}
           </p>
           {!isLoading && !error ? (
-            <span className="sr-only">
-              Este estado corresponde a la última consulta y no indica que el
-              jugador esté desconectado.
-            </span>
+            <span className="sr-only">{t("notDisconnected")}</span>
           ) : null}
         </div>
         {error ? (
@@ -515,7 +510,7 @@ function ActiveGameStatus({
             loading={isLoading}
             onClick={onRetry}
           >
-            Volver a comprobar
+            {t("checkAgain")}
           </Button>
         ) : null}
       </section>
@@ -531,36 +526,37 @@ function ActiveGameStatus({
       >
         <div>
           <h2 className="eyebrow" id="active-game-title">
-            Partida en curso
+            {t("activeGame")}
           </h2>
           <p className="muted-copy">
-            {queueLabel(game.queueId)} · iniciada{" "}
-            {formatDate(game.gameStartTime)}
+            {queueLabel(game.queueId, locale)} · {t("startedAt")}{" "}
+            {formatDate(game.gameStartTime, locale)}
           </p>
         </div>
         <div className="active-game-actions">
           <strong>
-            {formatDuration(game.gameLengthSeconds)} transcurridos
+            {t("elapsedDuration", {
+              duration: formatDuration(game.gameLengthSeconds, locale),
+            })}
           </strong>
           <Link
             className="primary-button"
             href={`/match/live?ownerPuuid=${encodeURIComponent(ownerPuuid)}${platformRegion ? `&platformRegion=${encodeURIComponent(platformRegion)}` : ""}`}
           >
-            Ver partida en curso →
+            {t("viewActiveGame")} →
           </Link>
         </div>
       </section>
       {error ? (
         <div className="warning-banner" role="status">
-          No se pudo actualizar la comprobación. Se conserva el resultado
-          anterior.
+          {t("activeCheckStale")}
           <Button
             variant="ghost"
             disabled={isLoading}
             loading={isLoading}
             onClick={onRetry}
           >
-            Volver a comprobar
+            {t("checkAgain")}
           </Button>
         </div>
       ) : null}
@@ -569,17 +565,20 @@ function ActiveGameStatus({
 }
 
 function LoadingPanel({ step }: { step: LoadingStep }) {
+  const t = useTranslations("dashboard");
+  const loadingCopy = {
+    lookup: t("lookup"),
+    sync: t("sync"),
+    results: t("results"),
+  };
   return (
     <section className="loading-panel" role="status" aria-live="polite">
       <span className="spinner" aria-hidden="true" />
       <div>
-        <p className="eyebrow">Preparando el análisis</p>
+        <p className="eyebrow">{t("preparing")}</p>
         <h2>{loadingCopy[step]}</h2>
-        <p>Consultando las últimas 5 partidas del jugador.</p>
-        <p>
-          Al abrir una partida se analizarán 5 partidas anteriores del jugador y
-          3 de cada uno de los otros 9 participantes.
-        </p>
+        <p>{t("loadingFive")}</p>
+        <p>{t("deepAnalysisScope")}</p>
       </div>
     </section>
   );
@@ -608,29 +607,34 @@ function MatchHistory({
   onLoadMore: () => void;
   disabled: boolean;
 }) {
+  const t = useTranslations("dashboard");
+  const common = useTranslations("common");
+  const locale = useLocale();
   const [filter, setFilter] = useState("all");
   const visible = filterMatches(matches.items, filter);
   return (
     <section className="player-match-history" aria-labelledby="matches-title">
       <div className="section-title-row">
         <div>
-          <p className="eyebrow">Historial</p>
-          <h2 id="matches-title">Partidas recientes</h2>
+          <p className="eyebrow">{t("history")}</p>
+          <h2 id="matches-title">{t("recentMatches")}</h2>
         </div>
         <p className="section-note">
-          {matches.items.length.toLocaleString("es-PA")} partidas cargadas
+          {t("loadedMatches", {
+            count: matches.items.length.toLocaleString(locale),
+          })}
         </p>
       </div>
 
       <div
         className="competitive-filters"
         role="group"
-        aria-label="Filtrar resultados"
+        aria-label={t("filterResults")}
       >
         {[
-          ["all", "Todas"],
-          ["wins", "Victorias"],
-          ["losses", "Derrotas"],
+          ["all", t("all")],
+          ["wins", t("wins")],
+          ["losses", t("losses")],
         ].map(([value, label]) => (
           <Button
             key={value}
@@ -643,22 +647,20 @@ function MatchHistory({
         ))}
       </div>
       {matches.items.length > 0 && !visible.length && (
-        <p role="status">
-          No hay partidas cargadas que coincidan con este filtro.
-        </p>
+        <p role="status">{t("filterEmpty")}</p>
       )}
       {matches.items.length === 0 ? (
         <UiEmptyState
           className="player-history-empty"
           title={
             coverageStatus === "error"
-              ? "No se pudieron cargar partidas"
-              : "No hay partidas disponibles en esta consulta"
+              ? t("matchesFailed")
+              : t("noMatchesQuery")
           }
           description={
             coverageStatus === "error" || coverageStatus === "partial"
-              ? "La consulta no pudo recuperar toda la información. Revisa la cobertura y vuelve a intentarlo."
-              : "No hay partidas elegibles en la ventana consultada. Esto no describe todo el historial de la cuenta."
+              ? t("partialHistory")
+              : t("noEligible")
           }
         />
       ) : (
@@ -686,10 +688,10 @@ function MatchHistory({
                   className="result-badge"
                 >
                   {match.win === true
-                    ? "Victoria"
+                    ? common("victory")
                     : match.win === false
-                      ? "Derrota"
-                      : "Resultado no disponible"}
+                      ? common("defeat")
+                      : common("resultUnavailable")}
                 </Badge>
                 <div className="match-champion">
                   <ChampionIcon
@@ -698,7 +700,7 @@ function MatchHistory({
                   />
                   <span className="match-champion-copy">
                     <strong>{match.championName}</strong>
-                    <span>{queueLabel(match.queueId)}</span>
+                    <span>{queueLabel(match.queueId, locale)}</span>
                   </span>
                 </div>
                 <div className="kda">
@@ -712,11 +714,15 @@ function MatchHistory({
                   </span>
                 </div>
                 <div className="match-meta">
-                  <span>{formatDuration(match.gameDurationSeconds)}</span>
-                  <span>{formatDashboardDate(match.gameStartTimestamp)}</span>
+                  <span>
+                    {formatDuration(match.gameDurationSeconds, locale)}
+                  </span>
+                  <span>
+                    {formatDashboardDate(match.gameStartTimestamp, locale)}
+                  </span>
                 </div>
                 <span className="card-action">
-                  Analizar encuentros <span aria-hidden="true">→</span>
+                  {t("analyzeEncounters")} <span aria-hidden="true">→</span>
                 </span>
               </Link>
             </article>
@@ -733,11 +739,11 @@ function MatchHistory({
           >
             {isLoadingMore
               ? retryingWindow
-                ? "Reintentando este bloque…"
-                : "Cargando partidas…"
+                ? t("retrying")
+                : t("loadingMatches")
               : retryingWindow
-                ? "Reintentar este bloque de cinco"
-                : "Cargar cinco partidas más"}
+                ? t("retryWindow")
+                : t("loadMore")}
           </Button>
         </div>
       ) : null}
@@ -745,6 +751,12 @@ function MatchHistory({
   );
 }
 
-function messageFor(error: unknown, fallback: string): string {
-  return error instanceof ApiError ? error.message : fallback;
+function messageFor(
+  error: unknown,
+  fallback: string,
+  translate: (key: ApiErrorMessageKey) => string,
+  context: "player" | "match" | "general" = "general",
+): string {
+  const key = apiErrorMessageKey(error, context);
+  return key ? translate(key) : fallback;
 }

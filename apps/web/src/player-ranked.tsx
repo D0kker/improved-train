@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { fetchJson, type PlayerLookup } from "./api";
 import { formatDashboardDate } from "./dashboard-presentation";
 import { Button } from "./design-system";
+import { useLocale, useTranslations } from "next-intl";
 
 export type RankedQueue = "RANKED_SOLO_5x5" | "RANKED_FLEX_SR";
 export interface RankedEntry {
@@ -16,6 +17,18 @@ export interface PlayerRankedResult {
   entries: RankedEntry[];
   observedAt: string;
 }
+export const rankTiers = [
+  "IRON",
+  "BRONZE",
+  "SILVER",
+  "GOLD",
+  "PLATINUM",
+  "EMERALD",
+  "DIAMOND",
+  "MASTER",
+  "GRANDMASTER",
+  "CHALLENGER",
+] as const;
 export const rankNames: Record<string, string> = {
   IRON: "Hierro",
   BRONZE: "Bronce",
@@ -50,13 +63,14 @@ export function validRankedResult(value: unknown): value is PlayerRankedResult {
   );
 }
 export function RankEmblem({ tier }: { tier: string }) {
+  const t = useTranslations("ranked");
   const [failed, setFailed] = useState(false);
   if (failed || !Object.hasOwn(rankNames, tier))
     return (
       <span
         className="rank-emblem-fallback"
         role="img"
-        aria-label="Emblema de rango no disponible"
+        aria-label={t("iconFallback")}
       >
         —
       </span>
@@ -64,7 +78,7 @@ export function RankEmblem({ tier }: { tier: string }) {
   return (
     <img
       src={`/assets/ranks/${tier.toLowerCase()}.png`}
-      alt={`Emblema de ${rankNames[tier]}`}
+      alt={`${t("emblemOf")} ${t(`tiers.${tier}` as "tiers.IRON")}`}
       width={56}
       height={56}
       onError={() => setFailed(true)}
@@ -72,6 +86,8 @@ export function RankEmblem({ tier }: { tier: string }) {
   );
 }
 export function RankedQueues({ result }: { result: PlayerRankedResult }) {
+  const t = useTranslations("ranked");
+  const locale = useLocale();
   const [queue, setQueue] = useState<RankedQueue>(
     result.entries.some((e) => e.queueType === "RANKED_SOLO_5x5")
       ? "RANKED_SOLO_5x5"
@@ -84,7 +100,7 @@ export function RankedQueues({ result }: { result: PlayerRankedResult }) {
   return (
     <>
       <label className="sr-only" htmlFor={`${description}-queue`}>
-        Cola clasificatoria
+        {t("queue")}
       </label>
       <select
         id={`${description}-queue`}
@@ -92,13 +108,13 @@ export function RankedQueues({ result }: { result: PlayerRankedResult }) {
         value={queue}
         onChange={(e) => setQueue(e.target.value as RankedQueue)}
       >
-        <option value="RANKED_SOLO_5x5">Solo/Dúo</option>
-        <option value="RANKED_FLEX_SR">Flexible</option>
+        <option value="RANKED_SOLO_5x5">{t("solo")}</option>
+        <option value="RANKED_FLEX_SR">{t("flex")}</option>
       </select>
       <p id={description} className="sr-only">
-        Clasificación recuperada: {formatDashboardDate(result.observedAt)}. La
-        caché temporal puede conservarla hasta cinco minutos con la
-        configuración predeterminada.
+        {t("retrievedAt", {
+          date: formatDashboardDate(result.observedAt, locale),
+        })}
       </p>
       <div className="ranked-value" role="status">
         {entry ? (
@@ -106,7 +122,7 @@ export function RankedQueues({ result }: { result: PlayerRankedResult }) {
             <RankEmblem key={entry.tier} tier={entry.tier} />
             <div>
               <strong>
-                {rankNames[entry.tier]}
+                {t(`tiers.${entry.tier}` as "tiers.IRON")}
                 {["MASTER", "GRANDMASTER", "CHALLENGER"].includes(entry.tier)
                   ? ""
                   : ` ${entry.division}`}
@@ -115,13 +131,14 @@ export function RankedQueues({ result }: { result: PlayerRankedResult }) {
             </div>
           </>
         ) : (
-          <strong>Sin clasificación</strong>
+          <strong>{t("noRank")}</strong>
         )}
       </div>
     </>
   );
 }
 export function PlayerRanked({ player }: { player: PlayerLookup }) {
+  const t = useTranslations("ranked");
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<{
     status: "loading" | "error" | "available";
@@ -163,16 +180,16 @@ export function PlayerRanked({ player }: { player: PlayerLookup }) {
   return (
     <section
       className="player-ranked"
-      aria-label="Rango competitivo"
+      aria-label={t("rank")}
       aria-busy={state.status === "loading"}
     >
       {state.status === "loading" ? (
-        <p role="status">Consultando rango…</p>
+        <p role="status">{t("loading")}</p>
       ) : state.status === "error" ? (
         <>
-          <p role="status">Rango no disponible</p>
+          <p role="status">{t("unavailable")}</p>
           <Button variant="ghost" onClick={() => setAttempt((a) => a + 1)}>
-            Reintentar rango
+            {t("retry")}
           </Button>
         </>
       ) : (
