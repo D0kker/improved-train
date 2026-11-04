@@ -28,8 +28,8 @@ export function HomeContent({
               <p>{copy.searchDescription}</p>
             </div>
             {searchForm}
-            <p className="region-note" aria-label="Región configurada">
-              Región de búsqueda: <strong>{platformRegionLabel}</strong>
+            <p className="region-note" aria-label={copy.regionAria}>
+              {copy.regionLabel} <strong>{platformRegionLabel}</strong>
             </p>
           </Card>
 

@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import {
   cleanup,
-  render,
   screen,
   fireEvent,
   waitFor,
   act,
 } from "@testing-library/react";
+import { renderWithIntl as render } from "./render-with-intl.tsx";
 import userEvent from "@testing-library/user-event";
 import {
   PlayerRanked,

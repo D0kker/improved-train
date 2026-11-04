@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- Fixed-size same-origin PNG already cached and bounded by our asset proxy. */
 import { useId, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { formatDashboardDate } from "./dashboard-presentation";
 import { profileIconPath } from "./data-dragon";
 export function ProfileIcon({
@@ -10,6 +11,8 @@ export function ProfileIcon({
   id?: number | null;
   observedAt?: string | null;
 }) {
+  const t = useTranslations("common");
+  const locale = useLocale();
   const descriptionId = useId();
   const [failedSource, setFailedSource] = useState<string | null>(null),
     source = profileIconPath(id);
@@ -18,12 +21,14 @@ export function ProfileIcon({
       {source && failedSource !== source ? (
         <img
           src={source}
-          alt="Ícono de invocador observado en su última partida disponible"
+          alt={t("observedProfileIcon")}
           aria-describedby={descriptionId}
           title={
             observedAt
-              ? `Ícono observado en partida: ${formatDashboardDate(observedAt)}`
-              : "Ícono de la última partida disponible"
+              ? t("profileIconAtMatch", {
+                  date: formatDashboardDate(observedAt, locale),
+                })
+              : t("lastAvailableProfileIcon")
           }
           className="profile-icon__image"
           width={88}
@@ -34,16 +39,18 @@ export function ProfileIcon({
         <span
           className="competitive-avatar"
           role="img"
-          aria-label="Ícono de perfil no disponible"
+          aria-label={t("profileIconUnavailable")}
         >
           E
         </span>
       )}
       {source && failedSource !== source && (
         <span className="sr-only" id={descriptionId}>
-          Ícono observado en la última partida disponible
-          {observedAt ? `, ${formatDashboardDate(observedAt)}` : ""}; puede
-          diferir del avatar actual.
+          {t("profileIconDescription", {
+            date: observedAt
+              ? `, ${formatDashboardDate(observedAt, locale)}`
+              : "",
+          })}
         </span>
       )}
     </div>

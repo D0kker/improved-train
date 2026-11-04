@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { playerProfilePath } from "./api";
+import { useTranslations } from "next-intl";
 
 export function PlayerProfileLink({
   compact = false,
@@ -13,13 +14,14 @@ export function PlayerProfileLink({
   platformRegion?: string;
   tagLine?: string;
 }) {
+  const t = useTranslations("common");
   if (!gameName || !tagLine) {
     return compact ? (
-      <span>{gameName || "Jugador no identificado"}</span>
+      <span>{gameName || t("unidentifiedPlayer")}</span>
     ) : (
       <span className="player-identity-incomplete">
-        <strong>{gameName || "Jugador no identificado"}</strong>
-        <span>{tagLine ? `#${tagLine}` : "Riot ID no disponible"}</span>
+        <strong>{gameName || t("unidentifiedPlayer")}</strong>
+        <span>{tagLine ? `#${tagLine}` : t("riotIdUnavailable")}</span>
       </span>
     );
   }
@@ -29,7 +31,7 @@ export function PlayerProfileLink({
     <Link
       className={`player-link${compact ? " compact" : ""}`}
       href={playerProfilePath(gameName, tagLine, platformRegion)}
-      aria-label={`Ver resumen de ${riotId}`}
+      aria-label={t("viewSummary", { riotId })}
     >
       {compact ? (
         `${gameName} #${tagLine}`

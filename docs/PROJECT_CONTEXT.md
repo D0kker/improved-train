@@ -1,10 +1,14 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-11-03
+Última actualización: 2026-11-04
 
-## T04.6 — integrada a main; RELEASE-06 pendiente de despliegue
+## T04.7 — internacionalización en implementación
 
-El PO autorizó integrar los PR #102, #103 y #104, pero **no autorizó el despliegue**. PR #102 (diseño) fue integrado mediante `97b1c20`; PR #103 (implementación) mediante `61bf116`. La implementación incluye resumen, equipos tintados azul/coral, owner dorado, relaciones históricas, grupos prudentes y cobertura. Compatible con API RELEASE-05; sin cambios en backend ni contratos. T04.6.2: Chromium con fixtures en 320/390/768/1024/1440, sin overflow; contraste focalizado texto mínimo 7.62:1 y foco 3.06:1, sin certificar WCAG integral. CI del HEAD de implementación aprobada, 81 pruebas frontend; auditoría de producción sin vulnerabilidades, con 16 moderadas y 1 alta en árbol completo de desarrollo. Capturas actuales: [T04.6.2](releases/t04-6-captures/t04-6.2/). El release aún requiere despliegue autorizado y smoke tests. Plan: [RELEASE-06](releases/ECHO_RELEASE_06_PLAN.md).
+Rama aislada `feature/t04-7-i18n`, creada desde `origin/main` `6b452208a3aa0ed9b8ea7a94fe51b7ca32cd50bb`; PR #105 de documentación continúa pendiente y no se incorporó a esta base. Se adopta `next-intl` con URLs existentes sin prefijo: cookie explícita `echo-locale`, después `Accept-Language` soportado, y `es` como fallback. Está implementada traducción tipada en ES/EN/PT-BR para Home/búsqueda, dashboard, clasificación, análisis, partida activa y componentes compartidos; formatos regionales, mensajes seguros de error y selector accesible. Validación local: 88/88 pruebas frontend, lint, TypeScript, build, Compose, diff-check, Prettier en archivos modificados y audit de producción (cero vulnerabilidades) aprobados. `npm run format:check` global detecta seis archivos previos sin cambios en esta rama. No se encontró navegador disponible, por lo que falta revisión visual real y capturas sintéticas; estado `REVIEW_REQUIRED`. Informe: [T04.7](T04_7_INTERNATIONALIZATION.md). Sin cambios de backend, API Riot, main o runtime.
+
+## T04.6 — integrada y RELEASE-06 desplegada
+
+El PO autorizó integrar los PR #102, #103 y #104, y el registro documental #105 confirma el despliegue de web RELEASE-06 sobre main `6b45220`, manteniendo API RELEASE-05. PR #102 (diseño) fue integrado mediante `97b1c20`; PR #103 (implementación) mediante `61bf116`. La implementación incluye resumen, equipos tintados azul/coral, owner dorado, relaciones históricas, grupos prudentes y cobertura. Compatible con API RELEASE-05; sin cambios en backend ni contratos. T04.6.2: Chromium con fixtures en 320/390/768/1024/1440, sin overflow; contraste focalizado texto mínimo 7.62:1 y foco 3.06:1, sin certificar WCAG integral. CI del HEAD de implementación aprobada, 81 pruebas frontend; auditoría de producción sin vulnerabilidades, con 16 moderadas y 1 alta en árbol completo de desarrollo. Capturas actuales: [T04.6.2](releases/t04-6-captures/t04-6.2/). El registro de despliegue es [PR #105](https://github.com/D0kker/improved-train/pull/105); su documentación queda pendiente de integración. Plan: [RELEASE-06](releases/ECHO_RELEASE_06_PLAN.md).
 
 ## T04.11 — refinamiento UX y clasificación (rama de revisión)
 
