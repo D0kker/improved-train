@@ -2770,6 +2770,17 @@ td > span,
 .analysis-player-kda span {
   font-size: 0.75rem;
 }
+.analysis-participant .analysis-group-badge {
+  width: fit-content;
+  border: 1px solid var(--echo-gold);
+  border-radius: 0.25rem;
+  padding: 0.05rem 0.3rem;
+  margin-top: 0.2rem;
+}
+.analysis-inline-history {
+  margin-top: 0.2rem;
+  overflow-wrap: anywhere;
+}
 .analysis-player-kda {
   text-align: right;
   display: grid;

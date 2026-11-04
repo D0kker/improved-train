@@ -236,6 +236,15 @@ const es = {
     playerCount: "{count, plural, one {# jugador} other {# jugadores}}",
   },
   match: {
+    inlineGroup: "Grupo {label} · coincidencias históricas",
+    inlineHistory:
+      "{count, plural, one {# partida contigo} other {# partidas contigo}} · {allies, plural, one {# aliado} other {# aliados}} / {rivals, plural, one {# rival} other {# rivales}}",
+    inlinePartial: "muestra parcial",
+    inlineEmpty: "Sin coincidencias contigo detectadas",
+    inlineIncomplete: "Información histórica incompleta",
+    inlineIdentity: "Identidad insuficiente para comparar",
+    inlineUnavailable: "Historial no disponible",
+    inlineAllies: "Aliados anteriores",
     analysis: "Análisis de partida",
     summary: "Resumen de partida",
     noMatch:
@@ -605,6 +614,15 @@ const en = {
     playerCount: "{count, plural, one {# player} other {# players}}",
   },
   match: {
+    inlineGroup: "Group {label} · historical encounters",
+    inlineHistory:
+      "{count, plural, one {# match with you} other {# matches with you}} · {allies, plural, one {# ally} other {# allies}} / {rivals, plural, one {# opponent} other {# opponents}}",
+    inlinePartial: "partial sample",
+    inlineEmpty: "No encounters with you detected",
+    inlineIncomplete: "Historical information is incomplete",
+    inlineIdentity: "Not enough identity information to compare",
+    inlineUnavailable: "History unavailable",
+    inlineAllies: "Previous allies",
     analysis: "Match analysis",
     summary: "Match summary",
     noMatch: "Couldn't load the match. Check your connection and try again.",
@@ -970,6 +988,15 @@ const ptBR = {
     playerCount: "{count, plural, one {# jogador} other {# jogadores}}",
   },
   match: {
+    inlineGroup: "Grupo {label} · encontros anteriores",
+    inlineHistory:
+      "{count, plural, =0 {# partidas com você} one {# partida com você} other {# partidas com você}} · {allies, plural, =0 {# aliados} one {# aliado} other {# aliados}} / {rivals, plural, =0 {# adversários} one {# adversário} other {# adversários}}",
+    inlinePartial: "amostra parcial",
+    inlineEmpty: "Nenhum encontro com você detectado",
+    inlineIncomplete: "Informações históricas incompletas",
+    inlineIdentity: "Identidade insuficiente para comparar",
+    inlineUnavailable: "Histórico indisponível",
+    inlineAllies: "Aliados anteriores",
     analysis: "Análise da partida",
     summary: "Resumo da partida",
     noMatch:

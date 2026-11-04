@@ -223,6 +223,24 @@ test("match analysis presents owner, teams, historical pairs, cautious groups an
   assert.ok(screen.getByText("Jugador consultado"));
   assert.ok(screen.getByRole("heading", { name: "Equipo azul" }));
   assert.ok(screen.getByRole("heading", { name: "Equipo rojo" }));
+  const blueTeam = screen.getByRole("region", { name: "Equipo azul" });
+  const redTeam = screen.getByRole("region", { name: "Equipo rojo" });
+  assert.equal(
+    within(blueTeam).getAllByText("Grupo A · coincidencias históricas").length,
+    2,
+  );
+  assert.ok(
+    within(blueTeam).getByText("4 partidas contigo · 3 aliados / 1 rival"),
+  );
+  assert.ok(
+    within(redTeam).getByText("2 partidas contigo · 0 aliados / 2 rivales"),
+  );
+  assert.ok(within(blueTeam).getByText("Aliados anteriores: Carla#TEST"));
+  assert.ok(within(redTeam).getByText("Aliados anteriores: Beto#TEST"));
+  assert.ok(
+    within(redTeam).getAllByText("Sin coincidencias contigo detectadas")
+      .length > 0,
+  );
   assert.match(
     screen
       .getByRole("link", { name: /Volver al perfil/ })
@@ -236,6 +254,57 @@ test("match analysis presents owner, teams, historical pairs, cautious groups an
   assert.equal(requests.length, 1);
   assert.match(requests[0].path, /LA1_FIXTURE\/analyze$/);
   assert.equal(requests[0].method, "POST");
+});
+
+test("inline history warns about incomplete coverage rather than claiming no encounters", async () => {
+  const data = fixture();
+  data.coverage.status = "partial";
+  globalThis.fetch = async () => Response.json(data);
+  render(<MatchDetailView {...props} />);
+  const team = await screen.findByRole("region", { name: "Equipo azul" });
+  assert.ok(within(team).getByText(/4 partidas contigo.*muestra parcial/));
+  assert.ok(
+    within(team).getAllByText("Información histórica incompleta").length > 0,
+  );
+  assert.equal(
+    within(team).queryByText("Sin coincidencias contigo detectadas"),
+    null,
+  );
+});
+
+test("inline evidence and singular/plural labels follow the selected locale", async () => {
+  const scenarios = [
+    [
+      "es",
+      "Grupo A · coincidencias históricas",
+      "1 partida contigo · 1 aliado / 0 rivales",
+    ],
+    [
+      "en",
+      "Group A · historical encounters",
+      "1 match with you · 1 ally / 0 opponents",
+    ],
+    [
+      "pt-BR",
+      "Grupo A · encontros anteriores",
+      "1 partida com você · 1 aliado / 0 adversários",
+    ],
+  ] as const;
+  for (const [locale, group, history] of scenarios) {
+    const data = fixture();
+    data.relationships[1] = {
+      ...data.relationships[1],
+      matchesTogether: 1,
+      allyMatches: 1,
+      enemyMatches: 0,
+    };
+    globalThis.fetch = async () => Response.json(data);
+    const view = render(<MatchDetailView {...props} />, locale);
+    assert.equal((await screen.findAllByText(group)).length, 2);
+    assert.ok(screen.getByText(history));
+    assert.ok(screen.getAllByText("4 / 2 / 7").length > 0);
+    view.unmount();
+  }
 });
 
 test("partial roster and partial coverage remain explicit rather than inventing participants", async () => {

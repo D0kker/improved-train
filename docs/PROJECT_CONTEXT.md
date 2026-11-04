@@ -2,6 +2,11 @@
 
 Última actualización: 2026-11-04
 
+## T04.6.4 — relaciones visibles en equipos
+
+Trabajo aislado `feature/t04-6-4-inline-relationships` desde `origin/main` `6b452208a3aa0ed9b8ea7a94fe51b7ca32cd50bb`. Las filas presentan grupos aportados por el contrato, coincidencias relativas al owner y aliados anteriores, conservando cobertura e identidades ambiguas. No modifica backend ni consultas Riot. Validación: 86 pruebas, lint, tipos, build, audit producción cero y Compose; Chromium con fixtures en cinco anchos sin overflow. Axe dejó contraste inconcluso, pendiente de revisión adicional. Detalle: [T04.6.4](T04_6_4_INLINE_RELATIONSHIPS.md) y [capturas](releases/t04-6-4-captures/README.md).
+
+
 ## T04.7 — internacionalización en implementación
 
 Rama aislada `feature/t04-7-i18n`, creada desde `origin/main` `6b452208a3aa0ed9b8ea7a94fe51b7ca32cd50bb`; PR #105 de documentación continúa pendiente y no se incorporó a esta base. PR T04.7 [#106](https://github.com/D0kker/improved-train/pull/106), Draft, CI run [41781834674](https://github.com/D0kker/improved-train/actions/runs/41781834674) aprobada. Se adopta `next-intl` con URLs existentes sin prefijo: cookie explícita `echo-locale`, después `Accept-Language` soportado, y `es` como fallback. Está implementada traducción tipada en ES/EN/PT-BR para Home/búsqueda, dashboard, clasificación, análisis, partida activa y componentes compartidos; formatos regionales, mensajes seguros de error y selector accesible. Validación local: 88/88 pruebas frontend, lint, TypeScript, build, Compose, diff-check, Prettier en archivos modificados y audit de producción (cero vulnerabilidades) aprobados. `npm run format:check` global detecta seis archivos previos sin cambios en esta rama. No se encontró navegador disponible, por lo que falta revisión visual real y capturas sintéticas; estado `REVIEW_REQUIRED`. Informe: [T04.7](T04_7_INTERNATIONALIZATION.md). Sin cambios de backend, API Riot, main o runtime.

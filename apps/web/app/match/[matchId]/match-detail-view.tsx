@@ -22,6 +22,7 @@ import { useRequestLifetime } from "@/src/use-request-lifetime";
 import { presentMatchRelations } from "@/src/match-relations";
 import { useLocale, useTranslations } from "next-intl";
 import { apiErrorMessageKey } from "@/src/i18n/errors";
+import { inlineMatchRelations } from "@/src/inline-match-relations";
 
 type MatchDetailProps = {
   matchId: string;
@@ -136,7 +137,11 @@ function MatchDetailContent({
       : null;
   const pairs =
     match && relationships
-      ? presentMatchRelations(relationships, match.teams)
+      ? presentMatchRelations(
+          relationships,
+          match.teams,
+          common("unidentifiedPlayer"),
+        )
       : [];
   const familiarityCopy = (() => {
     const familiarity = match?.familiarity;
@@ -177,6 +182,9 @@ function MatchDetailContent({
         return t("familiarityError");
     }
   })();
+  const inline = match
+    ? inlineMatchRelations(match, relationships, coverage, ownerPuuid)
+    : null;
   return (
     <main className="dashboard-shell" id="main-content" tabIndex={-1}>
       <SiteHeader />
@@ -346,7 +354,7 @@ function MatchDetailContent({
                             ? common("blueTeam")
                             : team.teamId === 200
                               ? common("redTeam")
-                              : `Equipo ${index + 1}`
+                              : `${t("team")} ${index + 1}`
                         }
                       >
                         <header>
@@ -355,56 +363,99 @@ function MatchDetailContent({
                               ? common("blueTeam")
                               : team.teamId === 200
                                 ? common("redTeam")
-                                : `Equipo ${index + 1}`}
+                                : `${t("team")} ${index + 1}`}
                           </h3>
                           <span>{result}</span>
                         </header>
                         {team.participants.length ? (
                           <ol>
-                            {team.participants.map((p, i) => (
-                              <li
-                                key={p.puuid || `${p.championId}-${i}`}
-                                className={
-                                  p.puuid && p.puuid === ownerPuuid
-                                    ? "analysis-owner-row"
-                                    : undefined
-                                }
-                              >
-                                <ChampionIcon
-                                  championId={p.championId}
-                                  championName={
-                                    p.championName || t("championUnavailable")
+                            {team.participants.map((p, i) => {
+                              const history = inline?.history(p.puuid);
+                              const allies = inline?.priorAllies(p.puuid) ?? [];
+                              const isOwner =
+                                !!p.puuid && p.puuid === ownerPuuid;
+                              return (
+                                <li
+                                  key={p.puuid || `${p.championId}-${i}`}
+                                  className={
+                                    p.puuid && p.puuid === ownerPuuid
+                                      ? "analysis-owner-row"
+                                      : undefined
                                   }
-                                />
-                                <div className="analysis-participant">
-                                  <strong>
-                                    {p.championName || t("championUnavailable")}
-                                  </strong>
-                                  <PlayerProfileLink
-                                    gameName={p.gameName}
-                                    tagLine={p.tagLine}
-                                    platformRegion={platformRegion}
-                                    compact
+                                >
+                                  <ChampionIcon
+                                    championId={p.championId}
+                                    championName={
+                                      p.championName || t("championUnavailable")
+                                    }
                                   />
-                                  {p.puuid && p.puuid === ownerPuuid && (
-                                    <span>{common("observedPlayer")}</span>
-                                  )}
-                                </div>
-                                <div className="analysis-player-kda">
-                                  <strong>
-                                    {[p.kills, p.deaths, p.assists].every(
-                                      (n) =>
-                                        typeof n === "number" &&
-                                        Number.isFinite(n) &&
-                                        n >= 0,
-                                    )
-                                      ? `${p.kills} / ${p.deaths} / ${p.assists}`
-                                      : "—"}
-                                  </strong>
-                                  <span>K / D / A</span>
-                                </div>
-                              </li>
-                            ))}
+                                  <div className="analysis-participant">
+                                    <strong>
+                                      {p.championName ||
+                                        t("championUnavailable")}
+                                    </strong>
+                                    <PlayerProfileLink
+                                      gameName={p.gameName}
+                                      tagLine={p.tagLine}
+                                      platformRegion={platformRegion}
+                                      compact
+                                    />
+                                    {p.puuid && p.puuid === ownerPuuid && (
+                                      <span>{common("observedPlayer")}</span>
+                                    )}
+                                    {p.puuid &&
+                                      inline?.labels
+                                        .get(p.puuid)
+                                        ?.map((label) => (
+                                          <span
+                                            className="analysis-group-badge"
+                                            key={label}
+                                          >
+                                            {t("inlineGroup", { label })}
+                                          </span>
+                                        ))}
+                                    {!isOwner && history && (
+                                      <span className="analysis-inline-history">
+                                        {history.kind === "known"
+                                          ? `${t("inlineHistory", { count: history.pair.matchesTogether, allies: history.pair.allyMatches, rivals: history.pair.enemyMatches })}${history.partial ? ` · ${t("inlinePartial")}` : ""}`
+                                          : history.kind === "empty"
+                                            ? t("inlineEmpty")
+                                            : history.kind === "partial"
+                                              ? t("inlineIncomplete")
+                                              : history.kind === "identity"
+                                                ? t("inlineIdentity")
+                                                : t("inlineUnavailable")}
+                                      </span>
+                                    )}
+                                    {allies.length > 0 && (
+                                      <span className="analysis-inline-history">
+                                        {t("inlineAllies")}:{" "}
+                                        {allies
+                                          .map(
+                                            (name) =>
+                                              name ??
+                                              common("unidentifiedPlayer"),
+                                          )
+                                          .join(", ")}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="analysis-player-kda">
+                                    <strong>
+                                      {[p.kills, p.deaths, p.assists].every(
+                                        (n) =>
+                                          typeof n === "number" &&
+                                          Number.isFinite(n) &&
+                                          n >= 0,
+                                      )
+                                        ? `${p.kills} / ${p.deaths} / ${p.assists}`
+                                        : "—"}
+                                    </strong>
+                                    <span>K / D / A</span>
+                                  </div>
+                                </li>
+                              );
+                            })}
                           </ol>
                         ) : (
                           <p>{t("noParticipants")}</p>
@@ -525,6 +576,7 @@ function MatchDetailContent({
                             ),
                         ),
                         match.teams,
+                        common("unidentifiedPlayer"),
                       ).map((pair) => (
                         <p key={pair.key}>
                           {pair.first.label} y {pair.second.label}:{" "}
