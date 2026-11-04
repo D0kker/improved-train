@@ -8,7 +8,7 @@
 
 Reúne T04.7 (interfaz en español, inglés y portugués brasileño) y T04.6.4 (grupos históricos respaldados por la API y conteos de encuentros con el jugador consultado en las filas de participantes). La vista conserva los equipos azul/coral, retratos, nombres, K/D/A y resaltado dorado del owner. Estados parciales, identidades ambiguas y evidencia no disponible mantienen mensajes prudentes.
 
-PR de origen: #106 (`d5406cf754b2426ead377df178117e96173ddaa4`) y #107 (`a309b8f76000e8f514e65dfa21dcdc9a1754f0a2`), ambos abiertos como Draft al verificar. PR #105 es un registro documental de RELEASE-06 aún abierto; no forma parte del alcance funcional de RELEASE-07.
+PR de origen: #106 (`d5406cf754b2426ead377df178117e96173ddaa4`) y #107 (`a309b8f76000e8f514e65dfa21dcdc9a1754f0a2`), ambos abiertos como Draft al verificar. El PR integrado [#108](https://github.com/D0kker/improved-train/pull/108) está abierto como Draft hacia `main`; su CI espera el HEAD publicado. PR #105 es un registro documental de RELEASE-06 aún abierto; no forma parte del alcance funcional de RELEASE-07.
 
 ## Integración y decisiones
 
@@ -49,7 +49,7 @@ CI GitHub para el HEAD candidato se debe verificar después de publicar la rama;
 
 ## Secuencia recomendada
 
-1. Revisar y aprobar este PR integrado hacia `main`, que contiene ambos historiales de trabajo.
+1. Revisar y aprobar el PR integrado #108 hacia `main`, que contiene ambos historiales de trabajo.
 2. No fusionar además #106 ni #107; cuando el PR integrado se acepte, marcar los originales como reemplazados según decisión del propietario.
 3. Publicar RELEASE-07 solo tras aprobación visual/funcional y autorización separada. Revalidar HEAD, CI, Compose, ARM64, imagen rollback y salud en producción.
 

@@ -4,7 +4,7 @@
 
 `READY_FOR_PO_APPROVAL`: candidata en `integration/t04-7-2-i18n-relationships`, HEAD `d79f54b2c3f8d724327ee58d3278e9fa21f666d4`. No es aprobación del Product Owner ni autorización para integrar a `main` o desplegar.
 
-PR #106 (`d5406cf754b2426ead377df178117e96173ddaa4`) y #107 (`a309b8f76000e8f514e65dfa21dcdc9a1754f0a2`) permanecen abiertos como Draft; #105, registro documental de RELEASE-06, también permanece abierto. La rama candidata conserva ambos historiales mediante merges y suma el ajuste de contraste del selector.
+PR #106 (`d5406cf754b2426ead377df178117e96173ddaa4`) y #107 (`a309b8f76000e8f514e65dfa21dcdc9a1754f0a2`) permanecen abiertos como Draft; #105, registro documental de RELEASE-06, también permanece abierto. PR integrado [#108](https://github.com/D0kker/improved-train/pull/108) está abierto como Draft hacia `main`, limpio y esperando CI del HEAD publicado. La rama candidata conserva ambos historiales mediante merges y suma el ajuste de contraste del selector.
 
 ## Cambios integrados
 
@@ -38,4 +38,4 @@ La revisión focalizada de contraste calcula los extremos de fondos y opacidades
 
 API RELEASE-06 sin cambios; contratos y llamadas Riot intactos. La release futura debe reconstruir solo web sobre API RELEASE-06, previa inspección de la configuración y entorno ARM64. La imagen de rollback de referencia es `project-echo-release06-web:6b45220`; verificar su Image ID en el host antes del despliegue.
 
-Recomendación: un único PR desde esta rama a `main`, pues ya incluye ambos historiales. No fusionar #106/#107 aparte; gestionar su sustitución/cierre solo después de decidir e integrar el PR candidato. Actualmente no existe PR de integración. Main, producción y Redis no se modificaron.
+Recomendación: integrar un único PR (#108) hacia `main`, pues ya incluye ambos historiales. No fusionar #106/#107 aparte; gestionar su sustitución/cierre solo después de decidir e integrar el PR candidato. Main, producción y Redis no se modificaron.

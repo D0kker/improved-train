@@ -11,7 +11,8 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Repetir `npm ci --offline`, 94/94 tests, lint, TypeScript, build, audit producción cero, Compose y Prettier dirigido.
 - [x] Chromium con fixtures: Home/dashboard/análisis/partida activa en 390/768/1440 y análisis 320/1024; selector, persistencia, recarga, fallback, parcial, vacío, error/reintento, nombres largos y solapamientos sin overflow ni solicitudes externas inesperadas.
 - [x] Documentar contraste focalizado, capturas vigentes, compatibilidad web/API, plan de despliegue web-only y referencia de rollback RELEASE-06.
-- [ ] Publicar rama y PR integrado; revisar CI del HEAD publicado. No fusionar ni desplegar sin autorización.
+- [x] Publicar rama y PR integrado [#108](https://github.com/D0kker/improved-train/pull/108) en Draft hacia main; esperar CI del HEAD final.
+- [ ] Revisar CI final y obtener aprobación del PO; no fusionar ni desplegar sin autorización.
 - Evidencia: [T04.7.2](T04_7_2_INTEGRATION_REPORT.md), [capturas](releases/t04-7-2-captures/README.md), [plan RELEASE-07](releases/ECHO_RELEASE_07_PLAN.md).
 
 ## T04.7 — internacionalización
