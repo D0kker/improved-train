@@ -1,5 +1,5 @@
 import type { AnalysisCoverage } from "./api";
-import { coverageDescription, coverageTitle } from "./coverage";
+import { useTranslations } from "next-intl";
 
 export function CoverageSummary({
   coverage,
@@ -8,9 +8,15 @@ export function CoverageSummary({
   coverage: AnalysisCoverage;
   title: string;
 }) {
+  const t = useTranslations("coverage");
   const windows = coverage.players ?? [];
-  const requestedWindows = windows.reduce((total, player) => total + player.requested, 0);
-  const evaluableProfiles = windows.filter((player) => player.eligibleMatches > 0).length;
+  const requestedWindows = windows.reduce(
+    (total, player) => total + player.requested,
+    0,
+  );
+  const evaluableProfiles = windows.filter(
+    (player) => player.eligibleMatches > 0,
+  ).length;
   const incompleteWindows = windows.filter((player) => player.limited).length;
   const headingId = `coverage-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 
@@ -22,43 +28,47 @@ export function CoverageSummary({
     >
       <div>
         <p className="eyebrow">{title}</p>
-        <h2 id={headingId}>{coverageTitle(coverage.status)}</h2>
-        <p>{coverageDescription(coverage.status)}</p>
+        <h2 id={headingId}>{t(coverage.status)}</h2>
+        <p>{t(`${coverage.status}Description` as "completeDescription")}</p>
       </div>
       <dl className="coverage-stats">
         {requestedWindows > 0 ? (
           <div>
-            <dt>Partidas solicitadas</dt>
+            <dt>{t("requested")}</dt>
             <dd>{requestedWindows}</dd>
           </div>
         ) : null}
         <div>
-          <dt>IDs de partidas obtenidos</dt>
+          <dt>{t("ids")}</dt>
           <dd>{coverage.matchIdsObtained}</dd>
         </div>
         <div>
-          <dt>Partidas recuperadas</dt>
+          <dt>{t("recovered")}</dt>
           <dd>{coverage.matchesRecovered}</dd>
         </div>
         <div>
-          <dt>IDs de partidas únicos</dt>
+          <dt>{t("uniqueIds")}</dt>
           <dd>{coverage.uniqueMatchIds}</dd>
         </div>
         {windows.length > 0 ? (
           <div>
-            <dt>Perfiles con historial utilizable</dt>
-            <dd>{evaluableProfiles} de {windows.length}</dd>
+            <dt>{t("profiles")}</dt>
+            <dd>
+              {evaluableProfiles} de {windows.length}
+            </dd>
           </div>
         ) : null}
         {windows.length > 0 ? (
           <div>
-            <dt>Ventanas con historial incompleto</dt>
-            <dd>{incompleteWindows} de {windows.length}</dd>
+            <dt>{t("incomplete")}</dt>
+            <dd>
+              {incompleteWindows} de {windows.length}
+            </dd>
           </div>
         ) : null}
         {coverage.failures.length > 0 ? (
           <div>
-            <dt>Fallos reportados</dt>
+            <dt>{t("failures")}</dt>
             <dd>{coverage.failures.length}</dd>
           </div>
         ) : null}

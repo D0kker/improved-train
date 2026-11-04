@@ -5,6 +5,8 @@ export const homeCopy = {
     "Busca jugadores, explora sus partidas recientes y descubre cuándo se han encontrado antes.",
   searchHeading: "Empieza con un jugador",
   searchDescription: "Introduce su Riot ID y comprueba la región de búsqueda.",
+  regionAria: "Región configurada",
+  regionLabel: "Región de búsqueda:",
   scope:
     "La consulta inicial revisa cinco partidas recientes. El análisis se basa en el historial disponible; si faltan datos, eso no confirma que nunca hayan coincidido.",
   howEyebrow: "En tres pasos",
@@ -18,7 +20,8 @@ export const homeCopy = {
     {
       number: "02",
       title: "Explora sus partidas",
-      description: "Empieza con cinco partidas recientes y revisa su actividad.",
+      description:
+        "Empieza con cinco partidas recientes y revisa su actividad.",
     },
     {
       number: "03",
