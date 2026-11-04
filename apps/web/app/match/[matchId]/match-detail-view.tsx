@@ -23,6 +23,7 @@ import { platformRegionName } from "@/src/platform-region";
 import { familiarityMessage } from "@/src/echo";
 import { useRequestLifetime } from "@/src/use-request-lifetime";
 import { presentMatchRelations } from "@/src/match-relations";
+import { inlineMatchRelations } from "@/src/inline-match-relations";
 
 type MatchDetailProps = {
   matchId: string;
@@ -137,6 +138,9 @@ function MatchDetailContent({
     match && relationships
       ? presentMatchRelations(relationships, match.teams)
       : [];
+  const inline = match
+    ? inlineMatchRelations(match, relationships, coverage, ownerPuuid)
+    : null;
   return (
     <main className="dashboard-shell" id="main-content" tabIndex={-1}>
       <SiteHeader />
@@ -332,50 +336,86 @@ function MatchDetailContent({
                         </header>
                         {team.participants.length ? (
                           <ol>
-                            {team.participants.map((p, i) => (
-                              <li
-                                key={p.puuid || `${p.championId}-${i}`}
-                                className={
-                                  p.puuid && p.puuid === ownerPuuid
-                                    ? "analysis-owner-row"
-                                    : undefined
-                                }
-                              >
-                                <ChampionIcon
-                                  championId={p.championId}
-                                  championName={
-                                    p.championName || "Campeón no disponible"
+                            {team.participants.map((p, i) => {
+                              const history = inline?.history(p.puuid);
+                              const allies = inline?.priorAllies(p.puuid) ?? [];
+                              const isOwner =
+                                !!p.puuid && p.puuid === ownerPuuid;
+                              return (
+                                <li
+                                  key={p.puuid || `${p.championId}-${i}`}
+                                  className={
+                                    p.puuid && p.puuid === ownerPuuid
+                                      ? "analysis-owner-row"
+                                      : undefined
                                   }
-                                />
-                                <div className="analysis-participant">
-                                  <strong>
-                                    {p.championName || "Campeón no disponible"}
-                                  </strong>
-                                  <PlayerProfileLink
-                                    gameName={p.gameName}
-                                    tagLine={p.tagLine}
-                                    platformRegion={platformRegion}
-                                    compact
+                                >
+                                  <ChampionIcon
+                                    championId={p.championId}
+                                    championName={
+                                      p.championName || "Campeón no disponible"
+                                    }
                                   />
-                                  {p.puuid && p.puuid === ownerPuuid && (
-                                    <span>Jugador consultado</span>
-                                  )}
-                                </div>
-                                <div className="analysis-player-kda">
-                                  <strong>
-                                    {[p.kills, p.deaths, p.assists].every(
-                                      (n) =>
-                                        typeof n === "number" &&
-                                        Number.isFinite(n) &&
-                                        n >= 0,
-                                    )
-                                      ? `${p.kills} / ${p.deaths} / ${p.assists}`
-                                      : "—"}
-                                  </strong>
-                                  <span>K / D / A</span>
-                                </div>
-                              </li>
-                            ))}
+                                  <div className="analysis-participant">
+                                    <strong>
+                                      {p.championName ||
+                                        "Campeón no disponible"}
+                                    </strong>
+                                    <PlayerProfileLink
+                                      gameName={p.gameName}
+                                      tagLine={p.tagLine}
+                                      platformRegion={platformRegion}
+                                      compact
+                                    />
+                                    {p.puuid && p.puuid === ownerPuuid && (
+                                      <span>Jugador consultado</span>
+                                    )}
+                                    {p.puuid &&
+                                      inline?.labels
+                                        .get(p.puuid)
+                                        ?.map((label) => (
+                                          <span
+                                            className="analysis-group-badge"
+                                            key={label}
+                                          >
+                                            {label} · coincidencias históricas
+                                          </span>
+                                        ))}
+                                    {!isOwner && history && (
+                                      <span className="analysis-inline-history">
+                                        {history.kind === "known"
+                                          ? `${history.pair.matchesTogether} ${history.pair.matchesTogether === 1 ? "partida" : "partidas"} contigo · ${history.pair.allyMatches} ${history.pair.allyMatches === 1 ? "aliado" : "aliados"} / ${history.pair.enemyMatches} ${history.pair.enemyMatches === 1 ? "rival" : "rivales"}${history.partial ? " · muestra parcial" : ""}`
+                                          : history.kind === "empty"
+                                            ? "Sin coincidencias contigo detectadas"
+                                            : history.kind === "partial"
+                                              ? "Información histórica incompleta"
+                                              : history.kind === "identity"
+                                                ? "Identidad insuficiente para comparar"
+                                                : "Historial no disponible"}
+                                      </span>
+                                    )}
+                                    {allies.length > 0 && (
+                                      <span className="analysis-inline-history">
+                                        Aliados anteriores: {allies.join(", ")}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="analysis-player-kda">
+                                    <strong>
+                                      {[p.kills, p.deaths, p.assists].every(
+                                        (n) =>
+                                          typeof n === "number" &&
+                                          Number.isFinite(n) &&
+                                          n >= 0,
+                                      )
+                                        ? `${p.kills} / ${p.deaths} / ${p.assists}`
+                                        : "—"}
+                                    </strong>
+                                    <span>K / D / A</span>
+                                  </div>
+                                </li>
+                              );
+                            })}
                           </ol>
                         ) : (
                           <p>No hay participantes disponibles.</p>

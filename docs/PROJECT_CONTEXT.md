@@ -2,6 +2,10 @@
 
 Última actualización: 2026-11-03
 
+## T04.6.4 — relaciones visibles en equipos
+
+Trabajo aislado `feature/t04-6-4-inline-relationships` desde `origin/main` `6b452208a3aa0ed9b8ea7a94fe51b7ca32cd50bb`. Las filas presentan grupos aportados por el contrato, coincidencias relativas al owner y aliados anteriores, conservando cobertura e identidades ambiguas. No modifica backend ni consultas Riot. Validación: 86 pruebas, lint, tipos, build, audit producción cero y Compose; Chromium con fixtures en cinco anchos sin overflow. Axe dejó contraste inconcluso, pendiente de revisión adicional. Detalle: [T04.6.4](T04_6_4_INLINE_RELATIONSHIPS.md) y [capturas](releases/t04-6-4-captures/README.md).
+
 ## T04.6 — integrada a main; RELEASE-06 pendiente de despliegue
 
 El PO autorizó integrar los PR #102, #103 y #104, pero **no autorizó el despliegue**. PR #102 (diseño) fue integrado mediante `97b1c20`; PR #103 (implementación) mediante `61bf116`. La implementación incluye resumen, equipos tintados azul/coral, owner dorado, relaciones históricas, grupos prudentes y cobertura. Compatible con API RELEASE-05; sin cambios en backend ni contratos. T04.6.2: Chromium con fixtures en 320/390/768/1024/1440, sin overflow; contraste focalizado texto mínimo 7.62:1 y foco 3.06:1, sin certificar WCAG integral. CI del HEAD de implementación aprobada, 81 pruebas frontend; auditoría de producción sin vulnerabilidades, con 16 moderadas y 1 alta en árbol completo de desarrollo. Capturas actuales: [T04.6.2](releases/t04-6-captures/t04-6.2/). El release aún requiere despliegue autorizado y smoke tests. Plan: [RELEASE-06](releases/ECHO_RELEASE_06_PLAN.md).

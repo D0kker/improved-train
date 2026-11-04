@@ -4,6 +4,13 @@
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
+## T04.6.4 — relaciones visibles en equipos
+
+- [x] Mostrar grupos del contrato y conteos de pareja relativos al owner con cobertura explícita.
+- [x] Validar 86 pruebas, lint, tipos, build, audit producción y Compose; capturas sintéticas sin overflow en cinco anchos.
+- [ ] Completar revisión de contraste que axe dejó inconclusa y aprobación visual del PO.
+- [ ] Revisar el PR contra main y completar la aprobación visual; no fusionar ni desplegar.
+
 ## T04.6 — análisis de partida
 
 - [x] Implementar y fusionar diseño #102 e implementación #103 a main (commits `97b1c20`, `61bf116`).
