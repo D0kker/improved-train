@@ -229,6 +229,24 @@ test("match analysis presents owner, teams, historical pairs, cautious groups an
   assert.ok(screen.getByText("Jugador consultado"));
   assert.ok(screen.getByRole("heading", { name: "Equipo azul" }));
   assert.ok(screen.getByRole("heading", { name: "Equipo rojo" }));
+  const blueTeam = screen.getByRole("region", { name: "Equipo azul" });
+  const redTeam = screen.getByRole("region", { name: "Equipo rojo" });
+  assert.equal(
+    within(blueTeam).getAllByText("Grupo A · coincidencias históricas").length,
+    2,
+  );
+  assert.ok(
+    within(blueTeam).getByText("4 partidas contigo · 3 aliados / 1 rival"),
+  );
+  assert.ok(
+    within(redTeam).getByText("2 partidas contigo · 0 aliados / 2 rivales"),
+  );
+  assert.ok(within(blueTeam).getByText("Aliados anteriores: Carla#TEST"));
+  assert.ok(within(redTeam).getByText("Aliados anteriores: Beto#TEST"));
+  assert.ok(
+    within(redTeam).getAllByText("Sin coincidencias contigo detectadas")
+      .length > 0,
+  );
   assert.match(
     screen
       .getByRole("link", { name: /Volver al perfil/ })
@@ -242,6 +260,22 @@ test("match analysis presents owner, teams, historical pairs, cautious groups an
   assert.equal(requests.length, 1);
   assert.match(requests[0].path, /LA1_FIXTURE\/analyze$/);
   assert.equal(requests[0].method, "POST");
+});
+
+test("inline history warns about incomplete coverage rather than claiming no encounters", async () => {
+  const data = fixture();
+  data.coverage.status = "partial";
+  globalThis.fetch = async () => Response.json(data);
+  render(<MatchDetailView {...props} />);
+  const team = await screen.findByRole("region", { name: "Equipo azul" });
+  assert.ok(within(team).getByText(/4 partidas contigo.*muestra parcial/));
+  assert.ok(
+    within(team).getAllByText("Información histórica incompleta").length > 0,
+  );
+  assert.equal(
+    within(team).queryByText("Sin coincidencias contigo detectadas"),
+    null,
+  );
 });
 
 test("partial roster and partial coverage remain explicit rather than inventing participants", async () => {
