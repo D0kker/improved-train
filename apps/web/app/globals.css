@@ -511,7 +511,7 @@ p {
 .locale-control select {
   min-height: 2.75rem;
   max-width: 9.5rem;
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--echo-text-subtle);
   border-radius: var(--radius-control, 0.65rem);
   padding: 0.4rem 0.65rem;
   background: var(--surface-raised, #101b2a);
