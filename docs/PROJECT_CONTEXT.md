@@ -1,10 +1,10 @@
 # Contexto vivo del proyecto
 
-Última actualización: 2026-11-01
+Última actualización: 2026-11-03
 
-## T04.6.3 — calidad cerrada, pendiente aprobación del PO
+## T04.6 — integrada a main; RELEASE-06 pendiente de despliegue
 
-PR #103 de T04.6 continúa abierto hacia `main`, HEAD `57835f14003007008975836cd74685a430eae0de`; CI #73 aprobó web, .NET y contenedores. Capturas sintéticas vigentes en cinco anchos confirman tintes azul/coral discretos, legibilidad y owner diferenciado; sin overflow ni errores. Cálculo focalizado de contraste pasa: mínimo texto 7.62:1 y foco 3.06:1. Axe deja `color-contrast` incomplete, así que no se afirma WCAG integral. `npm audit --omit=dev` aprobó con cero vulnerabilidades de producción tras un reintento al registry oficial; el árbol completo informó 16 moderate y 1 high. RELEASE-06 está `READY_FOR_PO_APPROVAL`; falta revisión visual del PO. No se modificó ni desplegó producción. Plan: [RELEASE-06](releases/ECHO_RELEASE_06_PLAN.md). Capturas: [índice T04.6.2](https://github.com/D0kker/improved-train/blob/feature/t04-6-match-analysis-implementation/docs/releases/t04-6-captures/README.md).
+El PO autorizó integrar los PR #102, #103 y #104, pero **no autorizó el despliegue**. PR #102 (diseño) fue integrado mediante `97b1c20`; PR #103 (implementación) mediante `61bf116`. La implementación incluye resumen, equipos tintados azul/coral, owner dorado, relaciones históricas, grupos prudentes y cobertura. Compatible con API RELEASE-05; sin cambios en backend ni contratos. T04.6.2: Chromium con fixtures en 320/390/768/1024/1440, sin overflow; contraste focalizado texto mínimo 7.62:1 y foco 3.06:1, sin certificar WCAG integral. CI del HEAD de implementación aprobada, 81 pruebas frontend; auditoría de producción sin vulnerabilidades, con 16 moderadas y 1 alta en árbol completo de desarrollo. Capturas actuales: [T04.6.2](releases/t04-6-captures/t04-6.2/). El release aún requiere despliegue autorizado y smoke tests. Plan: [RELEASE-06](releases/ECHO_RELEASE_06_PLAN.md).
 
 ## T04.11 — refinamiento UX y clasificación (rama de revisión)
 

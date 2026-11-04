@@ -1,19 +1,20 @@
 # Roadmap
 
-Última actualización: 2026-11-01
+Última actualización: 2026-11-03
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
 
 ## T04.6 — análisis de partida
 
-- [x] Implementar las cinco secciones con relaciones de backend, cobertura y navegación existentes.
-- [x] Validar con Chromium/fixtures el tinte de equipos del candidato `b331627` a 320/390/768/1024/1440, estados parciales/insuficientes/error y pruebas DOM; capturas vigentes en [índice T04.6.2](https://github.com/D0kker/improved-train/blob/feature/t04-6-match-analysis-implementation/docs/releases/t04-6-captures/README.md).
-- [x] Ajustar el fondo de equipos en `b331627` con tinte azul/coral tenue y mantener independiente el resaltado dorado del owner; no cambia estructura ni lógica.
-- [x] CI #73 aprobó frontend, .NET y contenedores para el HEAD final `57835f1`.
-- [x] Auditoría focalizada de contraste para gradientes, resaltado owner, texto, estadísticas, estados, controles y foco: umbrales revisados pasan. axe conserva `color-contrast` incompleto; no se declara WCAG integral.
-- [x] `npm audit --omit=dev`: cero vulnerabilidades de producción. La instalación informa 16 moderate y 1 high en el árbol completo.
-- [ ] Revisión visual final del PO y evaluación asistiva integral.
-- [ ] Autorizar merge y despliegue en una tarea posterior; no comenzar T04.7 antes del cierre.
+- [x] Implementar y fusionar diseño #102 e implementación #103 a main (commits `97b1c20`, `61bf116`).
+- [x] Validar Chromium/fixtures 320/390/768/1024/1440, estados parciales/error, sin overflow; [capturas T04.6.2](releases/t04-6-captures/t04-6.2/).
+- [x] Tinte azul/coral tenue por equipo y owner dorado independiente.
+- [x] CI #73 aprobada en HEAD `57835f1`; 81 pruebas frontend, lint, TypeScript, build y Compose.
+- [x] Contraste focalizado mínimo texto 7.62:1, foco 3.06:1; axe dejó color-contrast incompleto, sin certificar WCAG integral.
+- [x] `npm audit --omit=dev`: 0 vulnerabilidades de producción; árbol total reportó 16 moderate y 1 high.
+- [ ] Evaluación asistiva integral y aceptación visual final de la interfaz en producción.
+- [ ] RELEASE-06: despliegue web autorizado por separado, smoke tests y comprobación de rollback; API y Redis no se modifican.
+- [ ] Comenzar T04.7 después del cierre de RELEASE-06.
 
 ## T04.11 — UX y rango competitivo
 

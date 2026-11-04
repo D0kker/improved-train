@@ -1,3 +1,5 @@
+> **Actualización de integración (2026-11-03):** El PO autorizó exclusivamente fusionar PR #102, #103 y #104, no desplegar. PR #102 se integró en `97b1c20`, PR #103 en `61bf116`. La web de producción continúa en RELEASE-05 hasta nueva autorización. Las referencias a PR abiertos y al estado `READY_FOR_PO_APPROVAL` que aparecen más abajo describen la preparación previa a estos merges, no el estado actual. Las capturas en `t04-6-validation-captures/` son históricas anteriores al tinte; las capturas vigentes están en `t04-6-captures/t04-6.2/`.
+
 # RELEASE-06 — Plan de validación y despliegue candidato
 
 **Estado:** `READY_FOR_PO_APPROVAL`
