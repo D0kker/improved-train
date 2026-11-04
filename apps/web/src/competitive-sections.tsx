@@ -15,25 +15,24 @@ import {
   type DashboardWindow,
 } from "./competitive-dashboard";
 import { CoverageSummary } from "./coverage-summary";
-const number = (n: number | null) =>
-  n === null ? "—" : n.toLocaleString("es-PA", { maximumFractionDigits: 2 });
+import { useLocale, useTranslations } from "next-intl";
+const number = (n: number | null, locale: string) =>
+  n === null ? "—" : n.toLocaleString(locale, { maximumFractionDigits: 2 });
 export function CompetitivePerformance({
   windows,
 }: {
   windows: DashboardWindow[];
 }) {
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
   const stats = performance(loadedMatches(windows)),
     status = coverageStatus(windows);
   return (
     <section aria-labelledby="performance-title">
-      <SectionHeader
-        title="Rendimiento competitivo"
-        titleId="performance-title"
-      />
+      <SectionHeader title={t("performance")} titleId="performance-title" />
       {status !== "complete" && (
         <p className="warning-banner" role="status">
-          Los datos disponibles pueden no representar toda la muestra
-          solicitada.
+          {t("sampleMayBeIncomplete")}
         </p>
       )}
       <div className="competitive-performance">
@@ -41,7 +40,7 @@ export function CompetitivePerformance({
           <svg
             viewBox="0 0 120 120"
             role="img"
-            aria-label={`Win rate: ${stats.rate === null ? "sin resultados clasificables" : number(stats.rate) + "%"}; ${stats.wins} victorias y ${stats.losses} derrotas`}
+            aria-label={`${t("winRate")}: ${stats.rate === null ? t("noValidPerformance") : number(stats.rate, locale) + "%"}; ${stats.wins} ${t("wins")}; ${stats.losses} ${t("losses")}`}
           >
             <circle cx="60" cy="60" r="48" className="ring-track" />
             <circle
@@ -54,43 +53,42 @@ export function CompetitivePerformance({
               transform="rotate(-90 60 60)"
             />
             <text x="60" y="62" textAnchor="middle">
-              {stats.rate === null ? "—" : number(stats.rate) + "%"}
+              {stats.rate === null ? "—" : number(stats.rate, locale) + "%"}
             </text>
           </svg>
           <div className="competitive-ring-copy">
-            <strong>Win rate</strong>
+            <strong>{t("winRate")}</strong>
             <p>
-              {stats.wins} victorias · {stats.losses} derrotas
+              {stats.wins} {t("wins")} · {stats.losses} {t("losses")}
             </p>
             {stats.count > stats.wins + stats.losses && (
               <p>
-                Resultados sin clasificar:{" "}
-                {stats.count - stats.wins - stats.losses}
+                {t("unclassified")}: {stats.count - stats.wins - stats.losses}
               </p>
             )}
           </div>
         </Card>
         <div className="competitive-metrics competitive-performance-metrics">
           {[
-            ["Partidas analizadas", stats.count],
-            ["Victorias", stats.wins],
-            ["Derrotas", stats.losses],
-            ["KDA promedio", stats.kda],
-            ["Asesinatos promedio", stats.kills],
-            ["Muertes promedio", stats.deaths],
-            ["Asistencias promedio", stats.assists],
+            [t("analyzed"), stats.count],
+            [t("wins"), stats.wins],
+            [t("losses"), stats.losses],
+            [t("averageKda"), stats.kda],
+            [t("averageKills"), stats.kills],
+            [t("averageDeaths"), stats.deaths],
+            [t("averageAssists"), stats.assists],
           ].map(([label, value]) => (
             <StatCard
               key={String(label)}
               label={String(label)}
-              value={number(value as number | null)}
+              value={number(value as number | null, locale)}
             />
           ))}
         </div>
       </div>
       <header className="competitive-subsection">
-        <h3>Campeones más jugados</h3>
-        <p>Según las partidas cargadas</p>
+        <h3>{t("champions")}</h3>
+        <p>{t("basedOnLoaded")}</p>
       </header>
       <div className="competitive-champions">
         {stats.champions.map((c) => (
@@ -99,17 +97,21 @@ export function CompetitivePerformance({
             <div className="competitive-champion-copy">
               <h4>{c.name}</h4>
               <p>
-                {c.count} partidas · {c.wins} V / {c.losses} D
+                {t("championSummary", {
+                  count: c.count,
+                  wins: c.wins,
+                  losses: c.losses,
+                })}
               </p>
               <p>
-                Win rate: {number(c.rate)}
+                {t("winRate")}: {number(c.rate, locale)}
                 {c.rate !== null ? "%" : ""}
               </p>
             </div>
           </Card>
         ))}
       </div>
-      {!stats.count && <p>Sin partidas válidas para calcular rendimiento.</p>}
+      {!stats.count && <p>{t("noValidPerformance")}</p>}
     </section>
   );
 }
@@ -122,6 +124,8 @@ export function CompetitiveRelationships({
   owner: string;
   region?: string;
 }) {
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
   const [expanded, setExpanded] = useState(false),
     stats = relationships(windows, owner);
   const matches = new Map(
@@ -147,29 +151,22 @@ export function CompetitiveRelationships({
   ];
   return (
     <section aria-labelledby="relationships-title">
-      <SectionHeader
-        title="Relaciones entre jugadores"
-        titleId="relationships-title"
-      />
-      <p className="recurrent-explanation">
-        La recurrencia no confirma que los jugadores sean premades.
-      </p>
+      <SectionHeader title={t("relationships")} titleId="relationships-title" />
+      <p className="recurrent-explanation">{t("recurrenceDisclaimer")}</p>
       {stats && stats.incompleteMatches > 0 && (
         <p className="warning-banner">
-          {stats.incompleteMatches} partidas sin evidencia completa de
-          participantes. Se cuentan solo coincidencias identificables; algunos
-          equipos o encuentros no están disponibles.
+          {t("incompleteParticipants", { count: stats.incompleteMatches })}
         </p>
       )}
       {stats ? (
         <>
           <div className="competitive-metrics">
             {[
-              ["Jugadores únicos", stats.unique],
-              ["Jugadores recurrentes", stats.repeated],
-              ["Participaciones totales", stats.participations],
-              ["Aliados únicos", stats.allies],
-              ["Rivales únicos", stats.enemies],
+              [t("uniquePlayers"), stats.unique],
+              [t("recurring"), stats.repeated],
+              [t("participations"), stats.participations],
+              [t("uniqueAllies"), stats.allies],
+              [t("uniqueRivals"), stats.enemies],
             ].map(([label, value]) => (
               <StatCard
                 key={String(label)}
@@ -178,7 +175,7 @@ export function CompetitiveRelationships({
               />
             ))}
           </div>
-          <h3>Jugadores recurrentes</h3>
+          <h3>{t("recurring")}</h3>
           <ul className="competitive-recurrent">
             {stats.players.slice(0, expanded ? undefined : 5).map((p) => (
               <li key={p.puuid} className="recurrent-player">
@@ -197,20 +194,20 @@ export function CompetitiveRelationships({
                         </Link>
                       ) : (
                         <>
-                          {p.name || "Identidad no disponible"}
+                          {p.name || t("noIdentity")}
                           {p.tag ? <span>#{p.tag}</span> : null}
                         </>
                       )}
                     </strong>
                     {region && regions.includes(region.toLowerCase()) ? (
-                      <small>{platformRegionName(region)}</small>
+                      <small>{platformRegionName(region, locale)}</small>
                     ) : null}
                   </div>
                   <dl className="recurrent-mini-stats">
                     {[
-                      ["Compartidas", p.total],
-                      ["Aliados", p.ally],
-                      ["Rivales", p.enemy],
+                      [t("shared"), p.total],
+                      [t("allies"), p.ally],
+                      [t("rivals"), p.enemy],
                     ].map(([label, value]) => (
                       <div key={label}>
                         <dt>{label}</dt>
@@ -222,10 +219,10 @@ export function CompetitiveRelationships({
                 {p.sharedMatches.length > 0 ? (
                   <details className="recurrent-shared">
                     <summary>
-                      Ver partidas ({p.sharedMatches.length})
+                      {t("viewMatches", { count: p.sharedMatches.length })}
                       <span className="sr-only">
                         {" "}
-                        de {p.name || "jugador sin identidad"}
+                        {t("ofPlayer", { name: p.name || t("noIdentity") })}
                         {p.tag ? `#${p.tag}` : ""}
                       </span>
                     </summary>
@@ -236,13 +233,16 @@ export function CompetitiveRelationships({
                           <li key={m.id}>
                             <div>
                               <strong>
-                                Partida {index + 1}
-                                {match ? ` · ${queueLabel(match.queueId)}` : ""}
+                                {t("matchNumber", { number: index + 1 })}
+                                {match
+                                  ? ` · ${queueLabel(match.queueId, locale)}`
+                                  : ""}
                               </strong>
                               {match ? (
                                 <small>
                                   {formatDashboardDate(
                                     match.gameStartTimestamp,
+                                    locale,
                                   )}
                                 </small>
                               ) : null}
@@ -251,20 +251,23 @@ export function CompetitiveRelationships({
                               className={`shared-side shared-side--${m.side}`}
                             >
                               {m.side === "ally"
-                                ? "Aliados"
+                                ? t("allies")
                                 : m.side === "enemy"
-                                  ? "Rivales"
-                                  : "Equipo no disponible"}
+                                  ? t("rivals")
+                                  : t("teamUnavailable")}
                             </span>
                             {regions.includes(m.platform.toLowerCase()) ? (
                               <Link
                                 href={matchDetailPath(m.id, owner, m.platform)}
-                                aria-label={`Analizar partida compartida ${index + 1} con ${p.name || "jugador sin identidad"}${p.tag ? `#${p.tag}` : ""}`}
+                                aria-label={t("analyzeSharedMatch", {
+                                  number: index + 1,
+                                  player: `${p.name || t("noIdentity")}${p.tag ? `#${p.tag}` : ""}`,
+                                })}
                               >
-                                Analizar <span aria-hidden="true">→</span>
+                                {t("analyze")} <span aria-hidden="true">→</span>
                               </Link>
                             ) : (
-                              <span>Análisis no disponible</span>
+                              <span>{t("analysisUnavailable")}</span>
                             )}
                           </li>
                         );
@@ -272,34 +275,24 @@ export function CompetitiveRelationships({
                     </ul>
                   </details>
                 ) : (
-                  <p className="recurrent-no-evidence">
-                    Partidas compartidas no disponibles
-                  </p>
+                  <p className="recurrent-no-evidence">{t("noEvidence")}</p>
                 )}
               </li>
             ))}
           </ul>
-          {!stats.players.length && (
-            <p>
-              No se observaron jugadores recurrentes en la muestra recuperada.
-            </p>
-          )}
+          {!stats.players.length && <p>{t("noRecurring")}</p>}
           {stats.players.length > 5 && (
             <Button
               variant="secondary"
               aria-expanded={expanded}
               onClick={() => setExpanded(!expanded)}
             >
-              {expanded ? "Ver menos" : "Ver más"}
+              {expanded ? t("less") : t("more")}
             </Button>
           )}
         </>
       ) : (
-        <p className="warning-banner">
-          Las ventanas contienen solapamientos o detalles sin asociación
-          suficiente. El contrato no permite deduplicar sus relaciones con
-          exactitud; los conteos acumulados no están disponibles.
-        </p>
+        <p className="warning-banner">{t("relationshipCoverageUnavailable")}</p>
       )}
     </section>
   );
@@ -309,39 +302,26 @@ export function CompetitiveCoverage({
 }: {
   windows: DashboardWindow[];
 }) {
+  const t = useTranslations("dashboard");
   return (
     <section aria-labelledby="transparency-title">
-      <SectionHeader
-        title="Cobertura y transparencia"
-        titleId="transparency-title"
-      />
+      <SectionHeader title={t("coverage")} titleId="transparency-title" />
       <p>
-        {loadedMatches(windows).length} partidas válidas únicas utilizadas en
-        estadísticas · {windows.length} ventanas consultadas.
+        {t("coverageLoadedSummary", {
+          matches: loadedMatches(windows).length,
+          windows: windows.length,
+        })}
       </p>
-      <p>
-        El rendimiento utiliza todas las partidas válidas cargadas; los filtros
-        solo cambian el historial. La ventana recuperada no equivale al
-        historial completo del jugador y depende de los datos disponibles de
-        Riot.
-      </p>
-      <p>
-        Una persona puede aparecer como aliado y rival; esos conjuntos no se
-        suman. Las partidas compartidas se muestran cuando existe evidencia por
-        partida; respuestas antiguas solo permiten conteos agregados.
-      </p>
-      <p>
-        Los contadores de cada ventana no son sumas de partidas únicas: pueden
-        incluir solapamientos. Los reintentos sustituyen el reporte de su
-        ventana.
-      </p>
+      <p>{t("coverageScope")}</p>
+      <p>{t("relationshipScope")}</p>
+      <p>{t("windowScope")}</p>
       <details>
-        <summary>Consultar detalle de cobertura</summary>
+        <summary>{t("coverageDetails")}</summary>
         {windows.map((w) => (
           <CoverageSummary
             key={w.start}
             coverage={w.result.coverage}
-            title={`Ventana ${w.start + 1}–${w.start + 5}`}
+            title={t("windowNumber", { start: w.start + 1, end: w.start + 5 })}
           />
         ))}
       </details>

@@ -31,6 +31,7 @@ const compareOrdinal = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 export function presentMatchRelations(
   relationships: readonly Relationship[],
   teams: readonly MatchTeam[],
+  unidentified = "Jugador no identificado",
 ): MatchRelationView[] {
   const participants = new Map<
     string,
@@ -48,7 +49,7 @@ export function presentMatchRelations(
 
   const identity = (puuid: string): MatchRelationIdentity => {
     const record = participants.get(puuid);
-    if (!record) return { label: "Jugador no identificado" };
+    if (!record) return { label: unidentified };
     const gameName = record.participant.gameName?.trim() || undefined;
     const tagLine = record.participant.tagLine?.trim() || undefined;
     return {
@@ -56,7 +57,7 @@ export function presentMatchRelations(
         ? tagLine
           ? `${gameName}#${tagLine}`
           : gameName
-        : "Jugador no identificado",
+        : unidentified,
       gameName,
       tagLine,
       championName: record.participant.championName?.trim() || undefined,

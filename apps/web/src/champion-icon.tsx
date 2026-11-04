@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { championIconPath } from "./data-dragon";
+import { useTranslations } from "next-intl";
 
 export function ChampionIcon({
   championId,
@@ -14,6 +15,7 @@ export function ChampionIcon({
   championName: string;
   size?: 40 | 64 | 72 | 80;
 }) {
+  const t = useTranslations("common");
   const [failed, setFailed] = useState(false);
   const source = championIconPath(championId);
 
@@ -31,7 +33,7 @@ export function ChampionIcon({
 
   return (
     <Image
-      alt={`Ícono de ${championName}`}
+      alt={`${t("iconOf")} ${championName}`}
       className="champion-icon"
       height={size}
       onError={() => setFailed(true)}

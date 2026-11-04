@@ -1,7 +1,8 @@
 import "./dom-environment.ts";
 import assert from "node:assert/strict";
 import { test, afterEach } from "node:test";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { screen, fireEvent, cleanup } from "@testing-library/react";
+import { renderWithIntl as render } from "./render-with-intl.tsx";
 import { ChampionIcon } from "../src/champion-icon.tsx";
 import { ProfileIcon } from "../src/profile-icon.tsx";
 import { profileIconPath, profileIconUrl } from "../src/data-dragon.ts";

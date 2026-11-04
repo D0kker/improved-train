@@ -2,13 +2,8 @@ import "./dom-environment.ts";
 
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import {
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { renderWithIntl as render } from "./render-with-intl.tsx";
 import userEvent from "@testing-library/user-event";
 import { RiotIdSearchForm } from "../src/riot-id-search-form.tsx";
 import { HomeContent } from "../app/home-content.tsx";

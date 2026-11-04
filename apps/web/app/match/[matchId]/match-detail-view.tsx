@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ApiError,
   apiPath,
   fetchJson,
   analyzeSelectedMatch,
@@ -13,16 +12,17 @@ import {
 } from "@/src/api";
 import { formatDuration, queueLabel } from "@/src/format";
 import { formatDashboardDate } from "@/src/dashboard-presentation";
-import { coverageTitle, coverageDescription } from "@/src/coverage";
 import { CoverageSummary } from "@/src/coverage-summary";
 import { ChampionIcon } from "@/src/champion-icon";
 import { PlayerProfileLink } from "@/src/player-profile-link";
 import { SiteHeader } from "@/src/site-header";
 import { Button, Card } from "@/src/design-system";
 import { platformRegionName } from "@/src/platform-region";
-import { familiarityMessage } from "@/src/echo";
 import { useRequestLifetime } from "@/src/use-request-lifetime";
 import { presentMatchRelations } from "@/src/match-relations";
+import { useLocale, useTranslations } from "next-intl";
+import { apiErrorMessageKey } from "@/src/i18n/errors";
+import { inlineMatchRelations } from "@/src/inline-match-relations";
 
 type MatchDetailProps = {
   matchId: string;
@@ -53,6 +53,11 @@ function MatchDetailContent({
   platformRegion?: string;
   returnProfile?: { gameName: string; tagLine: string };
 }) {
+  const t = useTranslations("match");
+  const common = useTranslations("common");
+  const coverageText = useTranslations("coverage");
+  const errorT = useTranslations("errors");
+  const locale = useLocale();
   const beginRequest = useRequestLifetime();
   const [match, setMatch] = useState<MatchDetail | null>(null);
   const [coverage, setCoverage] = useState<AnalysisCoverage | null>(null);
@@ -99,16 +104,13 @@ function MatchDetailContent({
       } catch (requestError) {
         if (signal.aborted) return;
         setIsStale(hasPreviousMatch.current);
-        setError(
-          requestError instanceof ApiError
-            ? requestError.message
-            : "No se pudo cargar la partida. Comprueba la conexión e inténtalo de nuevo.",
-        );
+        const errorKey = apiErrorMessageKey(requestError, "match");
+        setError(errorKey ? errorT(errorKey) : t("noMatch"));
       } finally {
         if (!signal.aborted) setIsLoading(false);
       }
     },
-    [matchId, ownerPuuid, platformRegion, beginRequest],
+    [matchId, ownerPuuid, platformRegion, beginRequest, t, errorT],
   );
   useEffect(() => {
     let current = true;
@@ -135,8 +137,54 @@ function MatchDetailContent({
       : null;
   const pairs =
     match && relationships
-      ? presentMatchRelations(relationships, match.teams)
+      ? presentMatchRelations(
+          relationships,
+          match.teams,
+          common("unidentifiedPlayer"),
+        )
       : [];
+  const familiarityCopy = (() => {
+    const familiarity = match?.familiarity;
+    if (!familiarity || !coverage) return "";
+    if (coverage.status === "error") return t("familiarityError");
+    if (coverage.status === "partial")
+      return t("familiarityPartial", {
+        count: familiarity.knownPlayers,
+        evaluable: familiarity.evaluablePlayers,
+      });
+    if (coverage.status === "insufficient") return t("familiarityInsufficient");
+    switch (familiarity.status) {
+      case "Available":
+        return familiarity.knownPlayers > 0
+          ? t("familiarityAvailable", {
+              count: familiarity.knownPlayers,
+              evaluable: familiarity.evaluablePlayers,
+            })
+          : t("familiarityNone", { evaluable: familiarity.evaluablePlayers });
+      case "NoPriorHistory":
+        return t("familiarityNoPrior");
+      case "NoEvaluableParticipants":
+        return t("familiarityNoParticipants");
+      case "OwnerNotPresent":
+        return t("familiarityOwnerMissing");
+      case "PartialParticipants":
+        return t("familiarityPartialParticipants", {
+          count: familiarity.knownPlayers,
+          evaluable: familiarity.evaluablePlayers,
+        });
+      case "PartialHistory":
+        return t("familiarityPartialHistory", {
+          count: familiarity.knownPlayers,
+        });
+      case "InsufficientHistory":
+        return t("familiarityInsufficient");
+      case "AnalysisError":
+        return t("familiarityError");
+    }
+  })();
+  const inline = match
+    ? inlineMatchRelations(match, relationships, coverage, ownerPuuid)
+    : null;
   return (
     <main className="dashboard-shell" id="main-content" tabIndex={-1}>
       <SiteHeader />
@@ -149,18 +197,14 @@ function MatchDetailContent({
               : "/"
           }
         >
-          {returnProfile ? "← Volver al perfil" : "← Volver a la búsqueda"}
+          {returnProfile ? common("backProfile") : common("backSearch")}
         </Link>
         {isLoading && !match && (
           <section className="loading-panel" role="status">
             <span className="spinner" aria-hidden="true" />
             <div>
-              <h1>
-                {ownerPuuid
-                  ? "Analizando partida e historial anterior…"
-                  : "Cargando participantes…"}
-              </h1>
-              <p>La consulta puede tardar unos momentos.</p>
+              <h1>{ownerPuuid ? t("analyzing") : t("participantsLoading")}</h1>
+              <p>{t("mayTake")}</p>
             </div>
           </section>
         )}
@@ -168,18 +212,14 @@ function MatchDetailContent({
           <section className="message-panel error-panel" role="alert">
             <div>
               {match ? <h2>{error}</h2> : <h1>{error}</h1>}
-              <p>
-                {match && isStale
-                  ? "Se conserva el resultado de la consulta anterior."
-                  : "Puedes volver al perfil o a la búsqueda e intentarlo de nuevo."}
-              </p>
+              <p>{match && isStale ? t("previousResult") : t("tryAgain")}</p>
             </div>
             <Button
               variant="secondary"
               onClick={() => void load()}
               disabled={isLoading}
             >
-              Reintentar
+              {common("retry")}
             </Button>
           </section>
         )}
@@ -187,12 +227,12 @@ function MatchDetailContent({
           <>
             {isLoading && (
               <p role="status" className="warning-banner">
-                Actualizando el análisis…
+                {t("updating")}
               </p>
             )}
             {isStale && (
               <p className="warning-banner" role="status">
-                Se conserva la información de la consulta anterior.
+                {t("previousResult")}
               </p>
             )}
             <section
@@ -201,26 +241,23 @@ function MatchDetailContent({
             >
               <header className="analysis-section-heading">
                 <div>
-                  <p className="eyebrow">Análisis de partida</p>
-                  <h1 id="match-summary-title">Resumen de partida</h1>
+                  <p className="eyebrow">{t("analysis")}</p>
+                  <h1 id="match-summary-title">{t("summary")}</h1>
                 </div>
                 {coverage ? (
                   <a
                     className={`analysis-coverage analysis-coverage--${coverage.status}`}
                     href="#match-coverage"
                   >
-                    {coverageTitle(coverage.status)}
+                    {coverageText(coverage.status)}
                   </a>
                 ) : (
-                  <span className="analysis-coverage">
-                    Análisis histórico no solicitado
-                  </span>
+                  <span className="analysis-coverage">{t("notRequested")}</span>
                 )}
               </header>
               {coverage && coverage.status !== "complete" && (
                 <p role="status" className="warning-banner">
-                  {coverageDescription(coverage.status)} Las coincidencias
-                  disponibles pueden estar incompletas.
+                  {coverageText(coverage.status)}. {t("partialWarning")}
                 </p>
               )}
               <Card className="analysis-match-summary">
@@ -229,15 +266,15 @@ function MatchDetailContent({
                     <ChampionIcon
                       championId={owner.championId}
                       championName={
-                        owner.championName || "Campeón no disponible"
+                        owner.championName || t("championUnavailable")
                       }
                     />
                   )}
                   <div>
                     <strong>
                       {owner
-                        ? owner.championName || "Campeón no disponible"
-                        : "Jugador consultado no disponible"}
+                        ? owner.championName || t("championUnavailable")
+                        : t("ownerUnavailable")}
                     </strong>
                     {owner && (
                       <PlayerProfileLink
@@ -249,10 +286,10 @@ function MatchDetailContent({
                     )}
                     <span>
                       {owner?.win === true
-                        ? "Victoria"
+                        ? common("victory")
                         : owner?.win === false
-                          ? "Derrota"
-                          : "Resultado no disponible"}
+                          ? common("defeat")
+                          : common("resultUnavailable")}
                     </span>
                   </div>
                 </div>
@@ -270,20 +307,20 @@ function MatchDetailContent({
                     <strong>{kda ?? "—"}</strong>
                   </div>
                   <div>
-                    <span>Duración</span>
+                    <span>{t("duration")}</span>
                     <strong>
                       {typeof match.gameDurationSeconds === "number" &&
                       Number.isFinite(match.gameDurationSeconds)
-                        ? formatDuration(match.gameDurationSeconds)
+                        ? formatDuration(match.gameDurationSeconds, locale)
                         : "—"}
                     </strong>
                   </div>
                 </div>
                 <p>
-                  {queueLabel(match.queueId)} ·{" "}
-                  {formatDashboardDate(match.gameStartTimestamp)}
+                  {queueLabel(match.queueId, locale)} ·{" "}
+                  {formatDashboardDate(match.gameStartTimestamp, locale)}
                   {platformRegion
-                    ? ` · ${platformRegionName(platformRegion)}`
+                    ? ` · ${platformRegionName(platformRegion, locale)}`
                     : ""}
                 </p>
               </Card>
@@ -291,8 +328,8 @@ function MatchDetailContent({
             <section aria-labelledby="match-teams-title">
               <header className="analysis-section-heading">
                 <div>
-                  <p className="eyebrow">Participantes</p>
-                  <h2 id="match-teams-title">Equipos y participantes</h2>
+                  <p className="eyebrow">{t("participants")}</p>
+                  <h2 id="match-teams-title">{t("teams")}</h2>
                 </div>
               </header>
               {match.teams.length ? (
@@ -305,122 +342,163 @@ function MatchDetailContent({
                       outcomes.size === 1 &&
                       team.participants.every((p) => typeof p.win === "boolean")
                         ? outcomes.has(true)
-                          ? "Victoria"
-                          : "Derrota"
-                        : "Resultado no disponible";
+                          ? common("victory")
+                          : common("defeat")
+                        : common("resultUnavailable");
                     return (
                       <section
                         className={`analysis-team analysis-team--${team.teamId === 100 ? "blue" : team.teamId === 200 ? "red" : "neutral"}`}
                         key={team.teamId}
                         aria-label={
                           team.teamId === 100
-                            ? "Equipo azul"
+                            ? common("blueTeam")
                             : team.teamId === 200
-                              ? "Equipo rojo"
-                              : `Equipo ${index + 1}`
+                              ? common("redTeam")
+                              : `${t("team")} ${index + 1}`
                         }
                       >
                         <header>
                           <h3>
                             {team.teamId === 100
-                              ? "Equipo azul"
+                              ? common("blueTeam")
                               : team.teamId === 200
-                                ? "Equipo rojo"
-                                : `Equipo ${index + 1}`}
+                                ? common("redTeam")
+                                : `${t("team")} ${index + 1}`}
                           </h3>
                           <span>{result}</span>
                         </header>
                         {team.participants.length ? (
                           <ol>
-                            {team.participants.map((p, i) => (
-                              <li
-                                key={p.puuid || `${p.championId}-${i}`}
-                                className={
-                                  p.puuid && p.puuid === ownerPuuid
-                                    ? "analysis-owner-row"
-                                    : undefined
-                                }
-                              >
-                                <ChampionIcon
-                                  championId={p.championId}
-                                  championName={
-                                    p.championName || "Campeón no disponible"
+                            {team.participants.map((p, i) => {
+                              const history = inline?.history(p.puuid);
+                              const allies = inline?.priorAllies(p.puuid) ?? [];
+                              const isOwner =
+                                !!p.puuid && p.puuid === ownerPuuid;
+                              return (
+                                <li
+                                  key={p.puuid || `${p.championId}-${i}`}
+                                  className={
+                                    p.puuid && p.puuid === ownerPuuid
+                                      ? "analysis-owner-row"
+                                      : undefined
                                   }
-                                />
-                                <div className="analysis-participant">
-                                  <strong>
-                                    {p.championName || "Campeón no disponible"}
-                                  </strong>
-                                  <PlayerProfileLink
-                                    gameName={p.gameName}
-                                    tagLine={p.tagLine}
-                                    platformRegion={platformRegion}
-                                    compact
+                                >
+                                  <ChampionIcon
+                                    championId={p.championId}
+                                    championName={
+                                      p.championName || t("championUnavailable")
+                                    }
                                   />
-                                  {p.puuid && p.puuid === ownerPuuid && (
-                                    <span>Jugador consultado</span>
-                                  )}
-                                </div>
-                                <div className="analysis-player-kda">
-                                  <strong>
-                                    {[p.kills, p.deaths, p.assists].every(
-                                      (n) =>
-                                        typeof n === "number" &&
-                                        Number.isFinite(n) &&
-                                        n >= 0,
-                                    )
-                                      ? `${p.kills} / ${p.deaths} / ${p.assists}`
-                                      : "—"}
-                                  </strong>
-                                  <span>K / D / A</span>
-                                </div>
-                              </li>
-                            ))}
+                                  <div className="analysis-participant">
+                                    <strong>
+                                      {p.championName ||
+                                        t("championUnavailable")}
+                                    </strong>
+                                    <PlayerProfileLink
+                                      gameName={p.gameName}
+                                      tagLine={p.tagLine}
+                                      platformRegion={platformRegion}
+                                      compact
+                                    />
+                                    {p.puuid && p.puuid === ownerPuuid && (
+                                      <span>{common("observedPlayer")}</span>
+                                    )}
+                                    {p.puuid &&
+                                      inline?.labels
+                                        .get(p.puuid)
+                                        ?.map((label) => (
+                                          <span
+                                            className="analysis-group-badge"
+                                            key={label}
+                                          >
+                                            {t("inlineGroup", { label })}
+                                          </span>
+                                        ))}
+                                    {!isOwner && history && (
+                                      <span className="analysis-inline-history">
+                                        {history.kind === "known"
+                                          ? `${t("inlineHistory", { count: history.pair.matchesTogether, allies: history.pair.allyMatches, rivals: history.pair.enemyMatches })}${history.partial ? ` · ${t("inlinePartial")}` : ""}`
+                                          : history.kind === "empty"
+                                            ? t("inlineEmpty")
+                                            : history.kind === "partial"
+                                              ? t("inlineIncomplete")
+                                              : history.kind === "identity"
+                                                ? t("inlineIdentity")
+                                                : t("inlineUnavailable")}
+                                      </span>
+                                    )}
+                                    {allies.length > 0 && (
+                                      <span className="analysis-inline-history">
+                                        {t("inlineAllies")}:{" "}
+                                        {allies
+                                          .map(
+                                            (name) =>
+                                              name ??
+                                              common("unidentifiedPlayer"),
+                                          )
+                                          .join(", ")}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="analysis-player-kda">
+                                    <strong>
+                                      {[p.kills, p.deaths, p.assists].every(
+                                        (n) =>
+                                          typeof n === "number" &&
+                                          Number.isFinite(n) &&
+                                          n >= 0,
+                                      )
+                                        ? `${p.kills} / ${p.deaths} / ${p.assists}`
+                                        : "—"}
+                                    </strong>
+                                    <span>K / D / A</span>
+                                  </div>
+                                </li>
+                              );
+                            })}
                           </ol>
                         ) : (
-                          <p>No hay participantes disponibles.</p>
+                          <p>{t("noParticipants")}</p>
                         )}
                       </section>
                     );
                   })}
                 </div>
               ) : (
-                <p>No hay equipos disponibles.</p>
+                <p>{t("noTeams")}</p>
               )}
             </section>
             <section aria-labelledby="match-relationships-title">
               <header className="analysis-section-heading">
                 <div>
-                  <p className="eyebrow">Evidencia anterior</p>
-                  <h2 id="match-relationships-title">Relaciones históricas</h2>
+                  <p className="eyebrow">{t("historicalEvidence")}</p>
+                  <h2 id="match-relationships-title">
+                    {t("historicalRelations")}
+                  </h2>
                 </div>
               </header>
-              <p>
-                Coincidencias en las partidas anteriores disponibles; no
-                representan todo el historial.
-              </p>
+              <p>{t("previousMatchesNote")}</p>
               {match.familiarity && coverage && (
                 <p>
-                  {familiarityMessage(match.familiarity, coverage.status)}
+                  {familiarityCopy}
                   {coverage.status === "complete" &&
                   match.familiarity.status === "Available"
-                    ? ` Familiaridad: ${match.familiarity.familiarityPercentage}%.`
+                    ? ` ${t("familiarityPercent", { value: match.familiarity.familiarityPercentage })}`
                     : ""}
                 </p>
               )}
               {coverage && coverage.status !== "complete" && (
                 <p className="warning-banner" role="status">
-                  La información es incompleta; la ausencia de coincidencias no
-                  es concluyente.
+                  {t("incompleteWarning")}
                 </p>
               )}
               {relationships === null ? (
-                <p>No hay análisis histórico disponible para esta partida.</p>
+                <p>{t("noAnalysis")}</p>
               ) : pairs.length === 0 ? (
                 <p>
                   {coverage?.status === "complete"
-                    ? "No se encontraron coincidencias en las partidas disponibles."
-                    : "No hay información suficiente para confirmar coincidencias."}
+                    ? t("noMatchesFound")
+                    : t("insufficient")}
                 </p>
               ) : (
                 <ul className="analysis-relationships">
@@ -433,15 +511,15 @@ function MatchDetailContent({
                       </div>
                       <dl>
                         <div>
-                          <dt>Encuentros</dt>
+                          <dt>{t("encounters")}</dt>
                           <dd>{pair.matchesTogether}</dd>
                         </div>
                         <div>
-                          <dt>Aliados</dt>
+                          <dt>{t("allies")}</dt>
                           <dd>{pair.allyMatches}</dd>
                         </div>
                         <div>
-                          <dt>Rivales</dt>
+                          <dt>{t("rivals")}</dt>
                           <dd>{pair.enemyMatches}</dd>
                         </div>
                       </dl>
@@ -453,31 +531,26 @@ function MatchDetailContent({
             <section aria-labelledby="match-groups-title">
               <header className="analysis-section-heading">
                 <div>
-                  <p className="eyebrow">Interpretación prudente</p>
-                  <h2 id="match-groups-title">
-                    Grupos con coincidencias históricas
-                  </h2>
+                  <p className="eyebrow">{t("cautious")}</p>
+                  <h2 id="match-groups-title">{t("historicalMatches")}</h2>
                 </div>
               </header>
-              <p>
-                La recurrencia no confirma que los jugadores sean premades ni
-                que hayan entrado juntos.
-              </p>
+              <p>{t("groupsDisclaimer")}</p>
               {match.premadeGroups.length ? (
                 <ul className="analysis-groups">
                   {match.premadeGroups.map((group) => (
                     <li key={`${group.teamId}-${group.groupNumber}`}>
                       <strong>
                         {group.teamId === 100
-                          ? "Equipo azul"
+                          ? common("blueTeam")
                           : group.teamId === 200
-                            ? "Equipo rojo"
-                            : "Equipo"}
+                            ? common("redTeam")
+                            : t("team")}
                       </strong>
                       <span>
                         {group.classification === "LikelyPremade"
-                          ? "Evidencia histórica alta"
-                          : "Coincidencias históricas"}
+                          ? t("strongEvidence")
+                          : t("historicalMatches")}
                       </span>
                       <div>
                         {group.members.map((member, i) => (
@@ -503,11 +576,12 @@ function MatchDetailContent({
                             ),
                         ),
                         match.teams,
+                        common("unidentifiedPlayer"),
                       ).map((pair) => (
                         <p key={pair.key}>
                           {pair.first.label} y {pair.second.label}:{" "}
-                          {pair.allyMatches} como aliados · {pair.enemyMatches}{" "}
-                          como rivales
+                          {pair.allyMatches} {t("allyHistory")} ·{" "}
+                          {pair.enemyMatches} {t("rivalHistory")}
                         </p>
                       ))}
                     </li>
@@ -516,35 +590,29 @@ function MatchDetailContent({
               ) : (
                 <p>
                   {coverage?.status === "complete"
-                    ? "No se identificaron grupos en la muestra disponible."
-                    : "No hay información suficiente para identificar grupos."}
+                    ? t("noGroups")
+                    : t("insufficientGroups")}
                 </p>
               )}
             </section>
             <section id="match-coverage" aria-labelledby="match-coverage-title">
               <header className="analysis-section-heading">
                 <div>
-                  <p className="eyebrow">Alcance del análisis</p>
-                  <h2 id="match-coverage-title">Cobertura y transparencia</h2>
+                  <p className="eyebrow">{t("scope")}</p>
+                  <h2 id="match-coverage-title">{t("coverage")}</h2>
                 </div>
               </header>
-              <p>
-                Se consultan partidas anteriores a la seleccionada. La muestra
-                no representa todo el historial.
-              </p>
+              <p>{t("searchedBefore")}</p>
               {coverage ? (
                 <details className="analysis-coverage-details">
-                  <summary>Ver detalle de cobertura</summary>
+                  <summary>{t("coverageDetail")}</summary>
                   <CoverageSummary
                     coverage={coverage}
-                    title="Historial anterior a esta partida"
+                    title={t("priorHistory")}
                   />
                 </details>
               ) : (
-                <p>
-                  El análisis histórico no se solicitó. Abre la partida desde el
-                  historial de un jugador.
-                </p>
+                <p>{t("historyNotRequested")}</p>
               )}
             </section>
           </>

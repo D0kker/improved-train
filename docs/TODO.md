@@ -1,8 +1,37 @@
 # Roadmap
 
-Última actualización: 2026-11-03
+Última actualización: 2026-11-04
 
 La especificación original en `lol_network_analyzer_spec.md` conserva el detalle. Esta vista registra alcance y evidencia; no convierte ideas futuras en compromisos.
+
+## T04.7.3 / RELEASE-07 — candidata integrada
+
+- [x] Integrar PR #106 (i18n) y #107 (relaciones inline) en `integration/t04-7-2-i18n-relationships`, manteniendo los commits fuente y resolviendo vistas/docs compartidas.
+- [x] Localizar grupos, historial con owner, estados de evidencia y plurales en ES/EN/PT-BR; preservar K/D/A y semántica backend.
+- [x] Repetir `npm ci --offline`, 94/94 tests, lint, TypeScript, build, audit producción cero, Compose y Prettier dirigido.
+- [x] Chromium con fixtures: Home/dashboard/análisis/partida activa en 390/768/1440 y análisis 320/1024; selector, persistencia, recarga, fallback, parcial, vacío, error/reintento, nombres largos y solapamientos sin overflow ni solicitudes externas inesperadas.
+- [x] Documentar contraste focalizado, capturas vigentes, compatibilidad web/API, plan de despliegue web-only y referencia de rollback RELEASE-06.
+- [x] Publicar rama y PR integrado [#108](https://github.com/D0kker/improved-train/pull/108) en Draft hacia main; esperar CI del HEAD final.
+- [ ] Revisar CI final y obtener aprobación del PO; no fusionar ni desplegar sin autorización.
+- Evidencia: [T04.7.2](T04_7_2_INTEGRATION_REPORT.md), [capturas](releases/t04-7-2-captures/README.md), [plan RELEASE-07](releases/ECHO_RELEASE_07_PLAN.md).
+
+## T04.7 — internacionalización
+
+- [x] Crear `feature/t04-7-i18n` desde `origin/main` sin modificar otros worktrees.
+- [x] Integrar locale ES/EN/PT-BR, selector accesible y preferencia persistente en cookie con negociación de idioma del navegador.
+- [x] Traducir las rutas activas y mensajes compartidos; conservar nombres/IDs de Riot y la semántica prudente de coincidencias.
+- [x] Añadir formatos regionales y pruebas de negociación, cookie, selector, plurales, formatos y paridad de catálogos.
+- [x] Validar instalación limpia (`npm ci --offline` por DNS), 88/88 tests, lint, TypeScript, build, audit producción cero, Compose, diff-check y formato dirigido de los archivos modificados.
+- [x] Validar visualmente los tres idiomas a 390/768/1440 px con Chromium y fixtures sintéticos en la rama integrada.
+- [x] Publicar `feature/t04-7-i18n` y abrir PR #106 en Draft a main; CI `41781834674` aprobada. PR #106 sigue Draft/original y no debe fusionarse además del PR integrado.
+- Evidencia y límites: [T04.7](T04_7_INTERNATIONALIZATION.md).
+
+## T04.6.4 — relaciones visibles en equipos
+
+- [x] Mostrar grupos del contrato y conteos de pareja relativos al owner con cobertura explícita.
+- [x] Validar 86 pruebas, lint, tipos, build, audit producción y Compose; capturas sintéticas sin overflow en cinco anchos.
+- [x] Revisión focalizada de contraste y captura en la rama integrada; axe sigue incompleto y no se declara conformidad WCAG integral.
+- [ ] Aprobación visual del PO e integración final; PR #107 continúa abierto como origen, no fusionar además del PR integrado.
 
 ## T04.6 — análisis de partida
 
@@ -13,8 +42,8 @@ La especificación original en `lol_network_analyzer_spec.md` conserva el detall
 - [x] Contraste focalizado mínimo texto 7.62:1, foco 3.06:1; axe dejó color-contrast incompleto, sin certificar WCAG integral.
 - [x] `npm audit --omit=dev`: 0 vulnerabilidades de producción; árbol total reportó 16 moderate y 1 high.
 - [ ] Evaluación asistiva integral y aceptación visual final de la interfaz en producción.
-- [ ] RELEASE-06: despliegue web autorizado por separado, smoke tests y comprobación de rollback; API y Redis no se modifican.
-- [ ] Comenzar T04.7 después del cierre de RELEASE-06.
+- [x] RELEASE-06 desplegada según el registro documental del PR #105; API RELEASE-05 y Redis permanecieron intactos. La integración de ese registro documental sigue pendiente.
+- [x] Iniciar T04.7 después del cierre de RELEASE-06; su ejecución está registrada en la sección T04.7 de este roadmap.
 
 ## T04.11 — UX y rango competitivo
 
